@@ -1,0 +1,127 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+:root {
+  --navy-blue: #0f2a4a;
+  --gold: #d4af37;
+}
+
+.dark {
+  background-color: var(--navy-blue);
+  color: white;
+}
+
+/* Add these new styles for better mobile responsiveness */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .text-xl {
+    font-size: 1.25rem;
+  }
+
+  .text-2xl {
+    font-size: 1.5rem;
+  }
+
+  .p-4 {
+    padding: 1rem;
+  }
+
+  .space-y-4 > * + * {
+    margin-top: 1rem;
+  }
+}
+
+/* Markdown styling */
+.prose {
+  @apply text-current;
+}
+
+.prose a {
+  @apply text-blue-500 hover:underline;
+}
+
+.prose p {
+  @apply my-2;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  @apply font-bold my-2;
+}
+
+.prose h1 {
+  @apply text-xl;
+}
+
+.prose h2 {
+  @apply text-lg;
+}
+
+.prose h3 {
+  @apply text-base;
+}
+
+.prose ul, .prose ol {
+  @apply pl-5 my-2;
+}
+
+.prose ul {
+  @apply list-disc;
+}
+
+.prose ol {
+  @apply list-decimal;
+}
+
+.prose code {
+  @apply bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm;
+}
+
+.prose pre {
+  @apply bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto my-2;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic;
+}
+
+.prose table {
+  @apply border-collapse w-full my-2;
+}
+
+.prose th, .prose td {
+  @apply border border-gray-300 dark:border-gray-600 px-2 py-1;
+}
+
+.prose th {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+/* Specific styles for dark mode messages */
+.bg-navy-blue .prose {
+  @apply text-white;
+}
+
+.bg-navy-blue .prose code {
+  @apply bg-gray-800 text-gray-200;
+}
+
+.bg-navy-blue .prose pre {
+  @apply bg-gray-800 text-gray-200;
+}
+
+.bg-gold .prose {
+  @apply text-navy-blue;
+}
+
+.bg-gold .prose code {
+  @apply bg-white/30 text-navy-blue;
+}
+
+.bg-gold .prose pre {
+  @apply bg-white/30 text-navy-blue;
+}
