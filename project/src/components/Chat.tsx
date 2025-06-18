@@ -288,11 +288,11 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-white">
+    <div className="min-h-[90vh] flex flex-col bg-white border-8 border-red-500">
       {/* Fixed Header */}
       <div className="fixed top-16 left-0 right-0 z-20 bg-navy-blue text-white">
-        <div className="max-w-7xl mx-auto px-4 py-2">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-2  ">
+          <div className="flex items-center justify-between ">
             <div className="flex-grow mr-4">
               {isEditingTitle ? (
                 <div className="flex items-center">
@@ -356,7 +356,7 @@ const Chat: React.FC = () => {
       {/* Scrollable Chat Content */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto mt-20 mb-24 px-4 relative"
+        className="flex-1 overflow-hidden mt-20 mb-24 px-4 relative "
       >
         {videoAvatar ? (
           <AIVideoAvatar />
