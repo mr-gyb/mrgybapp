@@ -288,7 +288,7 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[90vh] flex flex-col bg-white border-8 border-red-500">
+    <div className="min-h-[90vh] flex flex-col bg-white">
       {/* Fixed Header */}
       <div className="fixed top-16 left-0 right-0 z-20 bg-navy-blue text-white">
         <div className="max-w-7xl mx-auto px-4 py-2  ">
