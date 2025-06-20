@@ -9,6 +9,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useChat } from '../../contexts/ChatContext';
 
 interface HomeFilterProps {
   onFilterChange: (filters: { agentType: string[] }) => void;
@@ -18,6 +19,7 @@ const HomeFilter: React.FC<HomeFilterProps> = ({ onFilterChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   const navigate = useNavigate();
+  const { newchatButton } = useChat();
 
   const aiTeamMembers = [
     { id: 'mrgyb', name: 'Mr.GYB AI', icon: Bot },
@@ -41,6 +43,14 @@ const HomeFilter: React.FC<HomeFilterProps> = ({ onFilterChange }) => {
     navigate(path);
     setIsOpen(false);
   };
+
+  // for making a new chat with chat/chatID 
+  const handleNewChat = async () => {
+    const newChatId = await newchatButton();
+    if (newChatId) {
+      navigate(`/chat/${newChatId}`);
+    }
+  }
 
   return (
     <div className="fixed bottom-32 right-4 z-50">
@@ -97,7 +107,7 @@ const HomeFilter: React.FC<HomeFilterProps> = ({ onFilterChange }) => {
               GYB Team Chat
             </button>
             <button
-              onClick={() => handleNavigate('/new-chat')}
+              onClick={handleNewChat}
               className="w-full flex items-center p-2 text-left hover:bg-gray-50 rounded"
             >
               <MessageCircle size={20} className="mr-2 text-navy-blue" />

@@ -176,7 +176,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if(!user) return null;
 
     try{
-      console.log("newchatButton");
+      // console.log("newchatButton");
       const newChatId = await createNewChat();
       if (newChatId) {
         const initialMessage = `Hello! I'm ${selectedAgent}. How can I help you today?`;

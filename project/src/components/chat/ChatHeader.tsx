@@ -38,7 +38,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   const agents = ['Mr.GYB AI', 'CEO', 'COO', 'CHRO', 'CTO', 'CCMO'];
 
   return (
-    <div className="bg-navy-blue text-white py-4 px-4 fixed w-full">
+    <div className="bg-navy-blue text-white py-4 px-4 fixed w-full z-20">
       <div className="flex items-center justify-between">
         <div className="flex items-center flex-grow">
           {isEditing ? (

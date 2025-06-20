@@ -19,6 +19,7 @@ import { Message } from '../types/chat';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChatCompletionContentPart } from "openai/resources/chat/completions";
+import ChatHeader from './chat/ChatHeader';
 
 
 
@@ -290,68 +291,21 @@ const Chat: React.FC = () => {
   return (
     <div className="min-h-[90vh] flex flex-col bg-white">
       {/* Fixed Header */}
-      <div className="fixed top-16 left-0 right-0 z-20 bg-navy-blue text-white">
-        <div className="max-w-7xl mx-auto px-4 py-2  ">
-          <div className="flex items-center justify-between ">
-            <div className="flex-grow mr-4">
-              {isEditingTitle ? (
-                <div className="flex items-center">
-                  <input
-                    ref={titleInputRef}
-                    type="text"
-                    value={editedTitle}
-                    onChange={(e) => setEditedTitle(e.target.value)}
-                    onKeyDown={handleTitleKeyPress}
-                    className="bg-white/10 text-white px-2 py-1 rounded flex-grow"
-                    placeholder="Enter chat title..."
-                  />
-                  <button
-                    onClick={handleTitleUpdate}
-                    className="ml-2 p-1 hover:bg-white/10 rounded"
-                  >
-                    <Check size={20} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsEditingTitle(false);
-                      setEditedTitle(currentChat.title);
-                    }}
-                    className="ml-1 p-1 hover:bg-white/10 rounded"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center">
-                  <h1 className="text-lg font-semibold mr-2">
-                    {currentChat.title}
-                  </h1>
-                  <button
-                    onClick={() => setIsEditingTitle(true)}
-                    className="p-1 hover:bg-white/10 rounded"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center space-x-4">
-              {currentAgent && (
-                <p className="text-sm opacity-75">
-                  Chatting with: {currentAgent}
-                </p>
-              )}
-              <button
-                onClick={handleNewChat}
-                className="bg-gold text-navy-blue px-3 py-1 rounded-full flex items-center text-sm"
-              >
-                <PlusCircle size={16} className="mr-1" />
-                New Chat
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ChatHeader
+        title={currentChat.title}
+        currentAgent={currentAgent}
+        isEditing={isEditingTitle}
+        editedTitle={editedTitle}
+        onEditToggle={() => setIsEditingTitle(true)}  
+        onTitleChange={setEditedTitle}
+        onTitleUpdate={handleTitleUpdate}
+        onTitleCancel={() => {
+          setIsEditingTitle(false);
+          setEditedTitle(currentChat.title);
+        }}
+        onAgentChange={setCurrentAgent}
+        onNewChat={handleNewChat}
+      />
 
       {/* Scrollable Chat Content */}
       <div 
@@ -361,7 +315,7 @@ const Chat: React.FC = () => {
         {videoAvatar ? (
           <AIVideoAvatar />
         ) : (
-          <div className="max-w-7xl mx-auto">
+          <div className="w-full ">
             <div className="space-y-4">
               {currentChat.messages?.map((message: any, index: number) => (
                 <div
