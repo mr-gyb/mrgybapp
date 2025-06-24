@@ -13,7 +13,16 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true,
 });
 
-const ASSISTANT_ID = 'asst_5FUXkLddYzdcjHPCsmfV9x3F';
+const getAssistantId = (aiAgent: string): string => {
+  const assistantIds: Record<string, string> = {
+    'Mr.GYB AI': 'asst_5FUXkLddYzdcjHPCsmfV9x3F',
+    'CEO': 'asst_3vtN1pMnvJ89RUgUTgYIQCf0',
+    'COO': 'asst_OIVmkEpenHuPVlJT8u7DCfY7',
+    // Another AI goes into here.
+  };
+
+  return assistantIds[aiAgent] || 'asst_defaultFallbackID'; // fallback ID 설정
+};
 
 
 export const uploadImageAndGetUrl = async (file: File): Promise<string> =>{
@@ -32,6 +41,8 @@ export const generateAIResponse = async (
 ) => {
   try {
     const lastMessage = messages[messages.length - 1];
+    const assistantId = getAssistantId(aiAgent);
+    console.log(aiAgent);
 
     // Handle messages with file content
     if (typeof lastMessage.content === 'object' && Array.isArray(lastMessage.content)) {
@@ -71,7 +82,7 @@ export const generateAIResponse = async (
         });
 
         const run = await openai.beta.threads.runs.create(thread.id, {
-          assistant_id: ASSISTANT_ID,
+          assistant_id: assistantId,
         });
 
         // Poll for completion
@@ -102,7 +113,7 @@ export const generateAIResponse = async (
     }
 
     const run = await openai.beta.threads.runs.create(thread.id, {
-      assistant_id: ASSISTANT_ID,
+      assistant_id: assistantId,
     });
 
     // Poll for completion
@@ -215,6 +226,7 @@ export const generateAIResponse2 = async (
   *  Also memorize the history automatically.
   */ 
   const content2 = convertToMessageParts(content);
+  const assistantId = getAssistantId(aiAgent);
 
 // Thread create
 const thread = await openai.beta.threads.create();
@@ -227,7 +239,7 @@ await openai.beta.threads.messages.create(thread.id, {
 
 // 3.Run
 const run = await openai.beta.threads.runs.create(thread.id, {
-  assistant_id: ASSISTANT_ID, 
+  assistant_id: assistantId, 
   instructions: `You are ${aiAgent}, a helpful assistant.`,
 });
 

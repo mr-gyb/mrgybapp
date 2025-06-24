@@ -60,6 +60,13 @@ const ChatHistory: React.FC = () => {
     return lastMessage.content;
   };
 
+  const getChatAgent = (messages?: any[]) => {
+    if (!messages || messages.length === 0) return null;
+    // Find the first assistant message to get the AI agent
+    const assistantMessage = messages.find(message => message.role === 'assistant');
+    return assistantMessage?.aiAgent || null;
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -115,7 +122,14 @@ const ChatHistory: React.FC = () => {
                       </div>
                     ) : (
                       <div className="flex items-center">
-                        <h2 className="text-xl font-semibold">{chat.title}</h2>
+                        <h2 className="text-xl font-semibold">
+                          {chat.title}
+                          {getChatAgent(chat.messages) && (
+                            <span className="text-sm font-normal text-gray-600 ml-2">
+                              ({getChatAgent(chat.messages)})
+                            </span>
+                          )}
+                        </h2>
                         <button
                           onClick={(e) => handleEditClick(e, chat.id, chat.title)}
                           className="ml-2 p-1 hover:bg-navy-blue hover:text-white rounded opacity-0 group-hover:opacity-100 transition-all duration-200"

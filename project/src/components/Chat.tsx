@@ -27,8 +27,7 @@ const Chat: React.FC = () => {
   const { chatId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { chats, addMessage, updateChatTitle, isProcessingAI, newchatButton, addImage } = useChat();
-  const [currentAgent, setCurrentAgent] = useState<string>('');
+  const { chats, addMessage, updateChatTitle, isProcessingAI, newchatButton, addImage, createNewChat, selectedAgent, setSelectedAgent } = useChat();
   const [isLoading, setIsLoading] = useState(true);
  // const [currentChat, setCurrentChat] = useState<any>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -53,7 +52,7 @@ const Chat: React.FC = () => {
             (m) => m.role === 'assistant'
           );
           if (lastAiMessage?.aiAgent) {
-            setCurrentAgent(lastAiMessage.aiAgent);
+            setSelectedAgent(lastAiMessage.aiAgent);
           }
         } else {
           navigate('/new-chat');
@@ -114,8 +113,8 @@ const Chat: React.FC = () => {
           await addImage(chatId, content, 'user', user?.uid);
         }
       }else{
-        console.log(content);
-        await addMessage(chatId, content, 'user', user?.uid);
+        console.log("selectedAgent is ", selectedAgent);
+        await addMessage(chatId, content, 'user', user?.uid, selectedAgent);
       }
       /* Update local state immediately
       setCurrentChat((prev) => ({
@@ -136,14 +135,14 @@ const Chat: React.FC = () => {
       setTimeout(async () => {
         //Simulate AI response
         const aiResponse = `This is a response from ${
-          currentAgent || 'AI Assistant'
+          selectedAgent || 'AI Assistant'
         } to your message: "${messageContent}"`;
         await addMessage(
           chatId,
           aiResponse,
           'assistant',
           undefined,
-          currentAgent
+          selectedAgent
         );
         
 
@@ -157,7 +156,7 @@ const Chat: React.FC = () => {
               chatId,
               content: aiResponse,
               role: 'assistant',
-              aiAgent: currentAgent,
+              aiAgent: selectedAgent,
               createdAt: new Date().toISOString(),
             },
           ],
@@ -173,8 +172,6 @@ const Chat: React.FC = () => {
       setIsProcessing(false);
     }
   };
-
-
 
   const handleTitleUpdate = async () => {
     if (chatId && editedTitle.trim()) {
@@ -193,6 +190,50 @@ const Chat: React.FC = () => {
       navigate(`/chat/${newChatId}`);
     }
   }
+
+  // for agent change - create new chat with selected agent
+  const handleAgentChange = async (newAgent: string) => {
+    if (newAgent === selectedAgent) return; // No change needed
+    
+    try {
+      // First, check if there's an existing chat with this agent
+      const existingChat = chats.find(chat => {
+        // Check if the chat has messages from this agent
+        return chat.messages && chat.messages.some(message => 
+          message.role === 'assistant' && message.aiAgent === newAgent
+        );
+      });
+
+      if (existingChat) {
+        // If existing chat found, navigate to it
+        navigate(`/chat/${existingChat.id}`);
+        // Get the actual agent from the existing chat's messages
+        const agentMessage = existingChat.messages?.find(message => 
+          message.role === 'assistant' && message.aiAgent === newAgent
+        );
+        if (agentMessage?.aiAgent) {
+          setSelectedAgent(agentMessage.aiAgent);
+        } else {
+          setSelectedAgent(newAgent);
+        }
+      } else {
+        // If no existing chat, create new chat with the selected agent
+        const newChatId = await createNewChat();
+        if (newChatId) {
+          // Add initial message from the new agent
+          const initialMessage = `Hello! I'm ${newAgent}. How can I help you today?`;
+          await addMessage(newChatId, initialMessage, 'assistant', undefined, newAgent);
+          
+          // Navigate to the new chat
+          navigate(`/chat/${newChatId}`);
+          // Update the current agent state
+          setSelectedAgent(newAgent);
+        }
+      }
+    } catch (error) {
+      console.error('Error handling agent change:', error);
+    }
+  };
 
   const handleTitleKeyPress = (
     event: React.KeyboardEvent<HTMLInputElement>
@@ -293,7 +334,6 @@ const Chat: React.FC = () => {
       {/* Fixed Header */}
       <ChatHeader
         title={currentChat.title}
-        currentAgent={currentAgent}
         isEditing={isEditingTitle}
         editedTitle={editedTitle}
         onEditToggle={() => setIsEditingTitle(true)}  
@@ -303,7 +343,7 @@ const Chat: React.FC = () => {
           setIsEditingTitle(false);
           setEditedTitle(currentChat.title);
         }}
-        onAgentChange={setCurrentAgent}
+        onAgentChange={handleAgentChange}
         onNewChat={handleNewChat}
       />
 

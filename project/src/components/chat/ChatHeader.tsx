@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Edit2, Check, X, PlusCircle, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useChat } from '../../contexts/ChatContext';
 
 interface ChatHeaderProps {
   title: string;
-  currentAgent: string;
   isEditing: boolean;
   editedTitle: string;
   onEditToggle: () => void;
@@ -17,7 +17,6 @@ interface ChatHeaderProps {
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({
   title,
-  currentAgent,
   isEditing,
   editedTitle,
   onEditToggle,
@@ -28,6 +27,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   onNewChat,
 }) => {
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const { selectedAgent, setSelectedAgent } = useChat();
 
   useEffect(() => {
     if (isEditing && titleInputRef.current) {
@@ -36,6 +36,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   }, [isEditing]);
 
   const agents = ['Mr.GYB AI', 'CEO', 'COO', 'CHRO', 'CTO', 'CCMO'];
+
+  const handleAgentChange = (newAgent: string) => {
+    setSelectedAgent(newAgent);
+    onAgentChange(newAgent);
+  };
 
   return (
     <div className="bg-navy-blue text-white py-4 px-4 fixed w-full z-20">
@@ -80,8 +85,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         <div className="flex items-center space-x-4">
           <div className="relative flex items-center ml-4">
             <select
-              value={currentAgent}
-              onChange={(e) => onAgentChange(e.target.value)}
+              value={selectedAgent || 'Mr.GYB AI'}
+              onChange={(e) => handleAgentChange(e.target.value)}
               className="appearance-none bg-transparent text-white pr-10 py-1 focus:outline-none text-center font-bold text-sm sm:text-base flex"
             >
               {agents.map((agent) => (

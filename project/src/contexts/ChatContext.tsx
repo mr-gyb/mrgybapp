@@ -11,14 +11,16 @@ import { getAuth } from "firebase/auth"; // for firebase auth ID token
 interface ChatContextType {
   chats: Chat[];
   currentChatId: string | null;
+  selectedAgent: string | null;
   isLoading: boolean;
   error: string | null;
   isProcessingAI: boolean;
   newchatButton: () => Promise<string | null>;
   createNewChat: () => Promise<string | null>;
-  addMessage: (chatId: string, content: string | OpenAIMessage, role: 'user' | 'assistant' | 'system', senderId?: string, aiAgent?: string) => Promise<void>;
-  addImage: (chatId: string, content: ChatCompletionContentPart[], role: 'user' | 'assistant' | 'system', senderId?: string, aiAgent?: string) => Promise<void>;
+  addMessage: (chatId: string, content: string | OpenAIMessage, role: 'user' | 'assistant' | 'system', senderId?: string, aiAgent?: string | null) => Promise<void>;
+  addImage: (chatId: string, content: ChatCompletionContentPart[], role: 'user' | 'assistant' | 'system', senderId?: string, aiAgent?: string | null) => Promise<void>;
   setCurrentChat: (chatId: string) => void;
+  setSelectedAgent: (agent: string | null) => void;
   deleteChat: (chatId: string) => Promise<boolean>;
   updateChatTitle: (chatId: string, newTitle: string) => Promise<boolean>;
   uploadFileToOpenAI: (chatId: string, file: File) => Promise<void>;
@@ -28,7 +30,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [chats, setChats] = useState<Chat[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState('Mr.GYB AI');
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +180,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try{
       // console.log("newchatButton");
       const newChatId = await createNewChat();
-      if (newChatId) {
+      if (newChatId && selectedAgent) {
         const initialMessage = `Hello! I'm ${selectedAgent}. How can I help you today?`;
         await addMessage(newChatId, initialMessage, 'assistant', undefined, selectedAgent);
       }
@@ -197,6 +199,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newChat = {
         title: 'New Chat',
         userId: user.uid,
+        AIAgent: selectedAgent,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -221,6 +224,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addMessage = async (chatId: string,   content: string | OpenAIMessage,   role: 'user' | 'assistant' | 'system',   senderId?: string,    aiAgent?: string) => {
     try {
       const messageContent = typeof content === 'string' ? content : JSON.stringify(content);
+      console.log("add message aiagent is ", aiAgent);
 
   
       const newMessage = {
@@ -421,7 +425,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const result = await response.json(); // result.fileId, result.fileName
 
-      // 저장할 메타데이터 메시지
+      // storing the meta message
       const newMessage = {
         chatId,
         senderId: user?.uid || null,
@@ -444,6 +448,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     chats,
     currentChatId,
+    selectedAgent,
     isLoading,
     error,
     isProcessingAI,
@@ -452,6 +457,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addMessage,
     addImage,
     setCurrentChat: setCurrentChatId,
+    setSelectedAgent,
     deleteChat,
     updateChatTitle,
     uploadFileToOpenAI
