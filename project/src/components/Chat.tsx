@@ -20,13 +20,14 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChatCompletionContentPart } from "openai/resources/chat/completions";
 import ChatHeader from './chat/ChatHeader';
+import { AI_USERS } from '../types/user';
 
 
 
 const Chat: React.FC = () => {
   const { chatId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const { chats, addMessage, updateChatTitle, isProcessingAI, newchatButton, addImage, createNewChat, selectedAgent, setSelectedAgent } = useChat();
   const [isLoading, setIsLoading] = useState(true);
  // const [currentChat, setCurrentChat] = useState<any>(null);
@@ -246,6 +247,22 @@ const Chat: React.FC = () => {
     }
   };
 
+  // Function to get AI profile image based on selected agent
+  // add the features to get the image of the corresponding user and ai
+  const getAIProfileImage = (agentName: string) => {
+
+    let agentNewName = agentName.toLowerCase() + "-ai";
+    if(agentNewName === 'mr.gyb ai-ai'){
+      agentNewName = 'mr-gyb-ai';
+    }
+    const aiUser = Object.values(AI_USERS).find(ai => ai.id === agentNewName);
+    if (aiUser) {
+      return aiUser.profile_image_url;
+    }
+    // Fallback to default AI profile image
+    return '/ai-profile.png';
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -364,15 +381,31 @@ const Chat: React.FC = () => {
                     message.role === 'user' ? 'justify-end' : 'justify-start'
                   }`}
                 >
-                  <div
-                    className={`max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 ${
-                      message.role === 'user'
-                        ? 'bg-gold text-navy-blue'
-                        : 'bg-navy-blue text-white'
-                    }`}
-                  >
-                    {renderMessageContent(message)}
-                  </div>
+                  {message.role === 'user' ? (
+                    // User message: profile image on right side
+                    <div className="flex items-start space-x-2">
+                      <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-gold text-navy-blue">
+                        {renderMessageContent(message)}
+                      </div>
+                      <img
+                        src={userData?.profile_image_url || 'https://cdn-icons-png.flaticon.com/512/63/63699.png'}
+                        alt="Profile"
+                        className="w-8 h-8 rounded-full flex-shrink-0"
+                      />
+                    </div>
+                  ) : (
+                    // AI message: profile image on left side
+                    <div className="flex items-start space-x-2">
+                      <img
+                        src={getAIProfileImage(selectedAgent || 'Mr.GYB AI')}
+                        alt="Profile"
+                        className="w-8 h-8 rounded-full flex-shrink-0"
+                      />
+                      <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
+                        {renderMessageContent(message)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
               {/* For AI typing */}

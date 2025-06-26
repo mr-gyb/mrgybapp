@@ -18,7 +18,9 @@ const getAssistantId = (aiAgent: string): string => {
     'Mr.GYB AI': 'asst_5FUXkLddYzdcjHPCsmfV9x3F',
     'CEO': 'asst_3vtN1pMnvJ89RUgUTgYIQCf0',
     'COO': 'asst_OIVmkEpenHuPVlJT8u7DCfY7',
-    // Another AI goes into here.
+    'CHRO' : 'asst_VkklftyKNwCBNz0ZGKCVthwN',
+    'CTO' : 'asst_DtKsptuonX5DEOPEmHL5f1XC',
+    'CMO' : 'asst_U5JvdzL03Gii91NPzg74XSgi'
   };
 
   return assistantIds[aiAgent] || 'asst_defaultFallbackID'; // fallback ID 설정

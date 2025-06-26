@@ -113,7 +113,7 @@ export const addMessage = async (
   content: string,
   role: 'user' | 'assistant' | 'system',
   senderId?: string,
-  aiAgent?: string
+  aiAgent?: string | null
 ): Promise<Message | null> => {
   try {
     const messageData = {
@@ -126,7 +126,7 @@ export const addMessage = async (
     };
     
     const messageRef = await addDoc(collection(db, 'messages'), messageData);
-    
+    console.log("storing firebase message as ", messageData);
     // Update chat's updatedAt timestamp
     await updateDoc(doc(db, 'chats', chatId), {
       updatedAt: new Date().toISOString()
