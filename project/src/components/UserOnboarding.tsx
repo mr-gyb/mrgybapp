@@ -65,10 +65,10 @@ const UserOnboarding: React.FC = () => {
           email,
           name: `${firstName} ${lastName}`,
           username: `@${firstName.toLowerCase()}${lastName.toLowerCase()}`,
-          phoneNumber,
-          birthday,
-          notificationsEnabled,
-          country
+          //phoneNumber,
+          //birthday,
+          //notificationsEnabled,
+          //country
         });
 
         navigate('/dashboard');

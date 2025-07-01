@@ -462,7 +462,7 @@ const Profile: React.FC = () => {
                       : 'text-gray-500'
                   }`}
                 >
-                  {tab}ㅎㅎ
+                  {tab}
                 </button>
               ))}
             </div>

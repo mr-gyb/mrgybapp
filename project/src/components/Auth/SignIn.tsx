@@ -21,22 +21,29 @@ const SignIn: React.FC = () => {
 
     try {
       if (mode === 'login') {
+        console.log('logging in');
         const result = await signIn(email, password);
         if (result.error) {
           throw result.error;
         }
         navigate('/dashboard');
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        console.log('creating user');
+        //await createUserWithEmailAndPassword(auth, email, password);
         navigate('/onboarding', { state: { email, password } });
       }
-    } catch (err) {
-      setError(mode === 'login' 
-        ? 'Invalid email or password. Please try again.' 
-        : 'Failed to create account. This email may already be registered.'
-      );
+    } catch (err: any) {
+      if (err.code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Try logging in instead.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email format.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password should be at least 6 characters.');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
       console.error('Authentication error:', err);
-    } finally {
+    }finally {
       setIsLoading(false);
     }
   };
@@ -82,6 +89,16 @@ const SignIn: React.FC = () => {
             <Apple size={24} className="mr-2" />
             Continue with Apple
           </button>
+
+          {/* signup mode only instruction*/}
+          {mode === 'signup' && (
+            <div className="mb-4 text-sm text-gray-600 bg-gray-100 rounded-md p-3">
+              <ul className="list-disc pl-5">
+                <li>Email format is required.</li>
+                <li>Password should be at least 6 characters.</li>
+              </ul>
+            </div>
+          )}
 
           <div className="flex items-center my-4">
             <div className="flex-grow border-t border-gray-300"></div>
