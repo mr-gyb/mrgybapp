@@ -4,13 +4,19 @@ import { Mail, Lock, AlertCircle, LogIn, UserPlus, Apple } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
+import { useLocation } from 'react-router-dom';
+
 
 const SignIn: React.FC = () => {
+  // for getting the location state
+  const location = useLocation();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState<'signup' | 'login'>('login');
+  // modify to have the current mode state so that it can be used in signup mode.
+  const [mode, setMode] = useState<'signup' | 'login'>(location.state?.mode || 'login');
   const navigate = useNavigate();
   const { signIn } = useAuth();
 

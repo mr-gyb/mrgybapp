@@ -146,7 +146,7 @@ const Login: React.FC = () => {
 
             <div className="text-center mt-4">
               <span className="text-gray-600">Don't have an account?</span>
-              <Link to="/signin" className="ml-2 text-navy-blue hover:text-navy-blue/80 font-medium">
+              <Link to="/signin" state={{ mode: 'signup' }} className="ml-2 text-navy-blue hover:text-navy-blue/80 font-medium">
                 Sign up
               </Link>
             </div>

@@ -32,15 +32,7 @@ const UserOnboarding: React.FC = () => {
       setError('Please enter your first and last name');
       return;
     }
-    if (step === 2 && !birthday) {
-      setError('Please enter your birthday');
-      return;
-    }
-    if (step === 3 && !password) {
-      setError('Please enter a password');
-      return;
-    }
-    if (step === 4) {
+    if (step === 2) {
       handleFinish();
       return;
     }
@@ -93,6 +85,8 @@ const UserOnboarding: React.FC = () => {
           <>
             <h1 className="text-3xl font-bold mb-6 text-center">Welcome to GYB AI</h1>
             <div className="space-y-4">
+              {/* remove the apple button and or button for now
+
               <button className="w-full bg-black text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center">
                 <Apple size={24} className="mr-2" />
                 Continue with Apple
@@ -102,6 +96,7 @@ const UserOnboarding: React.FC = () => {
                 <span className="px-4 text-gray-500">or</span>
                 <div className="flex-grow border-t border-gray-300"></div>
               </div>
+              */} 
               <input
                 type="tel"
                 value={phoneNumber}
@@ -142,29 +137,6 @@ const UserOnboarding: React.FC = () => {
         )}
         {step === 2 && (
           <>
-            <h2 className="text-2xl font-bold mb-4">When's your birthday?</h2>
-            <input
-              type="date"
-              value={birthday}
-              onChange={(e) => setBirthday(e.target.value)}
-              className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
-            />
-          </>
-        )}
-        {step === 3 && (
-          <>
-            <h2 className="text-2xl font-bold mb-4">Create a password</h2>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
-            />
-          </>
-        )}
-        {step === 4 && (
-          <>
             <h2 className="text-2xl font-bold mb-4 dark:text-black">Enable notifications</h2>
             <div className="flex items-center justify-between dark:text-black">
               <span>Receive notifications</span>
@@ -182,7 +154,7 @@ const UserOnboarding: React.FC = () => {
             </div>
           </>
         )}
-        {step === 5 && (
+        {step === 3 && (
           <>
             <h2 className="text-2xl font-bold mb-4">Select your country</h2>
             <div className="relative">
