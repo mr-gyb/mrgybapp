@@ -2,6 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, Search, Paperclip, Mic, Send, Camera, Image as ImageIcon, Video, Plus, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
+// For Firebase logic
+import { collection, addDoc, serverTimestamp, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+
+import { useAuth } from '../contexts/AuthContext';
+
 interface ChatMessage {
   id: string;
   sender: string;
@@ -20,29 +26,79 @@ interface TeamChat {
 const GYBTeamChat: React.FC = () => {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [message, setMessage] = useState('');
-  const [teamChats, setTeamChats] = useState<TeamChat[]>([
-    {
-      id: '1',
-      name: 'Marketing Campaign',
-      participants: ['@john', '@sarah', 'Mr.GYB AI'],
-      messages: [
-        { id: '1', sender: '@john', content: "Hey team, what's our plan for the new campaign?", timestamp: new Date().toISOString() },
-        { id: '2', sender: 'Mr.GYB AI', content: 'Based on our recent market analysis, I suggest focusing on social media engagement.', timestamp: new Date().toISOString(), isAI: true },
-      ]
-    },
-    // Add more sample chats here
-  ]);
+  const [teamChats, setTeamChats] = useState<TeamChat[]>([]);
+  const { user } = useAuth();
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatName, setNewChatName] = useState('');
   const [newChatParticipants, setNewChatParticipants] = useState('');
   const messageEndRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
+    // Getting the existing chat
+    useEffect(() => {
+      if (!user) return;
+    
+      // quering the dream_team_chat collection team members
+      // so that q have a information of participants
+      const q = query(
+        collection(db, 'dream_team_chat'),
+        where('teamMembers', 'array-contains', user.uid)
+      );
+    
+      // based on the q that queried from the above function
+      // doc.data() => the field that inside the corresponding id
+      // ...doc.data() list the data of the docs
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const rooms = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...(doc.data() as Omit<TeamChat, 'id' >),
+          messages: [],
+        }));
+    
+        setTeamChats(rooms); // 전체 채팅방 목록 업데이트
+
+      });
+    
+      return () => unsubscribe();
+    }, [user]);
+
+
+  // Getting the existing message based on the chat 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [selectedChat, teamChats]);
+
+    if(!selectedChat) return;
+
+    // Construct a message query for the chat
+    const q = query(
+      collection(db, `dream_team_chat/${selectedChat}/messages`),
+      orderBy('timestamp', 'asc')
+    );
+
+    // Register the snapshot for that chat
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedMessages: ChatMessage[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...(doc.data() as Omit<ChatMessage, 'id'>)
+      })) 
+
+      // Adding the firebase messages into the empty message[] 
+    setTeamChats(prevChats => 
+      prevChats.map(chat => 
+        chat.id === selectedChat
+          ? { ...chat, messages: loadedMessages }
+          : chat
+      )
+    );
+    setMessage('');  
+  });
+  
+  return () => unsubscribe();
+
+  }, [selectedChat, user]);
 
   const handleSendMessage = () => {
+    /*
     if (message.trim() && selectedChat) {
       const newMessage: ChatMessage = {
         id: Date.now().toString(),
@@ -59,6 +115,24 @@ const GYBTeamChat: React.FC = () => {
       );
       setMessage('');
     }
+      */
+
+    if (message.trim() && selectedChat){
+      try{
+        addDoc(
+          collection(db, `dream_team_chat/${selectedChat}/messages`),
+          {
+            content: message,
+            senderId:  user?.uid,
+            senderType:'user',
+            timestamp: new Date().toISOString(),
+          }
+        );
+        setMessage('');
+      } catch(error){
+        console.error('Error sending message:', error);
+      }
+    }
   };
 
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -67,6 +141,7 @@ const GYBTeamChat: React.FC = () => {
     }
   };
 
+  // needs to be fixed !!
   const createNewChat = () => {
     if (newChatName && newChatParticipants) {
       const newChat: TeamChat = {
@@ -120,9 +195,10 @@ const GYBTeamChat: React.FC = () => {
               onClick={() => setSelectedChat(chat.id)}
             >
               <h3 className="font-semibold">{chat.name}</h3>
-              <p className="text-sm text-gray-600 truncate">
-                {chat.participants.join(', ')}
+              {/*<p className="text-sm text-gray-600 truncate">
+                {chat.participants?.join(', ') || 'No participants'}
               </p>
+              */}
             </div>
           ))}
         </div>

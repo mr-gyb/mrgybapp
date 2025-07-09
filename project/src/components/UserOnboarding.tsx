@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Apple, Mail, Phone, ChevronDown, ArrowLeft } from 'lucide-react';
+import { Apple, Mail, Phone, ChevronDown, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -32,7 +32,11 @@ const UserOnboarding: React.FC = () => {
       setError('Please enter your first and last name');
       return;
     }
-    if (step === 2) {
+    if (step === 2 && ! notificationsEnabled){
+      setError('Please enable notifications');
+      return;
+    }
+    if (step === 4) {
       handleFinish();
       return;
     }
@@ -137,25 +141,6 @@ const UserOnboarding: React.FC = () => {
         )}
         {step === 2 && (
           <>
-            <h2 className="text-2xl font-bold mb-4 dark:text-black">Enable notifications</h2>
-            <div className="flex items-center justify-between dark:text-black">
-              <span>Receive notifications</span>
-              <label className="relative inline-block w-14 h-7">
-                <input
-                  type="checkbox"
-                  checked={notificationsEnabled}
-                  onChange={(e) => setNotificationsEnabled(e.target.checked)}
-                  className="opacity-0 w-0 h-0"
-                />
-                <span className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 rounded-full transition-colors duration-300 ${notificationsEnabled ? 'bg-navy-blue' : 'bg-gray-300'}`}>
-                  <span className={`absolute h-5 w-5 left-1 bottom-1 bg-white rounded-full transition-transform duration-300 ${notificationsEnabled ? 'transform translate-x-7' : ''}`}></span>
-                </span>
-              </label>
-            </div>
-          </>
-        )}
-        {step === 3 && (
-          <>
             <h2 className="text-2xl font-bold mb-4">Select your country</h2>
             <div className="relative">
               <select
@@ -177,6 +162,36 @@ const UserOnboarding: React.FC = () => {
             </div>
           </>
         )}
+
+        {step === 3 && (
+          <>
+            <h2 className="text-2xl font-bold mb-4 dark:text-black">Enable notifications</h2>
+            <div className="flex items-center justify-between dark:text-black">
+              <span>Receive notifications</span>
+              <label className="relative inline-block w-14 h-7">
+                <input
+                  type="checkbox"
+                  checked={notificationsEnabled}
+                  onChange={(e) => setNotificationsEnabled(e.target.checked)}
+                  className="opacity-0 w-0 h-0"
+                />
+                <span className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 rounded-full transition-colors duration-300 ${notificationsEnabled ? 'bg-navy-blue' : 'bg-gray-300'}`}>
+                  <span className={`absolute h-5 w-5 left-1 bottom-1 bg-white rounded-full transition-transform duration-300 ${notificationsEnabled ? 'transform translate-x-7' : ''}`}></span>
+                </span>
+              </label>
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <div className="flex flex-col items-center justify-center space-y-4 dark:text-black animate-fade-in">
+              <CheckCircle className="w-16 h-16 text-green-500 animate-bounce" />
+              <span className="text-center">Your account has been created successfully and is ready to use! 🎉</span>
+            </div>
+          </>
+        )}
+
         {error && <p className="text-red-500 mt-2">{error}</p>}
         <button
           onClick={handleContinue}
