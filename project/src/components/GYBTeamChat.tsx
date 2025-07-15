@@ -3,7 +3,7 @@ import { ChevronLeft, Search, Paperclip, Mic, Send, Camera, Image as ImageIcon, 
 import { Link, useNavigate } from 'react-router-dom';
 
 // For Firebase logic
-import { collection, addDoc, serverTimestamp, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { arrayRemove, collection, addDoc, arrayUnion, serverTimestamp, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 interface ChatMessage {
   id: string;
   sender: string;
+  senderId: string;
   content: string;
   timestamp: string;
   isAI?: boolean;
@@ -21,6 +22,16 @@ interface TeamChat {
   name: string;
   participants: string[];
   messages: ChatMessage[];
+  teamMembers : string[];
+}
+
+interface ChatInvitation {
+  id: string;
+  chatId: string;
+  invitedUid: string;
+  invitedEmail: string;
+  invitedBy: string;
+  createdAt: any; // Firebase Timestamp (or Timestamp if imported)
 }
 
 const GYBTeamChat: React.FC = () => {
@@ -32,38 +43,15 @@ const GYBTeamChat: React.FC = () => {
   const [newChatName, setNewChatName] = useState('');
   const [newChatParticipants, setNewChatParticipants] = useState('');
   const messageEndRef = useRef<HTMLDivElement>(null);
+  //for invitations
+  const [invitations, setInvitations] = useState<ChatInvitation[]>([]);
   const navigate = useNavigate();
-
-    // Getting the existing chat
-    useEffect(() => {
-      if (!user) return;
-    
-      // quering the dream_team_chat collection team members
-      // so that q have a information of participants
-      const q = query(
-        collection(db, 'dream_team_chat'),
-        where('teamMembers', 'array-contains', user.uid)
-      );
-    
-      // based on the q that queried from the above function
-      // doc.data() => the field that inside the corresponding id
-      // ...doc.data() list the data of the docs
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const rooms = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...(doc.data() as Omit<TeamChat, 'id' >),
-          messages: [],
-        }));
-    
-        setTeamChats(rooms); // 전체 채팅방 목록 업데이트
-
-      });
-    
-      return () => unsubscribe();
-    }, [user]);
-
+  const [chatParticipants, setChatParticipants] = useState<{ [chatId: string]: string[] }>({});
+  // For storing the previous messages.
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
   // Getting the existing message based on the chat 
+  // For right side of the dream_team ( Messages lists )
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
@@ -77,27 +65,130 @@ const GYBTeamChat: React.FC = () => {
 
     // Register the snapshot for that chat
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadedMessages: ChatMessage[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...(doc.data() as Omit<ChatMessage, 'id'>)
-      })) 
-
-      // Adding the firebase messages into the empty message[] 
-    setTeamChats(prevChats => 
-      prevChats.map(chat => 
-        chat.id === selectedChat
-          ? { ...chat, messages: loadedMessages }
-          : chat
-      )
-    );
-    setMessage('');  
-  });
+      // Should get a name from profile field 
+      // So use asnyc function.
+      // For get the sender name from the Profile field and 
+      // stores it into the sender(string) inthe ChatMessage[] interface.
+      const fetchMessagesWithSender = async () => {
+        const loadedMessages: ChatMessage[] = await Promise.all(
+          snapshot.docs.map(async (mdoc) => {
+            const data = mdoc.data() as Omit<ChatMessage, 'id' | 'sender'>;
+            let senderName = 'Unknown';
   
-  return () => unsubscribe();
+            if (data.senderId === 'ai') {
+              senderName = 'GYB AI';
+            } else if (data.senderId) {
+              const profileSnap = await getDoc(doc(db, 'profiles', data.senderId));
+              if (profileSnap.exists()) {
+                senderName = profileSnap.data().name || 'No Name';
+              }
+            }
+  
+            return {
+              id: mdoc.id,
+              sender: senderName,
+              ...data,
+            };
+          })
+        );
+        setChatMessages(loadedMessages);
+        setMessage('');
+      };
+  
+      // execute fetchMessagewith Sender()
+      fetchMessagesWithSender();
+    });
+  
+    return () => unsubscribe();
+  }, [selectedChat]);
 
-  }, [selectedChat, user]);
+  // Getting the existing chat
+  // For left side of the dream_team ( Chat room lists )
+  useEffect(() => {
+      if (!user) return;
 
-  const handleSendMessage = () => {
+      // quering the dream_team_chat collection team members
+      // so that q have a information of participants
+      const q = query(
+        collection(db, 'dream_team_chat'),
+        where('teamMembers', 'array-contains', user.uid)
+      );
+    
+      // based on the q that queried from the above function
+      // doc.data() => the field that inside the corresponding id
+      // ...doc.data() list the data of the docs
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const rooms = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...(doc.data() as Omit<TeamChat, 'id' | 'messages'  >),
+          messages: teamChats.find(c => c.id === doc.id)?.messages || [],
+        }));
+    
+        setTeamChats(rooms); // update the all the rooms in the list
+      });
+    
+      return () => unsubscribe();
+  }, [user ,selectedChat]);
+
+
+
+  // if User got invitation by some user
+  // For Sending invitation create a chat invitation field in firebase database
+  useEffect(() => {
+    if(!user?.uid) return;
+
+    const q = query(
+      collection(db, 'chat_invitations'),
+      where('invitedUid', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const invites = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...(doc.data() as Omit<ChatInvitation, 'id'>)
+      }));
+      setInvitations(invites); // for UI state
+    });
+
+
+  })
+
+  //  Fetch Participants of the chat room and stores the participants to ChatParticipants state.
+  // Show participants below the chatroom title.
+  useEffect(() => {
+    const fetchParticipants = async () => {
+      const participantsMap: { [chatId: string]: string[] } = {};
+      // console.log("ParticipantsMap", participantsMap);
+
+      for (const chat of teamChats) {
+        // By doing promise.all, ensure that all the data is accessed and stores to the names type
+        const names: string[] = await Promise.all(
+          // getting all the uid in the selected chat
+          (chat.teamMembers || []).map(async (uid) => {
+            // Getting the user in the profile field by selected uid.
+            const profileRef = doc(db, 'profiles', uid);
+            const profileSnap = await getDoc(profileRef);
+            if (profileSnap.exists()) {
+              // returning the name in the profile field.
+              return profileSnap.data().name || 'NO NAME';
+            }
+            return 'NO NAME';
+          })
+        );
+        participantsMap[chat.id] = names;
+      }
+
+      setChatParticipants(participantsMap);
+    };
+
+    if (teamChats.length > 0) {
+      fetchParticipants();
+    }
+  }, [teamChats]);
+
+  // Handling message send, stores to the firebase in the dream_team chat field
+  // Goes to subdomain "Message " field 
+  const handleSendMessage = async () => {
     /*
     if (message.trim() && selectedChat) {
       const newMessage: ChatMessage = {
@@ -119,6 +210,22 @@ const GYBTeamChat: React.FC = () => {
 
     if (message.trim() && selectedChat){
       try{
+        // trim a message to get the email
+        const trimmed = message.trim();
+
+        // if user input starts with invitation
+        if(trimmed.startsWith('/invite')){
+          const parts = trimmed.split(' ');
+          if (parts.length < 2){
+            alert("Provide valid email");
+            return;
+          }
+          const email = parts[1];
+          await inviteUserByEmail(email, selectedChat);
+          setMessage('')
+          return;
+        }
+
         addDoc(
           collection(db, `dream_team_chat/${selectedChat}/messages`),
           {
@@ -135,13 +242,76 @@ const GYBTeamChat: React.FC = () => {
     }
   };
 
+  // inviting user through valid email
+  // Getting the user information via email in profile field and 
+  // create chat_invitation field also add the inviting user to the teamMembers field.
+  const inviteUserByEmail = async(email: string, chatId: string) => {
+    const q = query(collection(db, 'profiles'), where('email', '==', email));
+    const snapshot = await getDocs(q)
+    console.log('inviting!!!');
+
+    if (snapshot.empty){
+      alert('NOT OUR USER');
+      return;
+    }
+
+    const invitedUserDoc = snapshot.docs[0];
+    const invitedUid = invitedUserDoc.id;
+
+    await addDoc(collection(db, 'chat_invitations'), {
+      chatId,
+      invitedUid,
+      invitedEmail: email,
+      invitedBy: user?.uid,
+      createdAt: serverTimestamp()
+    });
+
+    // Add to the participants
+    const chatRef = doc(db, 'dream_team_chat', chatId);
+    await updateDoc(chatRef, {
+      teamMembers: arrayUnion(invitedUid)
+    });
+
+
+    setMessage('');
+    //alert('user invited')
+  }
+
+
+  // Handling when user accept the invitation
+  // Delete the chat_invitation data in the chat_invitations field.
+  const handleAccept = async (invite:any) => {
+  
+    // 2. delete invitation 
+    await deleteDoc(doc(db, 'chat_invitations', invite.id));
+  };
+  
+  // Handling decline the invitation
+  // delete the chat_invitaion and should delete this person from the teamMembers.
+  const handleDecline = async (invite: any) => {
+    // find the inviteId
+    const invites = invitations.find(inv => inv.id === invite.id);
+    await deleteDoc(doc(db, 'chat_invitations', invite.id));
+    // If the inviteId is same as declined room then remove it
+    if (invite && selectedChat === invite.chatId) {
+      setSelectedChat(null);
+    }
+
+    const chatRef = doc(db, 'dream_team_chat', invite.chatId);
+    await updateDoc(chatRef, {
+      teamMembers: arrayRemove(invite.invitedUid)
+    });
+
+  };
+
+  // if user press the send button
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       handleSendMessage();
     }
   };
 
-  // needs to be fixed !!
+  /*// needs to be fixed !!
   const createNewChat = () => {
     if (newChatName && newChatParticipants) {
       const newChat: TeamChat = {
@@ -155,7 +325,7 @@ const GYBTeamChat: React.FC = () => {
       setNewChatParticipants('');
       setShowNewChatModal(false);
     }
-  };
+  };*/
 
   return (
     <div className="bg-white min-h-screen text-navy-blue flex flex-col">
@@ -188,19 +358,45 @@ const GYBTeamChat: React.FC = () => {
               <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
             </div>
           </div>
-          {teamChats.map((chat) => (
-            <div
-              key={chat.id}
-              className={`p-4 hover:bg-gray-100 cursor-pointer ${selectedChat === chat.id ? 'bg-gray-100' : ''}`}
-              onClick={() => setSelectedChat(chat.id)}
-            >
-              <h3 className="font-semibold">{chat.name}</h3>
-              {/*<p className="text-sm text-gray-600 truncate">
-                {chat.participants?.join(', ') || 'No participants'}
-              </p>
-              */}
-            </div>
-          ))}
+          {teamChats.map((chat) => {
+            if (!user) {return null;}
+
+            const invite = invitations.find(inv => inv.chatId === chat.id);
+            
+            const q = query(
+              collection(db, 'dream_team_chat'),
+              where('teamMembers', 'array-contains', user.uid)
+            );
+          
+            if (!q && !invite) {return null};
+
+            return (
+              <div
+                key={chat.id}
+                className={`p-4 hover:bg-gray-100 cursor-pointer ${selectedChat === chat.id ? 'bg-gray-100' : ''}`}
+                onClick={() => setSelectedChat(chat.id)}
+              >
+                <h3 className="font-semibold">{chat.name}</h3>
+                {/* button for accept/decline */}
+                {invite && (
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      className="px-2 py-1 bg-green-500 text-white rounded"
+                      onClick={e => { e.stopPropagation(); handleAccept(invite); }}
+                    >
+                      accept
+                    </button>
+                    <button
+                      className="px-2 py-1 bg-red-500 text-white rounded"
+                      onClick={e => { e.stopPropagation(); handleDecline(invite); }}
+                    >
+                      decline
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Right chat area */}
@@ -211,19 +407,24 @@ const GYBTeamChat: React.FC = () => {
                 <h2 className="text-xl font-semibold">
                   {teamChats.find((chat) => chat.id === selectedChat)?.name}
                 </h2>
+                <div className="text-sm text-gray-500 mt-1">
+                  Participants : {chatParticipants[selectedChat]?.join(', ') || ''}
+                </div>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {teamChats.find((chat) => chat.id === selectedChat)?.messages.map((msg) => (
+                {chatMessages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex ${msg.sender === 'You' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex flex-col ${msg.senderId === user?.uid ? 'items-end' : 'items-start'}`}
                   >
+                  <p className="text-sm mb-1">{msg.sender}</p>
                     <div
                       className={`max-w-xs rounded-lg p-3 ${
-                        msg.isAI ? 'bg-gold text-navy-blue' : 'bg-navy-blue text-white'
+                        msg.senderId === user?.uid || msg.isAI
+                        ? 'bg-gold text-navy-blue' 
+                        : 'bg-navy-blue text-white'
                       }`}
                     >
-                      <p className="font-semibold mb-1">{msg.sender}</p>
                       <p>{msg.content}</p>
                       <span className="text-xs opacity-75 mt-1 block">
                         {new Date(msg.timestamp).toLocaleString()}
@@ -302,7 +503,7 @@ const GYBTeamChat: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={createNewChat}
+                
                 className="px-4 py-2 bg-navy-blue text-white rounded hover:bg-opacity-90"
               >
                 Create
