@@ -131,7 +131,6 @@ const GYBTeamChat: React.FC = () => {
   }, [user ,selectedChat]);
 
 
-
   // if User got invitation by some user
   // For Sending invitation create a chat invitation field in firebase database
   useEffect(() => {
@@ -311,21 +310,37 @@ const GYBTeamChat: React.FC = () => {
     }
   };
 
-  /*// needs to be fixed !!
-  const createNewChat = () => {
-    if (newChatName && newChatParticipants) {
-      const newChat: TeamChat = {
-        id: Date.now().toString(),
+  // Creating a new chat with new member
+  const createNewChat = async () => {
+    // if user have a newChatName in the input
+    if (newChatName) {
+
+      const chatRef = await addDoc(collection(db, 'dream_team_chat'), {
         name: newChatName,
-        participants: newChatParticipants.split(',').map(p => p.trim()),
-        messages: []
-      };
-      setTeamChats(prevChats => [...prevChats, newChat]);
+        teamMembers: [user?.uid], // 또는 []
+      });
+
+      // get the email from the user input
+      const emails = newChatParticipants
+      .split(',')
+      .map(email => email.trim())
+      .filter(email => email.length > 0);
+
+      // invitation
+      for (const email of emails){
+        await inviteUserByEmail(email, chatRef.id);
+      }
+
+      // The newChat is added by the snapshot on the top useEffect function 
+      // so we don't need to manually add the new chat
+      // setTeamChats(prevchats => [...prevchats, newChat]);
+
+      // reset input
       setNewChatName('');
       setNewChatParticipants('');
       setShowNewChatModal(false);
     }
-  };*/
+  };
 
   return (
     <div className="bg-white min-h-screen text-navy-blue flex flex-col">
@@ -492,7 +507,7 @@ const GYBTeamChat: React.FC = () => {
               type="text"
               value={newChatParticipants}
               onChange={(e) => setNewChatParticipants(e.target.value)}
-              placeholder="Participants (comma-separated)"
+              placeholder="Enter the email of team members (comma-separated)"
               className="w-full mb-4 p-2 border rounded"
             />
             <div className="flex justify-end">
@@ -503,7 +518,7 @@ const GYBTeamChat: React.FC = () => {
                 Cancel
               </button>
               <button
-                
+                onClick = {createNewChat}
                 className="px-4 py-2 bg-navy-blue text-white rounded hover:bg-opacity-90"
               >
                 Create
