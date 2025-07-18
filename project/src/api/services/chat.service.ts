@@ -13,6 +13,7 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true,
 });
 
+// Record<string, string> is the type where both key and values are strings.
 const getAssistantId = (aiAgent: string): string => {
   const assistantIds: Record<string, string> = {
     'Mr.GYB AI': 'asst_5FUXkLddYzdcjHPCsmfV9x3F',
@@ -23,7 +24,7 @@ const getAssistantId = (aiAgent: string): string => {
     'CMO' : 'asst_U5JvdzL03Gii91NPzg74XSgi'
   };
 
-  return assistantIds[aiAgent] || 'asst_defaultFallbackID'; // fallback ID 설정
+  return assistantIds[aiAgent] || 'asst_defaultFallbackID'; 
 };
 
 
