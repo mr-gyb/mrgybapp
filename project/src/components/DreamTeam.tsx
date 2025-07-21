@@ -20,7 +20,7 @@ const DreamTeam: React.FC = () => {
     {
       id: 'mrgyb',
       title: 'Mr.GYB AI',
-      image: 'https://drive.google.com/uc?export=view&id=1H1PYdJ4qNz8a2R6WaxaYw22awKagmEy9',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58',
       specializations: [
         'ALL-IN-ONE BUSINESS GROWTH ASSISTANT',
         'DIGITAL MARKETING',
@@ -32,7 +32,7 @@ const DreamTeam: React.FC = () => {
     {
       id: 'ceo',
       title: 'CEO',
-      image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCEO.png?alt=media&token=62f3fe9f-0b51-4501-becd-c9bf88d7bf0e',
       specializations: [
         'STRATEGIC PLANNING',
         'BUSINESS DEVELOPMENT',
@@ -44,7 +44,7 @@ const DreamTeam: React.FC = () => {
     {
       id: 'coo',
       title: 'COO',
-      image: 'https://images.unsplash.com/photo-1573497491765-dccce02b29df?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCOO.png?alt=media&token=d57a97eb-83f5-4e0d-903e-278dc2a4d9af',
       specializations: [
         'OPERATIONS MANAGEMENT',
         'PROCESS OPTIMIZATION',
@@ -56,7 +56,7 @@ const DreamTeam: React.FC = () => {
     {
       id: 'chro',
       title: 'CHRO',
-      image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCHRO.png?alt=media&token=862bbf8c-373b-4996-89fe-8d867f378d9f',
       specializations: [
         'HUMAN RESOURCES MANAGEMENT',
         'TALENT ACQUISITION',
@@ -68,7 +68,7 @@ const DreamTeam: React.FC = () => {
     {
       id: 'cto',
       title: 'CTO',
-      image: 'https://images.unsplash.com/photo-1573496799652-408c2ac9fe98?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCTO.png?alt=media&token=e856c7b0-440d-4776-ba3b-8eb0bb89165d',
       specializations: [
         'TECHNOLOGY STRATEGY',
         'INNOVATION MANAGEMENT',
@@ -80,7 +80,7 @@ const DreamTeam: React.FC = () => {
     {
       id: 'cmo',
       title: 'CMO',
-      image: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCMO.png?alt=media&token=4e9ddaee-c4b0-4b4d-aca8-6c4196a5dd1b',
       specializations: [
         'MARKETING STRATEGY',
         'BRAND MANAGEMENT',
@@ -96,7 +96,7 @@ const DreamTeam: React.FC = () => {
   };
 
   const handleStartChat = (memberTitle: string) => {
-    navigate(`/new-chat`, { state: { selectedAgent: memberTitle, chatId: newChatId } });
+    navigate(`/chat/chatId`, { state: { selectedAgent: memberTitle, chatId: newChatId } });
   };
 
   const handleSendMessage = () => {
@@ -120,8 +120,8 @@ const DreamTeam: React.FC = () => {
     <div className="bg-white min-h-screen text-navy-blue">
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center mb-6">
-          <Link to="/new-chat" className="mr-4 text-navy-blue">
-            <ChevronLeft size={24} />
+          <Link to={`/chat/${currentChatId}`} className="mr-4 text-navy-blue">
+            <ChevronLeft size={24} /> 
           </Link>
           <h1 className="text-3xl font-bold text-navy-blue">GYB AI Team Members</h1>
         </div>

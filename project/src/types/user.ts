@@ -43,7 +43,7 @@ export const AI_USERS: Record<string, UserProfile> = {
     rating: 5.0,
     following: 1000000,
     followers: 5000000,
-    profile_image_url: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FChris%20real.jpg?alt=media&token=f71aa569-3cf4-41c0-af3d-cd4693126a64',
+    profile_image_url: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58',
     cover_image_url: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',

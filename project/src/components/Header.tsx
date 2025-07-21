@@ -5,6 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import SideMenu from './SideMenu';
 import { getProfile } from '../lib/firebase/profile';
 import { UserProfile } from '../types/user';
+import { useChat } from '../contexts/ChatContext';
 
 interface HeaderProps {
   getPageTitle: (pathname: string) => string;
@@ -18,6 +19,7 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
   const { isDarkMode } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentChatId } = useChat();
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -46,7 +48,7 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
   }, [user]);
 
   const handleLogoClick = () => {
-    navigate('/new-chat', { state: { selectedAgent: 'Mr.GYB AI' } });
+    navigate(`/chat/${currentChatId}`, { state: { selectedAgent: 'Mr.GYB AI' } });
   };
 
   const handleTitleClick = () => {

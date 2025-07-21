@@ -36,7 +36,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { OpenAIMessage } from "../types/chat";
 import { generateAIResponse } from "../api/services";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { useChat } from '../contexts/ChatContext';
 
 interface ChatMessage {
   id: string;
@@ -87,6 +87,8 @@ const GYBTeamChat: React.FC = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   // For showing the instruction (how to use)
   const [showInsturction, setshowInstruction] = useState(false);
+  // Getting the currentChatId
+  const { currentChatId } = useChat();
 
   // Getting the existing message based on the chat
   // For right side of the dream_team ( Messages lists )
@@ -465,7 +467,7 @@ const GYBTeamChat: React.FC = () => {
     <div className="bg-white min-h-screen text-navy-blue flex flex-col">
       <div className="bg-navy-blue text-white py-4 px-6 flex items-center justify-between">
         <div className="flex items-center">
-          <Link to="/new-chat" className="mr-4 text-white">
+          <Link to={`/chat/${currentChatId}`} className="mr-4 text-white">
             <ChevronLeft size={24} />
           </Link>
           <h1 className="text-2xl font-bold">GYB Team Chat</h1>
