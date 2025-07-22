@@ -726,7 +726,7 @@ const GYBTeamChat: React.FC = () => {
       {/* New Instruction model */}
       {showInsturction && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-lg relative">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-lg relative mt-[-40px]">
             <h2 className="text-xl font-bold mb-4">❓ How to Use</h2>
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 mr-2 mt-3 text-xl"
@@ -759,13 +759,44 @@ const GYBTeamChat: React.FC = () => {
             <p className="text-sm text-gray-600 mb-2">
               Replace <code>[aiAgent]</code> with one of our aiAgent actual name.
             </p>
-            <li>Mr.GYB</li>
-            <li>CEO</li>
-            <li>CTO</li>
-            <li>CHRO</li>
-            <li>CMO</li>
-            <li>COO</li>
-            <p className="text-sm text-gray-600 mb-4">
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">Mr.GYB</span>
+              <p className="text-sm text-gray-600">All-In-One Business Growth Assistant</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">CEO</span>
+              <p className="text-sm text-gray-600">Strategic Planning Assistant</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">CTO</span>
+              <p className="text-sm text-gray-600">Technology Strategy Assistant</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">CHRO</span>
+              <p className="text-sm text-gray-600">Human Resources Management Assistant</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">CMO</span>
+              <p className="text-sm text-gray-600">Marketing Strategy Assistant</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">COO</span>
+              <p className="text-sm text-gray-600">Operations Management Assistant</p>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-4 mt-2">
               ex. @CEO How can I grow my business?
             </p>
             <h3 className="text-md font-semibold mb-2">3. Leave the room</h3>
