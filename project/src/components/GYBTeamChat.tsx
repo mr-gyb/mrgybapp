@@ -89,6 +89,9 @@ const GYBTeamChat: React.FC = () => {
   const [showInsturction, setshowInstruction] = useState(false);
   // Getting the currentChatId
   const { currentChatId } = useChat();
+  // for the processing message
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingAiAgnet, setIsProcessingAiAgent] = useState('');
 
   // Getting the existing message based on the chat
   // For right side of the dream_team ( Messages lists )
@@ -227,6 +230,7 @@ const GYBTeamChat: React.FC = () => {
   // Handling message send, stores to the firebase in the dream_team chat field
   // Goes to subdomain "Message " field
   const handleSendMessage = async () => {
+    setIsProcessing(true);
     if (message.trim() && selectedChat) {
       try {
         // trim a message to get the email
@@ -238,6 +242,9 @@ const GYBTeamChat: React.FC = () => {
           const parts = trimmed.trim().split(" ");
           const aiAgent = parts[0].substring(1).toLowerCase(); // removing @ with aiagnetName
           const question = parts.slice(1).join(" ");
+
+          // for UI updates
+          setIsProcessingAiAgent(aiAgent);
 
           // if it is not a vaild question
           if (!question) {
@@ -278,7 +285,13 @@ const GYBTeamChat: React.FC = () => {
                 content: data.content,
               };
             });
-            const upperaiAgent = aiAgent.toUpperCase();
+            let upperaiAgent = ''
+            if(aiAgent === "mr.gyb"){
+              upperaiAgent = "Mr.GYB AI"
+            } else{
+              upperaiAgent = aiAgent.toUpperCase();
+            }
+             
             // 3.generate AI response
             const aiResponse = await generateAIResponse(
               [...chatHistory, { content: question }],
@@ -296,7 +309,8 @@ const GYBTeamChat: React.FC = () => {
                 timestamp: new Date().toISOString(),
               }
             );
-
+            setIsProcessing(false);
+            setIsProcessingAiAgent('');
             setMessage(""); //reset the text input area
           } catch (err) {
             console.error("Fail to generate AI reponse", err);
@@ -594,6 +608,15 @@ const GYBTeamChat: React.FC = () => {
                     </div>
                   </div>
                 ))}
+                {isProcessing && (
+                <div className="flex justify-start">
+                  <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
+                    <p className="text-sm sm:text-base italic">
+                      {`${processingAiAgnet} AI is thinking...`}
+                    </p>
+                  </div>
+                </div>
+              )}
                 <div ref={messageEndRef} />
               </div>
               <div className="p-4 border-t border-gray-200">

@@ -412,7 +412,7 @@ const Chat: React.FC = () => {
               {isProcessingAI && (
                 <div className="flex justify-start">
                   <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
-                    <p className="text-sm sm:text-base italic">GYBAI is thinking...</p>
+                    <p className="text-sm sm:text-base italic">AI is thinking...</p>
                   </div>
                 </div>
               )}
