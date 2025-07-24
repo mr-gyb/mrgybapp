@@ -34,9 +34,10 @@ import { db } from "../lib/firebase";
 
 import { useAuth } from "../contexts/AuthContext";
 import { OpenAIMessage } from "../types/chat";
+import { AI_USERS } from "../types/user";
 import { generateAIResponse } from "../api/services";
 import ReactMarkdown from "react-markdown";
-import { useChat } from '../contexts/ChatContext';
+import { useChat } from "../contexts/ChatContext";
 
 interface ChatMessage {
   id: string;
@@ -46,6 +47,7 @@ interface ChatMessage {
   timestamp: string;
   isAI?: boolean;
   aiAgent?: string;
+  profileImage?: string;
 }
 
 interface TeamChat {
@@ -69,7 +71,7 @@ const GYBTeamChat: React.FC = () => {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [teamChats, setTeamChats] = useState<TeamChat[]>([]);
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatName, setNewChatName] = useState("");
   // team member when user create a new chat. list of string type
@@ -83,6 +85,10 @@ const GYBTeamChat: React.FC = () => {
   const [chatParticipants, setChatParticipants] = useState<{
     [chatId: string]: string[];
   }>({});
+  // For storing participants profile image
+  const [profileImage, setProfileImage] = useState<{ [uid: string]: string }>(
+    {}
+  );
   // For storing the previous messages.
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   // For showing the instruction (how to use)
@@ -91,7 +97,7 @@ const GYBTeamChat: React.FC = () => {
   const { currentChatId } = useChat();
   // for the processing message
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingAiAgnet, setIsProcessingAiAgent] = useState('');
+  const [processingAiAgnet, setIsProcessingAiAgent] = useState("");
 
   // Getting the existing message based on the chat
   // For right side of the dream_team ( Messages lists )
@@ -117,21 +123,36 @@ const GYBTeamChat: React.FC = () => {
           snapshot.docs.map(async (mdoc) => {
             const data = mdoc.data() as Omit<ChatMessage, "id" | "sender">;
             let senderName = "Unknown";
+            let profileImage =
+              "https://cdn-icons-png.flaticon.com/512/63/63699.png";
 
             if (data.senderId === "ai") {
               senderName = data.aiAgent?.toUpperCase() || "KEVIN";
+              // To retrieve the AI agent profile image set the proper name
+              let agentKey = data.aiAgent?.toLowerCase() + "-ai";
+              if (agentKey === "mr.gyb ai-ai") {
+                agentKey = "mr-gyb-ai";
+              }
+              console.log(agentKey);
+              profileImage =
+                AI_USERS[agentKey]?.profile_image_url ||
+                "https://cdn-icons-png.flaticon.com/512/63/63699.png";
+              console.log(profileImage);
             } else if (data.senderId) {
               const profileSnap = await getDoc(
                 doc(db, "profiles", data.senderId)
               );
               if (profileSnap.exists()) {
                 senderName = profileSnap.data().name || "No Name";
+                profileImage =
+                  profileSnap.data().profile_image_url || profileImage;
               }
             }
 
             return {
               id: mdoc.id,
               sender: senderName,
+              profileImage,
               ...data,
             };
           })
@@ -285,13 +306,13 @@ const GYBTeamChat: React.FC = () => {
                 content: data.content,
               };
             });
-            let upperaiAgent = ''
-            if(aiAgent === "mr.gyb"){
-              upperaiAgent = "Mr.GYB AI"
-            } else{
+            let upperaiAgent = "";
+            if (aiAgent === "mr.gyb") {
+              upperaiAgent = "Mr.GYB AI";
+            } else {
               upperaiAgent = aiAgent.toUpperCase();
             }
-             
+
             // 3.generate AI response
             const aiResponse = await generateAIResponse(
               [...chatHistory, { content: question }],
@@ -310,7 +331,7 @@ const GYBTeamChat: React.FC = () => {
               }
             );
             setIsProcessing(false);
-            setIsProcessingAiAgent('');
+            setIsProcessingAiAgent("");
             setMessage(""); //reset the text input area
           } catch (err) {
             console.error("Fail to generate AI reponse", err);
@@ -578,10 +599,11 @@ const GYBTeamChat: React.FC = () => {
                     {chatParticipants[selectedChat]?.join(", ") || ""}
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setshowInstruction(true)}
-                  className="bg-red-300 text-white px-3 py-1 rounded-full text-sm hover:underline">
-                ❓How To Use
+                  className="bg-red-300 text-white px-3 py-1 rounded-full text-sm hover:underline"
+                >
+                  ❓How To Use
                 </button>
               </div>
 
@@ -589,34 +611,64 @@ const GYBTeamChat: React.FC = () => {
                 {chatMessages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex flex-col ${
-                      msg.senderId === user?.uid ? "items-end" : "items-start"
+                    className={`flex items-start space-x-2 ${
+                      msg.senderId === user?.uid
+                        ? "justify-end"
+                        : "justify-start"
                     }`}
                   >
-                    <p className="text-sm mb-1">{msg.sender}</p>
-                    <div
-                      className={`max-w-xs rounded-lg p-3 ${
-                        msg.senderId === user?.uid || msg.isAI
-                          ? "bg-gold text-navy-blue"
-                          : "bg-navy-blue text-white"
+                    {!(msg.senderId === user?.uid || msg.isAI) && (
+                      <img
+                        src={
+                          msg.profileImage ||
+                          "https://cdn-icons-png.flaticon.com/512/63/63699.png"
+                        }
+                        alt="Profile"
+                        className="w-8 h-8 rounded-full flex-shrink-0"
+                      />
+                    )}
+                    <div className = {`${
+                      msg.senderId === user?.uid
+                        ? "flex flex-col items-end"
+                        : "flex flex-col items-start"
                       }`}
                     >
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      <span className="text-xs opacity-75 mt-1 block">
-                        {new Date(msg.timestamp).toLocaleString()}
-                      </span>
+                      <p className="text-sm mb-1">{msg.sender}</p>
+                      <div
+                        className={`max-w-xs rounded-lg p-3 ${
+                          msg.senderId === user?.uid || msg.isAI
+                            ? "bg-gold text-navy-blue"
+                            : "bg-navy-blue text-white"
+                        }`}
+                      >
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <span className="text-xs opacity-75 mt-1 block">
+                          {new Date(msg.timestamp).toLocaleString()}
+                        </span>
+                      </div>
                     </div>
+                    {(msg.senderId === user?.uid || msg.isAI) && (
+                      <img
+                        src={
+                          userData?.profile_image_url ||
+                          "https://cdn-icons-png.flaticon.com/512/63/63699.png"
+                        }
+                        alt="Profile"
+                        className="w-8 h-8 rounded-full flex-shrink-0"
+                      />
+                    )}
                   </div>
                 ))}
+
                 {isProcessing && (
-                <div className="flex justify-start">
-                  <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
-                    <p className="text-sm sm:text-base italic">
-                      {`${processingAiAgnet} AI is thinking...`}
-                    </p>
+                  <div className="flex justify-start">
+                    <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
+                      <p className="text-sm sm:text-base italic">
+                        {`${processingAiAgnet} AI is thinking...`}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
                 <div ref={messageEndRef} />
               </div>
               <div className="p-4 border-t border-gray-200">
@@ -732,9 +784,11 @@ const GYBTeamChat: React.FC = () => {
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 mr-2 mt-3 text-xl"
               onClick={() => setshowInstruction(false)}
             >
-             ❌
+              ❌
             </button>
-            <h3 className="text-md font-semibold mb-2">1. Invitation Process</h3>
+            <h3 className="text-md font-semibold mb-2">
+              1. Invitation Process
+            </h3>
             <p className="mb-2">
               If you want to invite a team member, type the following command:
             </p>
@@ -747,53 +801,68 @@ const GYBTeamChat: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4">
               ex. /invite test@gmail.com
             </p>
-            
 
-            <h3 className="text-md font-semibold mb-2">2. Talk with AI agent</h3>
+            <h3 className="text-md font-semibold mb-2">
+              2. Talk with AI agent
+            </h3>
             <p className="mb-2">
-              If you want to discuss or have a question to ai Agent, type the following command:
+              If you want to discuss or have a question to ai Agent, type the
+              following command:
             </p>
             <pre className="bg-gray-100 text-sm text-black p-3 rounded-md overflow-x-auto mb-2">
               <code>@[aiAgent] [question]</code>
             </pre>
             <p className="text-sm text-gray-600 mb-2">
-              Replace <code>[aiAgent]</code> with one of our aiAgent actual name.
+              Replace <code>[aiAgent]</code> with one of our aiAgent actual
+              name.
             </p>
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
               <span className="text-m font-medium text-black">Mr.GYB</span>
-              <p className="text-sm text-gray-600">All-In-One Business Growth Assistant</p>
+              <p className="text-sm text-gray-600">
+                All-In-One Business Growth Assistant
+              </p>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
               <span className="text-m font-medium text-black">CEO</span>
-              <p className="text-sm text-gray-600">Strategic Planning Assistant</p>
+              <p className="text-sm text-gray-600">
+                Strategic Planning Assistant
+              </p>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
               <span className="text-m font-medium text-black">CTO</span>
-              <p className="text-sm text-gray-600">Technology Strategy Assistant</p>
+              <p className="text-sm text-gray-600">
+                Technology Strategy Assistant
+              </p>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
               <span className="text-m font-medium text-black">CHRO</span>
-              <p className="text-sm text-gray-600">Human Resources Management Assistant</p>
+              <p className="text-sm text-gray-600">
+                Human Resources Management Assistant
+              </p>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
               <span className="text-m font-medium text-black">CMO</span>
-              <p className="text-sm text-gray-600">Marketing Strategy Assistant</p>
+              <p className="text-sm text-gray-600">
+                Marketing Strategy Assistant
+              </p>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
               <span className="text-m font-medium text-black">COO</span>
-              <p className="text-sm text-gray-600">Operations Management Assistant</p>
+              <p className="text-sm text-gray-600">
+                Operations Management Assistant
+              </p>
             </div>
 
             <p className="text-sm text-gray-600 mb-4 mt-2">
