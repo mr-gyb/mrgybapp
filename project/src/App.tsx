@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { useLocation, BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { useTheme } from './contexts/ThemeContext';
 import Header from './components/Header';
 import BottomMenu from './components/BottomMenu';
@@ -89,76 +89,87 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <div className={`flex flex-col min-h-screen ${isDarkMode ? 'dark bg-navy-blue text-white' : 'bg-white text-navy-blue'}`}>
-        <Header getPageTitle={getPageTitle} />
-        <main className="flex-grow mt-16 mb-16">
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Commerce />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/onboarding" element={<UserOnboarding />} />
-
-            {/* App Routes */}
-            <Route path="/dashboard" element={<Commerce />} />
-            <Route path="/new-chat" element={<NewChat />} />
-            <Route path="/chat/:chatId" element={<Chat />} />
-            <Route path="/chat-history" element={<ChatHistory />} />
-            <Route path="/dream-team" element={<DreamTeam />} />
-            <Route path="/gyb-live-network" element={<GYBLiveNetwork />} />
-            <Route path="/user-profile/:userId" element={<UserProfile />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/gyb-team-chat" element={<GYBTeamChat />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/upload" element={<Upload />} />
-            <Route path="/new-post" element={<GYBMedia />} />
-            <Route path="/gyb-studio" element={<GYBStudio />} />
-            <Route path="/work-history" element={<WorkHistory />} />
-            <Route path="/invites" element={<Invites />} />
-            <Route path="/reviews" element={<Reviews />} />
-            <Route path="/rewards" element={<Rewards />} />
-            <Route path="/payments" element={<Payments />} />
-            <Route path="/earnings" element={<Earnings />} />
-            <Route path="/road-map" element={<RoadMap />} />
-            <Route path="/portfolio" element={<Portfolio />} />
-            <Route path="/resume" element={<Resume />} />
-            <Route path="/bookmarks" element={<BookmarksPage />} />
-            <Route path="/ai-video-avatar" element={<AIVideoAvatar />} />
-            <Route path="/group/create" element={<CreateGroup />} />
-            <Route path="/group/:groupId" element={<GroupProfile />} />
-
-            {/* Template Routes */}
-            <Route path="/templates/business-plan" element={<BusinessPlan />} />
-            <Route path="/templates/investor-deck" element={<InvestorDeck />} />
-            <Route path="/templates/market-analysis" element={<MarketAnalysis />} />
-            <Route path="/templates/marketing-sales" element={<MarketingSales />} />
-            <Route path="/templates/fulfilment-plan" element={<FulfilmentPlan />} />
-            <Route path="/templates/media-plan" element={<MediaPlan />} />
-
-            {/* Settings Routes */}
-            <Route path="/settings/email" element={<EmailSettings />} />
-            <Route path="/settings/subscription" element={<SubscriptionSettings />} />
-            <Route path="/settings/personalization" element={<PersonalizationSettings />} />
-            <Route path="/settings/data-controls" element={<DataControls />} />
-            <Route path="/settings/archived-chats" element={<ArchivedChats />} />
-            <Route path="/settings/language" element={<LanguageSettings />} />
-            <Route path="/settings/spelling" element={<SpellingSettings />} />
-            <Route path="/settings/updates" element={<UpdatesSettings />} />
-            <Route path="/settings/voice" element={<VoiceSettings />} />
-            <Route path="/settings/main-language" element={<MainLanguageSettings />} />
-            <Route path="/settings/integrations" element={<Integrations />} />
-            <Route path="/settings/help" element={<HelpCenter />} />
-            <Route path="/settings/terms" element={<TermsOfUse />} />
-            <Route path="/settings/privacy" element={<PrivacyPolicy />} />
-          </Routes>
-        </main>
-        <BottomMenu />
-      </div>
+      <InnerApp isDarkMode={isDarkMode} />
     </Router>
+  );
+};
+
+const InnerApp: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
+  const location = useLocation();
+
+  // To hide the bottom menu when it is in signin and signup Page
+  const hideBottomMenuRoutes = ['/login', '/signin', '/'];
+
+  return (
+    <div className={`flex flex-col min-h-screen ${isDarkMode ? 'dark bg-navy-blue text-white' : 'bg-white text-navy-blue'}`}>
+      <Header getPageTitle={getPageTitle} />
+      <main className="flex-grow mt-16 mb-16">
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Login />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/onboarding" element={<UserOnboarding />} />
+
+          {/* App Routes */}
+          <Route path="/dashboard" element={<Commerce />} />
+          <Route path="/new-chat" element={<NewChat />} />
+          <Route path="/chat/:chatId" element={<Chat />} />
+          <Route path="/chat-history" element={<ChatHistory />} />
+          <Route path="/dream-team" element={<DreamTeam />} />
+          <Route path="/gyb-live-network" element={<GYBLiveNetwork />} />
+          <Route path="/user-profile/:userId" element={<UserProfile />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/gyb-team-chat" element={<GYBTeamChat />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/new-post" element={<GYBMedia />} />
+          <Route path="/gyb-studio" element={<GYBStudio />} />
+          <Route path="/work-history" element={<WorkHistory />} />
+          <Route path="/invites" element={<Invites />} />
+          <Route path="/reviews" element={<Reviews />} />
+          <Route path="/rewards" element={<Rewards />} />
+          <Route path="/payments" element={<Payments />} />
+          <Route path="/earnings" element={<Earnings />} />
+          <Route path="/road-map" element={<RoadMap />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/resume" element={<Resume />} />
+          <Route path="/bookmarks" element={<BookmarksPage />} />
+          <Route path="/ai-video-avatar" element={<AIVideoAvatar />} />
+          <Route path="/group/create" element={<CreateGroup />} />
+          <Route path="/group/:groupId" element={<GroupProfile />} />
+
+          {/* Template Routes */}
+          <Route path="/templates/business-plan" element={<BusinessPlan />} />
+          <Route path="/templates/investor-deck" element={<InvestorDeck />} />
+          <Route path="/templates/market-analysis" element={<MarketAnalysis />} />
+          <Route path="/templates/marketing-sales" element={<MarketingSales />} />
+          <Route path="/templates/fulfilment-plan" element={<FulfilmentPlan />} />
+          <Route path="/templates/media-plan" element={<MediaPlan />} />
+
+          {/* Settings Routes */}
+          <Route path="/settings/email" element={<EmailSettings />} />
+          <Route path="/settings/subscription" element={<SubscriptionSettings />} />
+          <Route path="/settings/personalization" element={<PersonalizationSettings />} />
+          <Route path="/settings/data-controls" element={<DataControls />} />
+          <Route path="/settings/archived-chats" element={<ArchivedChats />} />
+          <Route path="/settings/language" element={<LanguageSettings />} />
+          <Route path="/settings/spelling" element={<SpellingSettings />} />
+          <Route path="/settings/updates" element={<UpdatesSettings />} />
+          <Route path="/settings/voice" element={<VoiceSettings />} />
+          <Route path="/settings/main-language" element={<MainLanguageSettings />} />
+          <Route path="/settings/integrations" element={<Integrations />} />
+          <Route path="/settings/help" element={<HelpCenter />} />
+          <Route path="/settings/terms" element={<TermsOfUse />} />
+          <Route path="/settings/privacy" element={<PrivacyPolicy />} />
+        </Routes>
+      </main>
+      {!hideBottomMenuRoutes.includes(location.pathname) && <BottomMenu />}
+    </div>
   );
 };
 

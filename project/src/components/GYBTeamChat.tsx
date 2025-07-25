@@ -28,7 +28,7 @@ import {
   where,
   orderBy,
   onSnapshot,
-  getDoc,
+  getDoc, 
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
@@ -105,6 +105,7 @@ const GYBTeamChat: React.FC = () => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
 
     if (!selectedChat) return;
+    if (!user || !user.uid) return;
 
     // Construct a message query for the chat
     const q = query(
@@ -133,11 +134,9 @@ const GYBTeamChat: React.FC = () => {
               if (agentKey === "mr.gyb ai-ai") {
                 agentKey = "mr-gyb-ai";
               }
-              console.log(agentKey);
               profileImage =
                 AI_USERS[agentKey]?.profile_image_url ||
                 "https://cdn-icons-png.flaticon.com/512/63/63699.png";
-              console.log(profileImage);
             } else if (data.senderId) {
               const profileSnap = await getDoc(
                 doc(db, "profiles", data.senderId)
@@ -171,7 +170,7 @@ const GYBTeamChat: React.FC = () => {
   // Getting the existing chat
   // For left side of the dream_team ( Chat room lists )
   useEffect(() => {
-    if (!user) return;
+    if (!user || !user.uid) return;
 
     // quering the dream_team_chat collection team members
     // so that q have a information of participants
@@ -199,7 +198,7 @@ const GYBTeamChat: React.FC = () => {
   // if User got invitation by some user
   // For Sending invitation create a chat invitation field in firebase database
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user || !user.uid) return;
 
     const q = query(
       collection(db, "chat_invitations"),
@@ -387,7 +386,6 @@ const GYBTeamChat: React.FC = () => {
   const inviteUserByEmail = async (email: string, chatId: string) => {
     const q = query(collection(db, "profiles"), where("email", "==", email));
     const snapshot = await getDocs(q);
-    console.log("inviting!!!");
 
     if (snapshot.empty) {
       alert(`${email} IS NOT OUR USER`);

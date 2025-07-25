@@ -45,7 +45,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const setupSubscriptions = async () => {
       setIsLoading(true);
       
-      if (!user)  {
+      if (!user || !user.uid)  {
         setChats([]);
         setCurrentChatId(null);
         setIsLoading(false);
