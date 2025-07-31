@@ -15,6 +15,7 @@ interface ChatContextType {
   isLoading: boolean;
   error: string | null;
   isProcessingAI: boolean;
+  setIsProcessingAI: React.Dispatch<React.SetStateAction<boolean>>;
   newchatButton: () => Promise<string | null>;
   createNewChat: () => Promise<string | null>;
   addMessage: (chatId: string, content: string | OpenAIMessage, role: 'user' | 'assistant' | 'system', senderId?: string, aiAgent?: string | null) => Promise<void>;
@@ -259,6 +260,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const aiResponse = await generateAIResponse([...messages, { content: messageContent }], aiAgent || 'Mr.GYB AI');
             
             if (aiResponse) {
+              setIsProcessingAI(false);
               // Add the AI response as a new message
               const aiMessageData = {
                 chatId,
@@ -452,6 +454,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     error,
     isProcessingAI,
+    setIsProcessingAI,
     newchatButton,
     createNewChat,
     addMessage,

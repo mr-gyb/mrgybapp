@@ -165,6 +165,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       handleSendMessage1();
+      // reset the text area 
+      setInput('')
     }
   };
 
