@@ -27,15 +27,14 @@ const SignIn: React.FC = () => {
 
     try {
       if (mode === 'login') {
-        console.log('logging in');
         const result = await signIn(email, password);
         if (result.error) {
-          throw result.error;
+          throw result.error; 
         }
         navigate('/dashboard');
       } else {
-        console.log('creating user');
-        //await createUserWithEmailAndPassword(auth, email, password);
+        
+        await createUserWithEmailAndPassword(auth, email, password);
         navigate('/onboarding', { state: { email, password } });
       }
     } catch (err: any) {
@@ -45,6 +44,8 @@ const SignIn: React.FC = () => {
         setError('Invalid email format.');
       } else if (err.code === 'auth/weak-password') {
         setError('Password should be at least 6 characters.');
+      } else if (err.code === 'auth/invalid-credential') {
+        setError('No Email Existed or Wrong Password');
       } else {
         setError('Something went wrong. Please try again.');
       }
@@ -74,7 +75,7 @@ const SignIn: React.FC = () => {
               <LogIn size={20} className="mr-2" />
               Login
             </button>
-            <button
+            <button 
               onClick={() => setMode('signup')}
               className={`flex items-center px-6 py-2 rounded-full ${
                 mode === 'signup'

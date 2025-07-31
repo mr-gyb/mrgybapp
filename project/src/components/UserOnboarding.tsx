@@ -17,6 +17,7 @@ const UserOnboarding: React.FC = () => {
   const [lastName, setLastName] = useState('');
   const [birthday, setBirthday] = useState('');
   const [password, setPassword] = useState(location.state?.password || '');
+  const [userCredential, setUserCredential] = useState(location.state?.userCredential || null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [country, setCountry] = useState('US');
   const [error, setError] = useState('');
@@ -52,12 +53,23 @@ const UserOnboarding: React.FC = () => {
     setError('');
 
     try {
-      // Create user with email and password
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      let currentUser = auth.currentUser;
       
-      if (userCredential.user) {
+      // If no current user and we have userCredential from SignIn, use it
+      if (!currentUser ) {
+        setError('No authenticated user found.');
+        return;
+      }
+      
+      // If still no user, create one
+      if (!currentUser) {
+        const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
+        currentUser = newUserCredential.user;
+      }
+      
+      if (currentUser) {
         // Create profile for the new user
-        await createProfile(userCredential.user.uid, {
+        await createProfile(currentUser.uid, {
           email,
           name: `${firstName} ${lastName}`,
           username: `@${firstName.toLowerCase()}${lastName.toLowerCase()}`,
