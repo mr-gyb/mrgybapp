@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef} from 'react';
 import { ChevronLeft, MessageSquare, Send, Mic, Camera, Paperclip, Image as ImageIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useChat } from '../contexts/ChatContext';
@@ -14,7 +14,9 @@ const DreamTeam: React.FC = () => {
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const navigate = useNavigate();
-  const { createNewChat, addMessage, currentChatId } = useChat();
+  const { createNewChat, addMessage, currentChatId, chats, setSelectedAgent } = useChat();
+  // For scrolling to bottom of the screen
+  const screenEndRef = useRef<HTMLDivElement>(null);
 
   const teamMembers: TeamMember[] = [
     {
@@ -93,26 +95,43 @@ const DreamTeam: React.FC = () => {
 
   const handleMemberClick = (memberId: string) => {
     setSelectedMember(memberId === selectedMember ? null : memberId);
+    screenEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleStartChat = (memberTitle: string) => {
-    navigate(`/chat/chatId`, { state: { selectedAgent: memberTitle, chatId: newChatId } });
-  };
+  const handleStartChat = async (newAgent: string) => {
+    try {
+      // check if there is an existing chat
+      const existingChat = chats.find((chat) => {
+        return (
+          chat.messages &&
+          chat.messages.some(
+            (message) =>
+              message.role === "assistant" && message.aiAgent === newAgent
+          )
+        );
+      });
 
-  const handleSendMessage = () => {
-    if (input.trim() && currentChatId && selectedMember) {
-      const memberTitle = teamMembers.find(m => m.id === selectedMember)?.title || '';
-      addMessage(currentChatId, 'user', input);
-      setInput('');
-      setTimeout(() => {
-        addMessage(currentChatId, 'assistant', `Response from ${memberTitle}: "${input}"`);
-      }, 1000);
-    }
-  };
+      if (existingChat) {
+        navigate(`/chat/${existingChat.id}`)
+      } else{
+        const newChatId = await createNewChat();
 
-  const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      handleSendMessage();
+        if (newChatId) {
+          // Add initial message from the new agent
+          const initialMessage = `Hello! I'm ${newAgent}. How can I help you today?`;
+          await addMessage(
+            newChatId,
+            initialMessage,
+            "assistant",
+            undefined,
+            newAgent
+          );
+          navigate(`/chat/${newChatId}`)
+          setSelectedAgent(newAgent)
+        }
+      }
+    } catch (error){
+      console.error("Error Handling going to the agent chat", error)
     }
   };
 
@@ -172,37 +191,10 @@ const DreamTeam: React.FC = () => {
                   </li>
                 ))}
             </ul>
-            <div className="flex items-center bg-white rounded-full p-2">
-              <button className="p-2 text-gray-500 hover:text-navy-blue">
-                <Paperclip size={20} />
-              </button>
-              <button className="p-2 text-gray-500 hover:text-navy-blue">
-                <Camera size={20} />
-              </button>
-              <button className="p-2 text-gray-500 hover:text-navy-blue">
-                <ImageIcon size={20} />
-              </button>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type your message..."
-                className="flex-grow bg-transparent border-none focus:outline-none px-4 py-2 text-navy-blue"
-              />
-              <button className="p-2 text-gray-500 hover:text-navy-blue">
-                <Mic size={20} />
-              </button>
-              <button
-                onClick={handleSendMessage}
-                className="p-2 text-blue-500 hover:text-blue-600"
-              >
-                <Send size={20} />
-              </button>
-            </div>
           </div>
         )}
       </div>
+      <div ref = {screenEndRef} />
     </div>
   );
 };
