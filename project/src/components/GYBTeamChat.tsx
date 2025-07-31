@@ -102,7 +102,7 @@ const GYBTeamChat: React.FC = () => {
   // Getting the existing message based on the chat
   // For right side of the dream_team ( Messages lists )
   useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+
 
     if (!selectedChat) return;
     if (!user || !user.uid) return;
@@ -246,6 +246,12 @@ const GYBTeamChat: React.FC = () => {
       fetchParticipants();
     }
   }, [teamChats]);
+
+  // Enable to automatically scrolls the screen to the last message after rendering the message.
+  useEffect(() => {
+    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages])
+
 
   // Handling message send, stores to the firebase in the dream_team chat field
   // Goes to subdomain "Message " field
@@ -496,8 +502,8 @@ const GYBTeamChat: React.FC = () => {
     setNewChatParticipants(updated);
   };
 
-  return (
-    <div className="bg-white min-h-screen text-navy-blue flex flex-col">
+ return (
+    <div className="bg-white h-screen text-navy-blue flex flex-col">
       <div className="bg-navy-blue text-white py-4 px-6 flex items-center justify-between">
         <div className="flex items-center">
           <Link to={`/chat/${currentChatId}`} className="mr-4 text-white">
@@ -584,8 +590,8 @@ const GYBTeamChat: React.FC = () => {
         </div>
 
         {/* Right chat area */}
-        <div className="flex-1 flex flex-col">
-          {selectedChat ? (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {selectedChat ? ( 
             <>
               <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <div>
