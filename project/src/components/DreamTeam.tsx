@@ -101,6 +101,10 @@ const DreamTeam: React.FC = () => {
   const handleStartChat = async (newAgent: string) => {
     try {
       // check if there is an existing chat
+      // chats have several chat room objects.
+      // .find() => return the first room that satisfy the requirement.
+      // if there are a message that have role == assistant and aiAgent == selectedAgent
+      // Then return true otherwise return false to indicate whether there are existing chat.
       const existingChat = chats.find((chat) => {
         return (
           chat.messages &&
