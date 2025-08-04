@@ -37,7 +37,8 @@ export const saveContent = async (
   userId: string,
   originalText: string,
   generatedContent: string,
-  title: string
+  title: string,
+  type: string // Added type param
 ) => {
   try {
     const contentData = {
@@ -47,7 +48,8 @@ export const saveContent = async (
       title,
       status: 'draft',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      type // Save type
     };
     console.log("generated_content here");
     const contentRef = await addDoc(collection(db, 'generated_content'), contentData);
