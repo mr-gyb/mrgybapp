@@ -1,5 +1,6 @@
 import { collection, addDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { ContentType } from '../types/content';
 
 export interface GeneratedContent {
   id: string;
@@ -10,6 +11,8 @@ export interface GeneratedContent {
   status: 'draft' | 'published';
   created_at: string;
   updated_at: string;
+  type: ContentType; // Added content type
+  blogPlatform?: string | null; // Optional blog platform
 }
 
 export interface ContentError {
@@ -43,7 +46,9 @@ export const saveContent = async (
   userId: string,
   originalText: string,
   generatedContent: string,
-  title: string
+  title: string,
+  type: ContentType, // Added type param
+  blogPlatform?: string | null // Optional blog platform
 ): Promise<GeneratedContent> => {
   try {
     const contentData = {
@@ -53,7 +58,9 @@ export const saveContent = async (
       title,
       status: 'draft',
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      type, // Save type
+      blogPlatform: blogPlatform || null
     };
     
     const contentRef = await addDoc(collection(db, 'generated_content'), contentData);
@@ -73,7 +80,7 @@ export const getContentHistory = async (userId: string): Promise<GeneratedConten
     const contentQuery = query(
       collection(db, 'generated_content'),
       where('user_id', '==', userId),
-      orderBy('created_at', { direction: 'desc' })
+      orderBy('created_at', 'desc')
     );
     
     const snapshot = await getDocs(contentQuery);
@@ -96,7 +103,8 @@ export const updateContent = async (
     
     await updateDoc(contentRef, {
       ...updates,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      blogPlatform: updates.blogPlatform !== undefined ? updates.blogPlatform : null
     });
     
     const updatedDoc = await getDoc(contentRef);
