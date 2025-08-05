@@ -58,8 +58,12 @@ const ContentAnalyzer: React.FC<ContentAnalyzerProps> = ({ onAnalysisComplete })
           <p className="text-lg mb-2">
             {isAnalyzing ? 'Analyzing content...' : 'Upload content for analysis'}
           </p>
-          <p className="text-sm text-gray-500">
-            Supported formats: Text, PDF, DOC, Images, Video, Audio
+          <p className="text-gray-500 mb-4">or</p>
+          <button className="bg-navy-blue text-white px-6 py-2 rounded-full hover:bg-opacity-90">
+            Browse Files
+          </button>
+          <p className="mt-4 text-sm text-gray-500">
+            Drag and drop your files here or click to browse
           </p>
         </label>
       </div>

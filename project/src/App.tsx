@@ -57,6 +57,9 @@ import HomePage from './components/HomePage';
 import AboutPage from './components/AboutPage';
 import ContactUs from './components/ContactUs';
 import WhatToExpect from './components/WhatToExpect';
+import TrialSignupPage from './components/TrialSignupPage';
+import TrialSignupStep2 from './components/TrialSignupStep2';
+import TrialSignupConfirmation from './components/TrialSignupConfirmation';
 
 // Import template components
 import BusinessPlan from './components/templates/BusinessPlan';
@@ -118,6 +121,9 @@ const App: React.FC = () => {
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/what-to-expect" element={<WhatToExpect />} />
+                           <Route path="/trial-signup" element={<TrialSignupPage />} />
+               <Route path="/trial-signup-step2" element={<TrialSignupStep2 />} />
+               <Route path="/trial-signup-confirmation" element={<TrialSignupConfirmation />} />
 
             {/* App Routes */}
             <Route path="/dashboard" element={<Dashboard />} />

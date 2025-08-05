@@ -16,6 +16,8 @@ import { fetchYouTubeViewCounts } from '../utils/platformUtils';
 import { getFacebookMetrics } from '../api/services/facebook.service';
 import ContentTypeBarChart from "./analytics/ContentTypeBarChart";
 import PlatformPieChart from "./analytics/PlatformPieChart";
+import { saveUserContent } from '../services/userContent.service';
+import { useAuth } from '../contexts/AuthContext';
 
 interface PieLabelProps {
   cx: number;
@@ -61,6 +63,7 @@ function getYouTubeEmbedUrl(url: string): string | null {
 const GYBStudio: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const { 
     content: userContent, 
     isLoading, 
@@ -88,6 +91,75 @@ const GYBStudio: React.FC = () => {
     total_impressions: number;
     total_reactions: number;
   } | null>(null);
+
+  // Force close all modals function
+  const closeAllModals = () => {
+    setShowCategorySelector(false);
+    setShowUploader(false);
+    setShowViewModal(false);
+    setShowSuccessMessage(false);
+    setSelectedCategory(null);
+    setViewingContent(null);
+  };
+
+  // Debug: Log modal states
+  useEffect(() => {
+    console.log('Modal states:', {
+      showCategorySelector,
+      showUploader,
+      showViewModal,
+      showSuccessMessage
+    });
+  }, [showCategorySelector, showUploader, showViewModal, showSuccessMessage]);
+
+  // Debug: Log content loading state
+  useEffect(() => {
+    console.log('Content loading state:', {
+      isLoading,
+      contentCount: userContent.length,
+      realContentCount: userContent.filter(item => !item.id.startsWith('default-')).length,
+      hasRealContent: userContent.some(item => !item.id.startsWith('default-'))
+    });
+  }, [isLoading, userContent]);
+
+  // Handle escape key to close modals
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (showCategorySelector) {
+          handleCategorySelectorClose();
+        } else if (showUploader) {
+          handleUploaderClose();
+        } else if (showViewModal) {
+          setShowViewModal(false);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showCategorySelector, showUploader, showViewModal]);
+
+  // Auto-close any stuck modals on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (showCategorySelector || showUploader || showViewModal) {
+        console.log('Auto-closing stuck modals');
+        closeAllModals();
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Ensure only one modal is open at a time
+  useEffect(() => {
+    const openModals = [showCategorySelector, showUploader, showViewModal].filter(Boolean);
+    if (openModals.length > 1) {
+      console.log('Multiple modals detected, closing all except the last one');
+      closeAllModals();
+    }
+  }, [showCategorySelector, showUploader, showViewModal]);
 
   // Handle uploaded content from navigation state
   useEffect(() => {
@@ -419,28 +491,26 @@ const GYBStudio: React.FC = () => {
   };
 
   const handleViewContent = async (item: ContentItem) => {
+    // Close any other modals first
+    setShowCategorySelector(false);
+    setShowUploader(false);
+    setShowSuccessMessage(false);
+    
+    setViewingContent(item);
     setIsLoadingView(true);
-    // Fetch the latest content data from Firestore
-    try {
-      const docRef = doc(db, 'media_content', item.id);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const contentData = docSnap.data();
-        setViewingContent({ ...item, ...contentData });
-      } else {
-        setViewingContent(item);
-      }
-      setShowViewModal(true);
-    } catch (error) {
-      setViewingContent(item);
-      setShowViewModal(true);
-    } finally {
+    setShowViewModal(true);
+    
+    // Simulate loading time for content analysis
+    setTimeout(() => {
       setIsLoadingView(false);
-    }
+    }, 1000);
   };
 
   const handleCreateContentClick = () => {
+    // Close any other modals first
+    setShowViewModal(false);
+    setShowUploader(false);
+    setShowSuccessMessage(false);
     setShowCategorySelector(true);
   };
 
@@ -459,7 +529,7 @@ const GYBStudio: React.FC = () => {
     setSelectedCategory(null);
   };
 
-  const handleUploadComplete = (result: { id: string; url: string; type: string; category: any; platforms?: string[]; title?: string; blogPlatform?: string | null }) => {
+  const handleUploadComplete = async (result: { id: string; url: string; type: string; category: any; platforms?: string[]; title?: string; blogPlatform?: string | null }) => {
     // Create a new ContentItem from the upload result
     const defaultPlatforms = result.category && result.category.platforms && result.category.platforms.length > 0
       ? result.category.platforms
@@ -499,6 +569,23 @@ const GYBStudio: React.FC = () => {
 
     // Add to the content list
     addContent(newContent);
+    
+    // Save to database
+    try {
+      if (user?.uid) {
+        await saveUserContent(user.uid, newContent);
+        console.log('Content saved to database successfully');
+      } else {
+        console.error('User not authenticated, cannot save content');
+      }
+    } catch (error) {
+      console.error('Error saving content to database:', error);
+    }
+    
+    // Refresh content from database to ensure it's properly loaded
+    setTimeout(() => {
+      refreshContent();
+    }, 1000);
     
     // Show success message
     const contentTitle = result.title || result.category.name;
@@ -723,7 +810,17 @@ const GYBStudio: React.FC = () => {
             <h1 className="text-3xl font-bold text-navy-blue">GYB Studio</h1>
           </div>
           <div className="flex items-center space-x-4">
-          <button
+            {/* Debug button to close all modals */}
+            {(showCategorySelector || showUploader || showViewModal) && (
+              <button
+                onClick={closeAllModals}
+                className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                title="Close all modals"
+              >
+                Close Modals
+              </button>
+            )}
+            <button
               onClick={handleCreateContentClick}
             className="bg-navy-blue text-white px-4 py-2 rounded-full flex items-center"
           >
@@ -838,11 +935,20 @@ const GYBStudio: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold">Content Hub</h2>
-            {userContent.length > 0 && (
-              <span className="text-sm text-gray-500">
-                {userContent.length} content item{userContent.length !== 1 ? 's' : ''} in your hub
-              </span>
-            )}
+            <div className="flex items-center space-x-2">
+              {userContent.length > 0 && (
+                <span className="text-sm text-gray-500">
+                  {userContent.length} content item{userContent.length !== 1 ? 's' : ''} in your hub
+                </span>
+              )}
+              <button
+                onClick={refreshContent}
+                className="text-sm text-blue-600 hover:text-blue-800"
+                title="Refresh content"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
           {/* Show message if user has no real content uploaded */}
           {userContent.filter(item => !item.id.startsWith('default-')).length === 0 && (
@@ -863,25 +969,42 @@ const GYBStudio: React.FC = () => {
 
       {/* Content Category Selector Modal */}
       {showCategorySelector && (
-        <ContentCategorySelector
-          onClose={handleCategorySelectorClose}
-          onCategorySelect={handleCategorySelect}
-        />
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
+          onClick={handleCategorySelectorClose}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <ContentCategorySelector
+              onClose={handleCategorySelectorClose}
+              onCategorySelect={handleCategorySelect}
+            />
+          </div>
+        </div>
       )}
 
       {/* Category Specific Uploader Modal */}
       {showUploader && selectedCategory && (
-        <CategorySpecificUploader
-          category={selectedCategory}
-          onClose={handleUploaderClose}
-          onUpload={handleUploadComplete}
-        />
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
+          onClick={handleUploaderClose}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <CategorySpecificUploader
+              category={selectedCategory}
+              onClose={handleUploaderClose}
+              onUpload={handleUploadComplete}
+            />
+          </div>
+        </div>
       )}
 
       {/* Content Viewer Modal */}
       {showViewModal && viewingContent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full relative max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50"
+          onClick={() => setShowViewModal(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full relative max-h-[90vh] overflow-y-auto">
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
               onClick={() => setShowViewModal(false)}

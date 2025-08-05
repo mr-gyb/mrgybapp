@@ -1,15 +1,11 @@
-import React, { useState } from 'react';
-import TrialModal from './TrialModal';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const TrialSection: React.FC = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleGetStartedClick = () => {
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+    navigate('/trial-signup');
   };
 
   return (
@@ -36,9 +32,6 @@ const TrialSection: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Trial Modal */}
-      <TrialModal isOpen={isModalOpen} onClose={handleCloseModal} />
     </>
   );
 };

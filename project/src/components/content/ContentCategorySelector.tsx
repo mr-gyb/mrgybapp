@@ -9,7 +9,6 @@ interface ContentCategory {
   icon: React.ReactNode;
   type: ContentType;
   platforms: string[];
-  fileTypes: string[];
   examples: string[];
 }
 
@@ -36,7 +35,6 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
       icon: <FileText size={32} className="text-blue-500" />,
       type: 'written',
       platforms: ['Blog'],
-      fileTypes: ['PDF', 'DOC', 'DOCX', 'TXT', 'RTF'],
       examples: ['Blog posts', 'Articles', 'Reports', 'Whitepapers', 'Scripts']
     },
     {
@@ -46,7 +44,6 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
       icon: <Headphones size={32} className="text-purple-500" />,
       type: 'audio',
       platforms: ['Spotify'],
-      fileTypes: ['MP3', 'WAV', 'M4A', 'AAC', 'OGG'],
       examples: ['Podcast episodes', 'Voice notes', 'Music', 'Interviews']
     },
     {
@@ -56,7 +53,6 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
       icon: <Video size={32} className="text-red-500" />,
       type: 'video',
       platforms: ['YouTube', 'Video'],
-      fileTypes: ['MP4', 'MOV', 'AVI', 'WebM', 'YouTube Links'],
       examples: ['Product demos', 'Tutorial videos', 'Vlogs', 'Short-form content']
     },
     {
@@ -66,7 +62,6 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
       icon: <Image size={32} className="text-green-500" />,
       type: 'photo',
       platforms: ['Pinterest', 'Instagram', 'Facebook'],
-      fileTypes: ['JPG', 'PNG', 'GIF', 'WebP', 'SVG', 'MP4', 'MOV'],
       examples: ['Instagram posts', 'Pinterest pins', 'Facebook images']
     },
     {
@@ -76,7 +71,6 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
       icon: <Link size={32} className="text-orange-500" />,
       type: 'written',
       platforms: ['LinkedIn', 'Other'],
-      fileTypes: ['PDF', 'DOC', 'DOCX', 'TXT', 'RTF'],
       examples: ['LinkedIn articles', 'Networking content']
     }
   ];
@@ -96,19 +90,18 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-4xl w-full m-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-navy-blue">
-            {selectedCategory ? `Create ${selectedCategory.name}` : 'Choose Content Type'}
-          </h2>
-          <button 
-            onClick={onClose} 
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <X size={24} />
-          </button>
-        </div>
+    <div className="bg-white rounded-lg p-6 max-w-4xl w-full m-4 max-h-[90vh] overflow-y-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-navy-blue">
+          {selectedCategory ? `Create ${selectedCategory.name}` : 'Choose Content Type'}
+        </h2>
+        <button 
+          onClick={onClose} 
+          className="text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          <X size={24} />
+        </button>
+      </div>
 
         {!selectedCategory ? (
           // Category Selection View
@@ -171,7 +164,6 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 };

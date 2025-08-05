@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, onSnapshot, setDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { ContentItem, ContentType } from '../types/content';
 
@@ -160,4 +160,32 @@ export const updateUserContent = (existingContent: ContentItem[], updatedContent
  */
 export const removeUserContent = (existingContent: ContentItem[], contentId: string): ContentItem[] => {
   return existingContent.filter(item => item.id !== contentId);
+}; 
+
+/**
+ * Save content to the database
+ */
+export const saveUserContent = async (userId: string, content: ContentItem): Promise<void> => {
+  try {
+    const contentData = {
+      userId: userId,
+      title: content.title,
+      description: content.description,
+      contentType: content.type,
+      originalUrl: content.originalUrl,
+      storagePath: content.storagePath,
+      metadata: content.metadata || {},
+      createdAt: content.createdAt,
+      updatedAt: new Date().toISOString(),
+      platforms: content.platforms,
+      blogPlatform: content.blogPlatform || null
+    };
+
+    // Save to new_content collection
+    await setDoc(doc(collection(db, 'new_content'), content.id), contentData);
+    console.log('Content saved to database:', content.id);
+  } catch (error) {
+    console.error('Error saving user content:', error);
+    throw error;
+  }
 }; 

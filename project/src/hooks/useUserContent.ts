@@ -5,31 +5,49 @@ import { useAuth } from '../contexts/AuthContext';
 
 export const useUserContent = () => {
   const { user } = useAuth();
-  const [content, setContent] = useState<ContentItem[]>(() => {
-    // Load from localStorage if available
-    const saved = localStorage.getItem('userContent');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [content, setContent] = useState<ContentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Save content to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('userContent', JSON.stringify(content));
-  }, [content]);
+  // Get user-specific localStorage key
+  const getStorageKey = () => {
+    return user?.uid ? `userContent_${user.uid}` : null;
+  };
 
   // Load user content
   const loadContent = useCallback(async () => {
-    if (!user || !user.id) return;
+    if (!user?.uid) {
+      setContent([]);
+      setIsLoading(false);
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
+    
     try {
-      const userContent = await getUserContent(user.id);
-      // Only overwrite if backend has data
+      // Clear any old content from previous user
+      setContent([]);
+      
+      // Try to load from localStorage first (user-specific key)
+      const storageKey = getStorageKey();
+      if (storageKey) {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsedContent = JSON.parse(saved);
+          setContent(parsedContent);
+        }
+      }
+      
+      // Then fetch from backend and update if backend has data
+      const userContent = await getUserContent(user.uid);
       if (userContent && userContent.length > 0) {
         setContent(userContent);
+        // Update localStorage with fresh data
+        if (storageKey) {
+          localStorage.setItem(storageKey, JSON.stringify(userContent));
+        }
       }
-      // Otherwise, keep localStorage content
     } catch (err) {
       console.error('Error loading user content:', err);
       setError('Failed to load content. Please try again.');
@@ -43,30 +61,32 @@ export const useUserContent = () => {
     loadContent();
   }, [loadContent]);
 
+  // Save content to localStorage whenever it changes (user-specific key)
+  useEffect(() => {
+    const storageKey = getStorageKey();
+    if (storageKey && content.length > 0) {
+      localStorage.setItem(storageKey, JSON.stringify(content));
+    }
+  }, [content, user]);
+
   // Add new content
   const addContent = useCallback((newContent: ContentItem) => {
     setContent(prevContent => {
-      const updated = addUserContent(prevContent, newContent);
-      localStorage.setItem('userContent', JSON.stringify(updated));
-      return updated;
+      return addUserContent(prevContent, newContent);
     });
   }, []);
 
   // Update existing content
   const updateContent = useCallback((updatedContent: ContentItem) => {
     setContent(prevContent => {
-      const updated = updateUserContent(prevContent, updatedContent);
-      localStorage.setItem('userContent', JSON.stringify(updated));
-      return updated;
+      return updateUserContent(prevContent, updatedContent);
     });
   }, []);
 
   // Remove content
   const removeContent = useCallback((contentId: string) => {
     setContent(prevContent => {
-      const updated = removeUserContent(prevContent, contentId);
-      localStorage.setItem('userContent', JSON.stringify(updated));
-      return updated;
+      return removeUserContent(prevContent, contentId);
     });
   }, []);
 

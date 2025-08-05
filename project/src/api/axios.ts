@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_CONFIG } from './config';
+import { storage } from '../utils/storage';
 
 const axiosInstance = axios.create({
   baseURL: `${API_CONFIG.BASE_URL}/api/${API_CONFIG.API_VERSION}`,
@@ -26,8 +27,8 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('token');
+      // Handle unauthorized access - clear all user data to prevent leakage
+      storage.clear();
       window.location.href = '/';
     }
     return Promise.reject(error);

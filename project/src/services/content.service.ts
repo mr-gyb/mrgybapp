@@ -1,7 +1,7 @@
 import { collection, addDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { v4 as uuidv4 } from 'uuid';
-import { ContentDerivative } from '../types/content';
+import { ContentDerivative, ContentType } from '../types/content';
 
 const mockDerivatives: ContentDerivative[] = [
   {
@@ -18,17 +18,23 @@ const mockDerivatives: ContentDerivative[] = [
   }
 ];
 
-export const analyzeContent = async (text: string): Promise<string> => {
-  // In a real implementation, you would send the text to an API for analysis
+export const analyzeContent = async (userId: string, content: string | File, contentType: ContentType): Promise<string> => {
+  // In a real implementation, you would send the content to an API for analysis
   // For now, just return a UUID
   return uuidv4();
 };
 
 export const getContentAnalysis = async (analysisId: string) => {
   // In a real implementation, you would fetch the analysis results from Firestore
-  // For now, return mock data
+  // For now, return mock data with category information
   return {
     id: analysisId,
+    url: 'https://example.com/uploaded-content',
+    category: {
+      name: 'Uploaded Content',
+      type: 'text',
+      platforms: ['social', 'blog']
+    },
     content_derivatives: mockDerivatives
   };
 };

@@ -17,14 +17,13 @@ interface ContentCategory {
   icon: React.ReactNode;
   type: ContentType;
   platforms: string[];
-  fileTypes: string[];
   examples: string[];
 }
 
 interface CategorySpecificUploaderProps {
   category: ContentCategory;
   onClose: () => void;
-  onUpload: (result: { id: string; url: string; type: string; category: ContentCategory; platforms: string[]; formats: string[]; linkType?: string; title?: string }) => void;
+  onUpload: (result: { id: string; url: string; type: string; category: ContentCategory; platforms: string[]; formats: string[]; linkType?: string; title?: string; blogPlatform?: string }) => void;
 }
 
 const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
@@ -39,10 +38,8 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
   const [uploadMethod, setUploadMethod] = useState<'file' | 'url'>('file');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
-  const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
   const [showTitleModal, setShowTitleModal] = useState(false);
   const [pendingUploadData, setPendingUploadData] = useState<any>(null);
-  const [selectedLinkType, setSelectedLinkType] = useState<string>('blog');
   // Add state for selected blog platform
   const [selectedBlogPlatform, setSelectedBlogPlatform] = useState<string | null>(null);
   // Add state for the URL title
@@ -100,13 +97,69 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
     multiple: false
   });
 
-  const LINK_TYPES = [
-    { label: 'Blogs', value: 'blog' },
-    { label: 'Audio', value: 'audio' },
-    { label: 'Video', value: 'video' },
-    { label: 'Social Media', value: 'social-media' },
-    { label: 'Other (Networking)', value: 'other' }
-  ];
+  // Function to automatically determine link type based on URL and category
+  const getLinkTypeFromUrl = (url: string, categoryId: string): string => {
+    const urlLower = url.toLowerCase();
+    
+    // YouTube links
+    if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
+      return 'video';
+    }
+    
+    // Spotify links
+    if (urlLower.includes('spotify.com') || urlLower.includes('open.spotify.com')) {
+      return 'audio';
+    }
+    
+    // Medium links
+    if (urlLower.includes('medium.com')) {
+      return 'blog';
+    }
+    
+    // Instagram links
+    if (urlLower.includes('instagram.com') || urlLower.includes('instagr.am')) {
+      return 'social-media';
+    }
+    
+    // Facebook links
+    if (urlLower.includes('facebook.com') || urlLower.includes('fb.com')) {
+      return 'social-media';
+    }
+    
+    // Twitter/X links
+    if (urlLower.includes('twitter.com') || urlLower.includes('x.com')) {
+      return 'social-media';
+    }
+    
+    // LinkedIn links
+    if (urlLower.includes('linkedin.com')) {
+      return 'other';
+    }
+    
+    // TikTok links
+    if (urlLower.includes('tiktok.com')) {
+      return 'social-media';
+    }
+    
+    // Pinterest links
+    if (urlLower.includes('pinterest.com')) {
+      return 'social-media';
+    }
+    
+    // Default based on category
+    switch (categoryId) {
+      case 'video':
+        return 'video';
+      case 'audio':
+        return 'audio';
+      case 'blog':
+        return 'blog';
+      case 'social-media':
+        return 'social-media';
+      default:
+        return 'other';
+    }
+  };
 
   const handleUrlSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,14 +169,20 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
     setError(null);
 
     try {
+      // Automatically determine link type based on URL
+      const automaticLinkType = getLinkTypeFromUrl(contentUrl.trim(), category.id);
+      
       const result = await processMediaLink(contentUrl.trim(), user.uid);
       onUpload({
-        ...result,
+        id: result.id,
+        url: result.url,
+        type: result.type,
         category,
         platforms: selectedPlatforms,
-        formats: selectedFormats,
-        linkType: selectedLinkType, // Pass the selected link type
+        formats: [], // No formats for URL uploads
+        linkType: automaticLinkType, // Use automatically determined link type
         title: urlTitle, // Pass the entered title
+        blogPlatform: selectedBlogPlatform || undefined // Pass the selected blog platform
       });
       setContentUrl('');
       setUrlTitle('');
@@ -147,7 +206,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
       file: selectedFile,
       category,
       platforms: selectedPlatforms,
-      formats: selectedFormats
+      formats: [] // No formats for file uploads
     });
     setShowTitleModal(true);
   };
@@ -178,7 +237,17 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
       };
 
       console.log('Upload result:', uploadResult);
-      onUpload(uploadResult);
+      onUpload({
+        id: uploadResult.id,
+        url: uploadResult.url,
+        type: uploadResult.type,
+        category,
+        platforms: selectedPlatforms,
+        formats: pendingUploadData.formats, // Pass the formats from pendingUploadData
+        linkType: getLinkTypeFromUrl(uploadResult.url, category.id), // Use automatic link type detection
+        title: urlTitle, // Pass the entered title
+        blogPlatform: selectedBlogPlatform || undefined // Pass the selected blog platform
+      });
 
       // Save to database with title
       const contentData = {
@@ -242,16 +311,8 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
     );
   };
 
-  const toggleFormat = (format: string) => {
-    setSelectedFormats((prev) =>
-      prev.includes(format)
-        ? prev.filter((f) => f !== format)
-        : [...prev, format]
-    );
-  };
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <>
       <div className="bg-white rounded-lg p-6 max-w-2xl w-full m-4">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center">
@@ -308,12 +369,8 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
               <p className="text-lg mb-2 mt-4">
                 {isDragActive ? 'Drop files here' : getUploadPlaceholder()}
               </p>
-              <p className="text-gray-500 mb-4">or</p>
-              <button className="bg-navy-blue text-white px-6 py-2 rounded-full hover:bg-opacity-90 transition-colors">
-                Browse Files
-              </button>
               <p className="mt-4 text-sm text-gray-500">
-                Supported formats: {category.fileTypes.join(', ')}
+                Drag and drop your files here or click to browse
               </p>
             </div>
             {selectedFile && (
@@ -346,9 +403,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
                   placeholder={
                     category.id === 'link'
                       ? 'https://example.com/article'
-                      : category.id === 'video'
-                        ? 'https://youtube.com/watch?v=... (YouTube links only)'
-                        : 'https://youtube.com/watch?v=...'
+                      : 'https://youtube.com/watch?v=... or any content URL'
                   }
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-blue focus:border-transparent"
                   required
@@ -368,28 +423,6 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
                   required
                 />
               </div>
-              {/* Link Type Selector - only show if not video */}
-              {category.id !== 'video' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Link Type</label>
-                  <div className="flex flex-wrap gap-2">
-                    {LINK_TYPES.map((type) => (
-                      <button
-                        key={type.value}
-                        type="button"
-                        className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${
-                          selectedLinkType === type.value
-                            ? 'bg-navy-blue text-white border-navy-blue'
-                            : 'bg-white text-navy-blue border-gray-200 hover:bg-gray-100'
-                        }`}
-                        onClick={() => setSelectedLinkType(type.value)}
-                      >
-                        {type.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
               <button
                 type="submit"
                 className="w-full bg-navy-blue text-white px-6 py-3 rounded-lg hover:bg-opacity-90 transition-colors flex items-center justify-center"
@@ -499,22 +532,6 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
               ))
             )}
           </div>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {category.fileTypes.map((format) => (
-              <button
-                key={format}
-                type="button"
-                className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${
-                  selectedFormats.includes(format)
-                    ? 'bg-navy-blue text-white border-navy-blue'
-                    : 'bg-white text-navy-blue border-gray-200 hover:bg-gray-100'
-                }`}
-                onClick={() => toggleFormat(format)}
-              >
-                {format.replace('.', '').toUpperCase()}
-              </button>
-            ))}
-          </div>
           <div>
             <h5 className="font-semibold mb-1 text-navy-blue">Content Examples</h5>
             <ul className="list-disc list-inside text-gray-600 text-sm">
@@ -538,7 +555,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
         fileName={pendingUploadData?.file?.name}
         category={category.name}
       />
-    </div>
+    </>
   );
 };
 
