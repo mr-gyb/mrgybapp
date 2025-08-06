@@ -45,7 +45,7 @@ const SignIn: React.FC = () => {
       } else if (err.code === 'auth/weak-password') {
         setError('Password should be at least 6 characters.');
       } else if (err.code === 'auth/invalid-credential') {
-        setError('No Email Existed or Wrong Password');
+        setError('The email or password you entered is incorrect');
       } else {
         setError('Something went wrong. Please try again.');
       }
@@ -92,16 +92,17 @@ const SignIn: React.FC = () => {
             {mode === 'login' ? 'Welcome back!' : 'Create your account'}
           </h2>
 
+          {/*}
           <button className="w-full bg-black text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center mb-4">
             <Apple size={24} className="mr-2" />
             Continue with Apple
           </button>
+          */}
 
           {/* signup mode only instruction*/}
           {mode === 'signup' && (
             <div className="mb-4 text-sm text-gray-600 bg-gray-100 rounded-md p-3">
               <ul className="list-disc pl-5">
-                <li>Email format is required.</li>
                 <li>Password should be at least 6 characters.</li>
               </ul>
             </div>

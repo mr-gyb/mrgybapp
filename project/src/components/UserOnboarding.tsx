@@ -64,6 +64,7 @@ const UserOnboarding: React.FC = () => {
       // If still no user, create one
       if (!currentUser) {
         const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
+        console.log('email', email);
         currentUser = newUserCredential.user;
       }
       
@@ -99,9 +100,12 @@ const UserOnboarding: React.FC = () => {
         )}
         {step === 0 && (
           <>
-            <h1 className="text-3xl font-bold mb-6 text-center">Welcome to GYB AI</h1>
+          <h1 className="text-3xl font-bold mb-6 text-center">Welcome to GYB AI❗</h1>
+        </>
+        )}
+            {/*
             <div className="space-y-4">
-              {/* remove the apple button and or button for now
+               remove the apple button and or button for now
 
               <button className="w-full bg-black text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center">
                 <Apple size={24} className="mr-2" />
@@ -112,7 +116,7 @@ const UserOnboarding: React.FC = () => {
                 <span className="px-4 text-gray-500">or</span>
                 <div className="flex-grow border-t border-gray-300"></div>
               </div>
-              */} 
+              
               <input
                 type="tel"
                 value={phoneNumber}
@@ -120,16 +124,12 @@ const UserOnboarding: React.FC = () => {
                 placeholder="Phone number"
                 className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
               />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
-              />
+
             </div>
           </>
-        )}
+          */} 
+        
+        
         {step === 1 && (
           <>
             <h2 className="text-2xl font-bold mb-4">What's your name?</h2>

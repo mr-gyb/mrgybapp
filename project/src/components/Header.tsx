@@ -81,11 +81,17 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
               profileData ? getExperienceColor(profileData.experienceLevel) : 'border-navy-blue dark:border-gold'
             } focus:outline-none focus:ring-2 focus:ring-navy-blue dark:focus:ring-gold transition-colors`}
           >
-            <img
-              src={profileData?.profile_image_url || 'https://cdn-icons-png.flaticon.com/512/63/63699.png'}
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+              {profileData?.profile_image_url.startsWith('http') ? (
+              <img
+                src={profileData?.profile_image_url}
+                alt={profileData?.name}
+                className="w-full h-full object-cover"
+              />
+              ) : (
+              <div className = "w-full h-full flex items-center justify-center text-2xl font-bold object-cover pb-1">
+                  {profileData?.profile_image_url}
+                </div>
+              )}
           </button>
 
           <h1 
@@ -104,7 +110,7 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
       <SideMenu
         isOpen={isSideMenuOpen}
         onClose={() => setIsSideMenuOpen(false)}
-        userData={profileData}
+        userData={profileData || {}}
       />
     </>
   );

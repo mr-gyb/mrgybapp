@@ -98,6 +98,8 @@ const GYBTeamChat: React.FC = () => {
   // for the processing message
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingAiAgnet, setIsProcessingAiAgent] = useState("");
+  // For test
+  const [message123, setMessage123] = useState("");
 
   // Getting the existing message based on the chat
   // For right side of the dream_team ( Messages lists )
@@ -494,6 +496,14 @@ const GYBTeamChat: React.FC = () => {
     setNewChatParticipants(updated);
   };
 
+  // For testing backend spring boot
+  const handleClick = async () => {
+    console.log("Hello from spring boot");
+    const response = await fetch('http://localhost:8080/api/hello');
+    const data = await response.text()
+    setMessage123(data);
+  };
+
   // Removing the Participant text input field while creating a new chat
   const removeParticipantField = (index: number) => {
     if (newChatParticipants.length === 1) return; // if only me then do nothing
@@ -609,6 +619,12 @@ const GYBTeamChat: React.FC = () => {
                 >
                   ❓How To Use
                 </button>
+                <div className="p-4">
+                  <button onClick={handleClick} className="bg-blue-500 text-white px-4 py-2 rounded">
+                    서버에서 인사받기
+                  </button>
+                  {message123 && <p className="mt-2 text-green-700">{message123}</p>}
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">

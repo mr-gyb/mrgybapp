@@ -42,10 +42,12 @@ const Login: React.FC = () => {
             Welcome back!
           </h2>
 
+          {/*}
           <button className="w-full bg-black text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center mb-4">
             <Apple size={24} className="mr-2" />
             Continue with Apple
           </button>
+          */}
 
           <div className="flex items-center my-4">
             <div className="flex-grow border-t border-gray-300"></div>
