@@ -98,11 +98,12 @@ const InnerApp: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
   const location = useLocation();
 
   // To hide the bottom menu when it is in signin and signup Page
-  const hideBottomMenuRoutes = ['/login', '/signin', '/'];
+  const hideBottomMenuRoutes = ['/login', '/signin', '/', '/onboarding'];
+  const hideHeaderMenuRoutes = ['/login', '/signin', '/', '/onboarding']
 
   return (
     <div className={`flex flex-col min-h-screen ${isDarkMode ? 'dark bg-navy-blue text-white' : 'bg-white text-navy-blue'}`}>
-      <Header getPageTitle={getPageTitle} />
+      {!hideHeaderMenuRoutes.includes(location.pathname) && <Header getPageTitle={getPageTitle} />}
       <main className="flex-grow mt-16 mb-16">
         <Routes>
           {/* Public Routes */}

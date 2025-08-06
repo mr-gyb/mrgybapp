@@ -102,7 +102,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     await signOut(auth);
     setUserData(null);
-
   };
 
   const updateUserData = async (updates: Partial<UserProfile>) => {
