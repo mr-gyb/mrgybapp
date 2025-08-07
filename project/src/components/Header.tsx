@@ -15,7 +15,7 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { isDarkMode } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();

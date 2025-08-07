@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { createProfile } from '../services/profile.service';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
 
 const UserOnboarding: React.FC = () => {
   const { signUp } = useAuth();
@@ -22,6 +24,9 @@ const UserOnboarding: React.FC = () => {
   const [country, setCountry] = useState('US');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // for previewUrl
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const handleContinue = () => {
     setError('');
@@ -44,6 +49,26 @@ const UserOnboarding: React.FC = () => {
     setStep(step + 1);
   };
 
+  // for getting the initial to display the profile
+  const getInitials = (first: string, last: string) => {
+    const f = first?.[0]?.toUpperCase() || '';
+    const l = last?.[0]?.toUpperCase() || '';
+    return `${f}${l}` || "No Name";
+  };
+
+  // for tracking the file change(profile)
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
   const handleBack = () => {
     setStep(step - 1);
   };
@@ -60,12 +85,27 @@ const UserOnboarding: React.FC = () => {
         setError('No authenticated user found.');
         return;
       }
+
+      // for making null to test if user upload their own image
+      let profileImageUrl = null;
+
+
       
       // If still no user, create one
       if (!currentUser) {
         const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
         console.log('email', email);
         currentUser = newUserCredential.user;
+
+        await currentUser.reload(); 
+      }
+
+      if (selectedFile){
+        const storage = getStorage();
+        // const fileName = `${firstName.toLowerCase()} - ${lastName.toLowerCase()}`;
+        const imageRef = ref(storage, `profile-images/${currentUser.uid}`);
+        await uploadBytes(imageRef, selectedFile);
+        profileImageUrl = await getDownloadURL(imageRef);
       }
       
       if (currentUser) {
@@ -74,6 +114,7 @@ const UserOnboarding: React.FC = () => {
           email,
           name: `${firstName} ${lastName}`,
           username: `@${firstName.toLowerCase()}${lastName.toLowerCase()}`,
+          profile_image_url: profileImageUrl || '',
           //phoneNumber,
           //birthday,
           //notificationsEnabled,
@@ -174,7 +215,7 @@ const UserOnboarding: React.FC = () => {
             </div>
           </>
         )}
-
+        {/*
         {step === 3 && (
           <>
             <h2 className="text-2xl font-bold mb-4 dark:text-black">Enable notifications</h2>
@@ -190,6 +231,35 @@ const UserOnboarding: React.FC = () => {
                 <span className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 rounded-full transition-colors duration-300 ${notificationsEnabled ? 'bg-navy-blue' : 'bg-gray-300'}`}>
                   <span className={`absolute h-5 w-5 left-1 bottom-1 bg-white rounded-full transition-transform duration-300 ${notificationsEnabled ? 'transform translate-x-7' : ''}`}></span>
                 </span>
+              </label>
+            </div>
+          </>
+        )}
+          */}
+        {step === 3 && (
+          <>
+            <h2 className="text-2xl font-bold mb-4 dark:text-balck">Profile Image</h2>
+            <div className="flex items-center justify-between space-x-4">
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt="Profile Preview"
+                  className="w-24 h-24 rounded-full object-cover border"
+                  />
+              ) : (
+                <div className='w-24 h-24 rounded-full bg-gray-300 text-blue flex items-center justify-center text-2xl font-bold'>
+                  {getInitials(firstName, lastName)}
+                </div>
+              )}
+
+              <label className="cursor-pointer bg-gold text-white px-4 py-2 rounded hover:bg-yellow-600">
+                Upload Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
               </label>
             </div>
           </>
