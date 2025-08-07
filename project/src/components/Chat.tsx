@@ -43,16 +43,7 @@ const Chat: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [videoAvatar, setVideoAvatar] = useState(false);
 
-  // For those you first enters into the culture tab.
-  useEffect(() => {
-    if (currentChat?.messages?.length === 0){
-      const greetAI = async() => {
-        const greetingMessage = `Hello! I'm Mr.GYB AI. How can I help you today?`
-        await addMessage(currentChat.id, greetingMessage, 'assistant', undefined, 'Mr.GYB AI');
-      }
-      greetAI();
-    };
-  }, []);
+
   
   useEffect(() => {
     const loadChat = async () => {
@@ -119,6 +110,17 @@ const Chat: React.FC = () => {
       setIsProcessingAI(false);
     };
   }, [chatId]);
+
+  // For those you first enters into the culture tab.
+  useEffect(() => {
+    if (currentChat?.messages?.length === 0){
+      const greetAI = async() => {
+        const greetingMessage = `Hello! I'm Mr.GYB AI. How can I help you today?`
+        await addMessage(currentChat.id, greetingMessage, 'assistant', undefined, 'Mr.GYB AI');
+      }
+      greetAI();
+    };
+  }, []);
 
 
   const scrollToBottom = () => {
