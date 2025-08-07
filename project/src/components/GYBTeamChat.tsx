@@ -618,13 +618,16 @@ const GYBTeamChat: React.FC = () => {
                   className="bg-red-300 text-white px-3 py-1 rounded-full text-sm hover:underline"
                 >
                   ❓How To Use
+                
                 </button>
+                {/* 
                 <div className="p-4">
                   <button onClick={handleClick} className="bg-blue-500 text-white px-4 py-2 rounded">
                     서버에서 인사받기
                   </button>
                   {message123 && <p className="mt-2 text-green-700">{message123}</p>}
                 </div>
+                */}
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">

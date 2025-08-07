@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { X, User, Settings, LogOut, Video, Bookmark, Palette, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useChat } from "../contexts/ChatContext";
+
 
 interface SideMenuProps {
   isOpen: boolean;
@@ -18,6 +20,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
   const { logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const {setSelectedAgent} = useChat();
 
   if (!isAuthenticated) return null;
   
@@ -37,6 +40,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
   const handleLogout = async () => {
     try {
       await logout();
+      setSelectedAgent(null);
       navigate('/login');
       onClose();
     } catch (error) {
