@@ -424,14 +424,20 @@ const Chat: React.FC = () => {
                       <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-gold text-navy-blue">
                         {renderMessageContent(message)}
                       </div>
-                      <img
+                      {userData?.profile_image_url.startsWith('http') ? (
+                        <img
                         src={
-                          userData?.profile_image_url ||
-                          "https://cdn-icons-png.flaticon.com/512/63/63699.png"
+                          userData?.profile_image_url
                         }
                         alt="Profile"
                         className="w-8 h-8 rounded-full flex-shrink-0"
                       />
+                      ) : (
+                        <div className = "w-8 h-8 flex-shrink-0 items-center justify-center text-2xl font-bold object-cover pb-1">
+                          {userData?.profile_image_url}
+                        </div>
+                      )}
+                      
                     </div>
                   ) : (
                     // AI message: profile image on left side

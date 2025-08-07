@@ -143,6 +143,7 @@ const GYBTeamChat: React.FC = () => {
               const profileSnap = await getDoc(
                 doc(db, "profiles", data.senderId)
               );
+              
               if (profileSnap.exists()) {
                 senderName = profileSnap.data().name || "No Name";
                 profileImage =
@@ -258,14 +259,16 @@ const GYBTeamChat: React.FC = () => {
   // Handling message send, stores to the firebase in the dream_team chat field
   // Goes to subdomain "Message " field
   const handleSendMessage = async () => {
-    setIsProcessing(true);
+    
     if (message.trim() && selectedChat) {
       try {
+        
         // trim a message to get the email
         const trimmed = message.trim();
 
         // if user tries to discuss with one of the aiagents
         if (trimmed.startsWith("@")) {
+          setIsProcessing(true);
           const validAgents = ["mr.gyb", "ceo", "coo", "chro", "cto", "cmo"];
           const parts = trimmed.trim().split(" ");
           const aiAgent = parts[0].substring(1).toLowerCase(); // removing @ with aiagnetName
@@ -641,15 +644,19 @@ const GYBTeamChat: React.FC = () => {
                     }`}
                   >
                     {!(msg.senderId === user?.uid || msg.isAI) && (
-                      <img
-                        src={
-                          msg.profileImage ||
-                          "https://cdn-icons-png.flaticon.com/512/63/63699.png"
-                        }
-                        alt="Profile"
-                        className="w-8 h-8 rounded-full flex-shrink-0"
-                      />
+                      msg.profileImage?.startsWith("http") ? (
+                        <img
+                          src={msg.profileImage}
+                          alt="Profile"
+                          className="w-8 h-8 rounded-full flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-300 text-white flex items-center justify-center font-bold text-xl  ">
+                          {msg.profileImage}
+                        </div>
+                      )
                     )}
+                    
                     <div className = {`${
                       msg.senderId === user?.uid
                         ? "flex flex-col items-end"
@@ -671,14 +678,17 @@ const GYBTeamChat: React.FC = () => {
                       </div>
                     </div>
                     {(msg.senderId === user?.uid || msg.isAI) && (
-                      <img
-                        src={
-                          userData?.profile_image_url ||
-                          "https://cdn-icons-png.flaticon.com/512/63/63699.png"
-                        }
-                        alt="Profile"
-                        className="w-8 h-8 rounded-full flex-shrink-0"
-                      />
+                      msg.profileImage?.startsWith("http") ? (
+                        <img
+                          src={msg.profileImage}
+                          alt="Profile"
+                          className="w-8 h-8 rounded-full flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-300 text-white flex items-center justify-center font-bold text-xl  ">
+                          {msg.profileImage}
+                        </div>
+                      )
                     )}
                   </div>
                 ))}
