@@ -42,6 +42,7 @@ const Chat: React.FC = () => {
   const currentChat = chats.find((c) => c.id === chatId);
   const [isProcessing, setIsProcessing] = useState(false);
   const [videoAvatar, setVideoAvatar] = useState(false);
+  const greetingSentRef = useRef(false);
 
   useEffect(() => {
     const loadChat = async () => {
@@ -109,6 +110,18 @@ const Chat: React.FC = () => {
     };
   }, [chatId]);
 
+  // for entering the culture tab for the first time
+  useEffect(() => {
+    if (currentChat?.messages !== undefined && currentChat?.messages?.length === 0 && !greetingSentRef.current) {
+      const defaultAgent = selectedAgent || 'Mr.GYB AI';
+      setSelectedAgent(defaultAgent);
+      console.log("first time?")
+      const greeting = `Hello! I'm ${selectedAgent}. How can I help you today?`;
+      addMessage(currentChat.id, greeting, 'assistant', undefined, selectedAgent);
+      greetingSentRef.current = true;
+
+    }
+  },[currentChat, currentChat?.messages])
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
