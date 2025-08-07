@@ -44,6 +44,10 @@ const Chat: React.FC = () => {
   const [videoAvatar, setVideoAvatar] = useState(false);
 
   useEffect(() => {
+    console.log("💡 useEffect 실행됨");
+  }, []);
+  
+  useEffect(() => {
     const loadChat = async () => {
       if (chatId) {
         setIsLoading(true);
@@ -108,6 +112,7 @@ const Chat: React.FC = () => {
       setIsProcessingAI(false);
     };
   }, [chatId]);
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
