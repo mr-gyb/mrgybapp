@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, AlertCircle, LogIn, Apple } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE } from '../../api/config';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -11,6 +12,10 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { signIn } = useAuth();
 
+  // for Google OAuth2 start
+  const loginWithGoogle = () => {
+    window.location.href = `${API_BASE}/oauth2/authorization/google`;
+  }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -42,6 +47,14 @@ const Login: React.FC = () => {
             Welcome back!
           </h2>
 
+          <button
+            type="button"
+            onClick={loginWithGoogle}
+            className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 font-semibold flex items-center justify-center mb-4 hover:bg-gray-50"
+          >
+            <Apple size={24} className="mr-2" />
+            Continue with Google(Not Yet developed)
+          </button>
           {/*}
           <button className="w-full bg-black text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center mb-4">
             <Apple size={24} className="mr-2" />

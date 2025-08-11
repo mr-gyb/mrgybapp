@@ -50,6 +50,7 @@ import PrivacyPolicy from './components/settings/PrivacyPolicy';
 import AIVideoAvatar from './components/AIVideoAvatar';
 import CreateGroup from './components/group/CreateGroup';
 import GroupProfile from './components/group/GroupProfile';
+import GoogleAuthCallback from './components/Auth/GoogleAuthCallback';
 
 // Import template components
 import BusinessPlan from './components/templates/BusinessPlan';
@@ -114,6 +115,7 @@ const InnerApp: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/onboarding" element={<UserOnboarding />} />
+          <Route path="/google-callback" element={<GoogleAuthCallback />} />
 
           {/* App Routes */}
           <Route path="/dashboard" element={<Commerce />} />
