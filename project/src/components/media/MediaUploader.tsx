@@ -72,7 +72,7 @@ const MediaUploader: React.FC<MediaUploaderProps> = ({ onUpload, onClose }) => {
             Browse Files
           </button>
           <p className="mt-4 text-sm text-gray-500">
-            Supported formats: Video, Audio, Images, PDF, DOC, DOCX, TXT
+            Drag and drop your files here or click to browse
           </p>
         </div>
 

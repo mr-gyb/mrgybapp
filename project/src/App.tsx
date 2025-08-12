@@ -8,7 +8,8 @@ import SignIn from './components/Auth/SignIn';
 import NewChat from './components/NewChat';
 import Chat from './components/Chat';
 import ChatHistory from './components/ChatHistory';
-import Commerce from './components/Dashboard';
+import Commerce from './components/Commerce';
+import Dashboard from './components/Dashboard';
 import DreamTeam from './components/DreamTeam';
 import GYBLiveNetwork from './components/GYBLiveNetwork';
 import UserProfile from './components/UserProfile';
@@ -20,6 +21,8 @@ import Analytics from './components/Analytics';
 import Upload from './components/Upload';
 import GYBMedia from './components/NewPost';
 import GYBStudio from './components/GYBStudio';
+import FacebookAPITester from './components/FacebookAPITester';
+import FacebookPostsDisplay from './components/FacebookPostsDisplay';
 import WorkHistory from './components/WorkHistory';
 import Invites from './components/Invites';
 import Reviews from './components/Reviews';
@@ -50,7 +53,16 @@ import PrivacyPolicy from './components/settings/PrivacyPolicy';
 import AIVideoAvatar from './components/AIVideoAvatar';
 import CreateGroup from './components/group/CreateGroup';
 import GroupProfile from './components/group/GroupProfile';
+import HomePage from './components/HomePage';
+import AboutPage from './components/AboutPage';
+import ContactUs from './components/ContactUs';
+import WhatToExpect from './components/WhatToExpect';
+import TrialSignupPage from './components/TrialSignupPage';
+import TrialSignupStep2 from './components/TrialSignupStep2';
+import TrialSignupConfirmation from './components/TrialSignupConfirmation';
+
 import GoogleAuthCallback from './components/Auth/GoogleAuthCallback';
+
 
 // Import template components
 import BusinessPlan from './components/templates/BusinessPlan';
@@ -62,6 +74,10 @@ import MediaPlan from './components/templates/MediaPlan';
 
 const getPageTitle = (pathname: string) => {
   switch (pathname) {
+    case '/':
+      return 'Home';
+    case '/home':
+      return 'Home';
     case '/dashboard':
       return 'Commerce';
     case '/new-chat':
@@ -80,6 +96,8 @@ const getPageTitle = (pathname: string) => {
       return 'Roadmap';
     case '/gyb-studio':
       return 'Content';
+    case '/facebook-posts':
+      return 'Facebook Posts';
     default:
       return '';
   }
@@ -94,9 +112,11 @@ const App: React.FC = () => {
     </Router>
   );
 };
+  
 
 const InnerApp: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
   const location = useLocation();
+
 
   // To hide the bottom menu when it is in signin and signup Page
   const hideBottomMenuRoutes = ['/login', '/signin', '/', '/onboarding'];
@@ -116,6 +136,12 @@ const InnerApp: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/onboarding" element={<UserOnboarding />} />
           <Route path="/google-callback" element={<GoogleAuthCallback />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route path="/what-to-expect" element={<WhatToExpect />} />
+          <Route path="/trial-signup" element={<TrialSignupPage />} />
+          <Route path="/trial-signup-step2" element={<TrialSignupStep2 />} />
+          <Route path="/trial-signup-confirmation" element={<TrialSignupConfirmation />} />
 
           {/* App Routes */}
           <Route path="/dashboard" element={<Commerce />} />

@@ -3,6 +3,9 @@ import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEma
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile } from '../types/user';
+
+import { storage } from '../utils/storage';
+
 import { getInitials } from '../services/profile.service';
 
 
@@ -111,6 +114,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     await signOut(auth);
     setUserData(null);
+    // Clear all user-specific data from localStorage to prevent data leakage
+    storage.clear();
   };
 
   const updateUserData = async (updates: Partial<UserProfile>) => {

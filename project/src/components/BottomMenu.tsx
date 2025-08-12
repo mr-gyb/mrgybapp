@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Users, Plus, LayoutDashboard, Map } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useChat } from '../contexts/ChatContext';
+import CultureIcon from './icons/CultureIcon';
 
 const BottomMenu: React.FC = () => {
   const location = useLocation();
@@ -22,9 +23,15 @@ const BottomMenu: React.FC = () => {
   };
 
   const menuItems = [
+    {
+      path: '/home',
+      icon: Home,
+      label: 'Home',
+      isCustomNav: false
+    },
     { 
       path: '/new-chat', 
-      icon: Home, 
+      icon: CultureIcon, // Use CultureIcon here
       label: 'Culture',
       onClick: handleChatNavigation,
       isCustomNav: true 
@@ -58,7 +65,7 @@ const BottomMenu: React.FC = () => {
   return (
     <nav className={`fixed bottom-0 left-0 right-0 bg-white dark:bg-navy-blue border-t border-gray-200 dark:border-gray-700 z-50 transition-colors duration-200`}>
       <div className="flex justify-around items-center h-16">
-        {menuItems.map((item) => (
+        {menuItems.map((item, idx) => (
           item.isCustomNav ? (
             <button
               key={item.path}
@@ -69,7 +76,8 @@ const BottomMenu: React.FC = () => {
                   : 'text-gray-500 dark:text-gray-400'
               }`}
             >
-              <item.icon size={24} />
+              {/* Use size=34 for CultureIcon, 26 for others */}
+              {item.label === 'Culture' ? <item.icon size={36} /> : <item.icon size={26} />}
               <span className="text-xs mt-1">{item.label}</span>
             </button>
           ) : (
@@ -82,7 +90,7 @@ const BottomMenu: React.FC = () => {
                   : 'text-gray-500 dark:text-gray-400'
               }`}
             >
-              <item.icon size={24} />
+              <item.icon size={26} />
               <span className="text-xs mt-1">{item.label}</span>
             </Link>
           )
