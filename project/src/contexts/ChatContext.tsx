@@ -15,6 +15,7 @@ interface ChatContextType {
   isLoading: boolean;
   error: string | null;
   isProcessingAI: boolean;
+  setIsProcessingAI: React.Dispatch<React.SetStateAction<boolean>>;
   newchatButton: () => Promise<string | null>;
   createNewChat: () => Promise<string | null>;
   addMessage: (chatId: string, content: string | OpenAIMessage, role: 'user' | 'assistant' | 'system', senderId?: string, aiAgent?: string | null) => Promise<void>;
@@ -30,7 +31,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [chats, setChats] = useState<Chat[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<string | null>('Mr.GYB AI');
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +46,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const setupSubscriptions = async () => {
       setIsLoading(true);
       
-      if (!user)  {
+      if (!user || !user.uid)  {
         setChats([]);
         setCurrentChatId(null);
         setIsLoading(false);
@@ -259,6 +260,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const aiResponse = await generateAIResponse([...messages, { content: messageContent }], aiAgent || 'Mr.GYB AI');
             
             if (aiResponse) {
+              setIsProcessingAI(false);
               // Add the AI response as a new message
               const aiMessageData = {
                 chatId,
@@ -452,6 +454,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     error,
     isProcessingAI,
+    setIsProcessingAI,
     newchatButton,
     createNewChat,
     addMessage,

@@ -4,13 +4,19 @@ import { Mail, Lock, AlertCircle, LogIn, UserPlus, Apple } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
+import { useLocation } from 'react-router-dom';
+
 
 const SignIn: React.FC = () => {
+  // for getting the location state
+  const location = useLocation();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState<'signup' | 'login'>('login');
+  // modify to have the current mode state so that it can be used in signup mode.
+  const [mode, setMode] = useState<'signup' | 'login'>(location.state?.mode || 'login');
   const navigate = useNavigate();
   const { signIn } = useAuth();
 
@@ -23,20 +29,28 @@ const SignIn: React.FC = () => {
       if (mode === 'login') {
         const result = await signIn(email, password);
         if (result.error) {
-          throw result.error;
+          throw result.error; 
         }
         navigate('/dashboard');
       } else {
+        
         await createUserWithEmailAndPassword(auth, email, password);
         navigate('/onboarding', { state: { email, password } });
       }
-    } catch (err) {
-      setError(mode === 'login' 
-        ? 'Invalid email or password. Please try again.' 
-        : 'Failed to create account. This email may already be registered.'
-      );
+    } catch (err: any) {
+      if (err.code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Try logging in instead.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email format.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password should be at least 6 characters.');
+      } else if (err.code === 'auth/invalid-credential') {
+        setError('The email or password you entered is incorrect');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
       console.error('Authentication error:', err);
-    } finally {
+    }finally {
       setIsLoading(false);
     }
   };
@@ -61,7 +75,7 @@ const SignIn: React.FC = () => {
               <LogIn size={20} className="mr-2" />
               Login
             </button>
-            <button
+            <button 
               onClick={() => setMode('signup')}
               className={`flex items-center px-6 py-2 rounded-full ${
                 mode === 'signup'
@@ -78,10 +92,21 @@ const SignIn: React.FC = () => {
             {mode === 'login' ? 'Welcome back!' : 'Create your account'}
           </h2>
 
+          {/*}
           <button className="w-full bg-black text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center mb-4">
             <Apple size={24} className="mr-2" />
             Continue with Apple
           </button>
+          */}
+
+          {/* signup mode only instruction*/}
+          {mode === 'signup' && (
+            <div className="mb-4 text-sm text-gray-600 bg-gray-100 rounded-md p-3">
+              <ul className="list-disc pl-5">
+                <li>Password should be at least 6 characters.</li>
+              </ul>
+            </div>
+          )}
 
           <div className="flex items-center my-4">
             <div className="flex-grow border-t border-gray-300"></div>

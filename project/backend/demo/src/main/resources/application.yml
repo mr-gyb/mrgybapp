@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope: openid, email, profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            issuer-uri: https://accounts.google.com
+
+app:
+  jwt:
+    secret: "CHANGE_ME_TO_32+_CHAR_RANDOM_SECRET"
+    expiry-minutes: 120
+
+frontend:
+  redirect-success: "http://localhost:5173"
+  redirect-failure: "http://localhost:5173/login?error=oauth_failed"

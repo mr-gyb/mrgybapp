@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getProfile, updateProfile } from '../lib/firebase/profile';
 import { UserProfile } from '../types/user';
 import { doc } from 'firebase/firestore';
+import { getInitials } from '../services/profile.service';
 import {
   MapPin,
   Calendar,
@@ -66,10 +67,8 @@ const Profile: React.FC = () => {
     isCover: boolean = false
   ) => {
     
-    console.log("handlefileselect!!");
     const file = event.target.files?.[0];
     if (file) {
-      console.log("There is a file", file);
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onloadend = () => {
@@ -122,10 +121,17 @@ const Profile: React.FC = () => {
     value: string | number
   ) => {
     if (profileData) {
-      setProfileData((prev) => ({
+      setProfileData((prev) => {
+        const updated = {
         ...prev!,
         [field]: value,
-      }));
+      };
+      if (field === 'name' && !selectedFile) {
+        updated.profile_image_url = getInitials(value as string);
+      }
+
+      return updated;
+    });
     }
   };
 
@@ -320,11 +326,19 @@ const Profile: React.FC = () => {
                   <Image size={24} />
                 </button>
               )}
+              {/* if there is no existing profile image, show the initials */}
+              {profileData.profile_image_url.startsWith('http') ? (
               <img
                 src={previewUrl || profileData.profile_image_url}
                 alt={profileData.name}
                 className="w-full h-full object-cover"
               />
+              ) : (
+              <div className = "w-full h-full flex items-center justify-center text-4xl font-bold object-cover">
+                  {profileData.profile_image_url}
+                </div>
+              )}
+              
               <input
                 ref={fileInputRef}
                 type="file"
@@ -462,7 +476,7 @@ const Profile: React.FC = () => {
                       : 'text-gray-500'
                   }`}
                 >
-                  {tab}ㅎㅎ
+                  {tab}
                 </button>
               ))}
             </div>

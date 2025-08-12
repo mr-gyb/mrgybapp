@@ -3,7 +3,11 @@ import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEma
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile } from '../types/user';
+
 import { storage } from '../utils/storage';
+
+import { getInitials } from '../services/profile.service';
+
 
 interface AuthContextType {
   user: User | null;
@@ -49,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               rating: 4.5,
               following: 0,
               followers: 0,
-              profile_image_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80',
+              profile_image_url: getInitials(currentUser.displayName),
               cover_image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
@@ -70,6 +74,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => unsubscribe();
   }, []);
+
+  function getInitials(name?: string | null): string {
+    if (!name) return "U"; // fallback for unknown
+    const words = name.trim().split(" ");
+    if (words.length === 1) return words[0][0].toUpperCase();
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
 
   const signIn = async (email: string, password: string) => {
     try {
