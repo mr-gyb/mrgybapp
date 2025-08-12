@@ -76,7 +76,7 @@ const getPageTitle = (pathname: string) => {
   switch (pathname) {
     case '/':
       return 'Home';
-    case '/home':
+    case '/homepage':
       return 'Home';
     case '/dashboard':
       return 'Commerce';
@@ -133,6 +133,7 @@ const InnerApp: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
           <Route path="/signin" element={<SignIn />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path ='/homepage' element={<HomePage/>} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/onboarding" element={<UserOnboarding />} />
           <Route path="/google-callback" element={<GoogleAuthCallback />} />

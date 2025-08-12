@@ -26,7 +26,7 @@ const Login: React.FC = () => {
       if (result.error) {
         throw result.error;
       }
-      navigate('/dashboard');
+      navigate('/homepage');
     } catch (err: any) {
       setError("Invalid email or password.");
       console.error("Login failed:", err);
@@ -46,7 +46,7 @@ const Login: React.FC = () => {
           <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
             Welcome back!
           </h2>
-
+          {/*
           <button
             type="button"
             onClick={loginWithGoogle}
@@ -55,7 +55,7 @@ const Login: React.FC = () => {
             <Apple size={24} className="mr-2" />
             Continue with Google(Not Yet developed)
           </button>
-          {/*}
+          
           <button className="w-full bg-black text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center mb-4">
             <Apple size={24} className="mr-2" />
             Continue with Apple
