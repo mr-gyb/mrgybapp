@@ -1,46 +1,50 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import {
-  PlusCircle,
-  Edit2,
-  Check,
-  X,
-  ArrowDown,
-  FileText,
-} from 'lucide-react';
-import { useChat } from '../contexts/ChatContext';
-import { useAuth } from '../contexts/AuthContext';
-import { getChat } from '../lib/firebase/chats';
-import MessageInput from './chat/MessageInput';
-import HomeFilter from './filters/HomeFilter';
-import AIVideoAvatar from './AIVideoAvatar';
-import { OpenAIMessage } from '../types/chat';
-import { Message } from '../types/chat';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { PlusCircle, Edit2, Check, X, ArrowDown, FileText } from "lucide-react";
+import { useChat } from "../contexts/ChatContext";
+import { useAuth } from "../contexts/AuthContext";
+import { getChat } from "../lib/firebase/chats";
+import MessageInput from "./chat/MessageInput";
+import HomeFilter from "./filters/HomeFilter";
+import AIVideoAvatar from "./AIVideoAvatar";
+import { OpenAIMessage } from "../types/chat";
+import { Message } from "../types/chat";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { ChatCompletionContentPart } from "openai/resources/chat/completions";
-import ChatHeader from './chat/ChatHeader';
-import { AI_USERS } from '../types/user';
-
-
+import ChatHeader from "./chat/ChatHeader";
+import { AI_USERS } from "../types/user";
 
 const Chat: React.FC = () => {
   const { chatId } = useParams();
   const navigate = useNavigate();
   const { user, userData } = useAuth();
-  const { chats, addMessage, updateChatTitle, isProcessingAI, newchatButton, addImage, createNewChat, selectedAgent, setSelectedAgent } = useChat();
+  const {
+    chats,
+    addMessage,
+    updateChatTitle,
+    isProcessingAI,
+    newchatButton,
+    addImage,
+    createNewChat,
+    selectedAgent,
+    setSelectedAgent,
+    setIsProcessingAI,
+  } = useChat();
   const [isLoading, setIsLoading] = useState(true);
- // const [currentChat, setCurrentChat] = useState<any>(null);
+  // const [currentChat, setCurrentChat] = useState<any>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editedTitle, setEditedTitle] = useState('');
+  const [editedTitle, setEditedTitle] = useState("");
   const [showScrollButton, setShowScrollButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const currentChat = chats.find(c => c.id === chatId);
+  const currentChat = chats.find((c) => c.id === chatId);
   const [isProcessing, setIsProcessing] = useState(false);
   const [videoAvatar, setVideoAvatar] = useState(false);
 
+
+  
   useEffect(() => {
     const loadChat = async () => {
       if (chatId) {
@@ -50,13 +54,13 @@ const Chat: React.FC = () => {
           //setCurrentChat(chatData);
           setEditedTitle(chatData.title);
           const lastAiMessage = chatData.messages?.find(
-            (m) => m.role === 'assistant'
+            (m) => m.role === "assistant"
           );
           if (lastAiMessage?.aiAgent) {
             setSelectedAgent(lastAiMessage.aiAgent);
           }
         } else {
-          navigate('/new-chat');
+          navigate("/new-chat");
         }
         setIsLoading(false);
       }
@@ -68,7 +72,10 @@ const Chat: React.FC = () => {
   useEffect(() => {
     if (currentChat?.messages && currentChat.messages.length > 0) {
       const lastMessage = currentChat.messages[currentChat.messages.length - 1];
-      if (currentChat.messages.length > 1 && (lastMessage.role === 'assistant' || lastMessage.role === 'user')) {
+      if (
+        currentChat.messages.length > 1 &&
+        (lastMessage.role === "assistant" || lastMessage.role === "user")
+      ) {
         scrollToBottom();
       }
     }
@@ -84,7 +91,7 @@ const Chat: React.FC = () => {
     const checkScrollPosition = () => {
       const container = messagesContainerRef.current;
       if (!container) return;
-      
+
       const { scrollTop, scrollHeight, clientHeight } = container;
       const isScrolledUp = scrollHeight - scrollTop - clientHeight > 100;
       setShowScrollButton(isScrolledUp);
@@ -92,30 +99,51 @@ const Chat: React.FC = () => {
 
     const container = messagesContainerRef.current;
     if (container) {
-      container.addEventListener('scroll', checkScrollPosition);
-      return () => container.removeEventListener('scroll', checkScrollPosition);
+      container.addEventListener("scroll", checkScrollPosition);
+      return () => container.removeEventListener("scroll", checkScrollPosition);
     }
   }, []);
 
+    // For storing the state of the page change, ai agent change
+  useEffect(() => {
+    return () => {
+      setIsProcessingAI(false);
+    };
+  }, [chatId]);
+
+  // For those you first enters into the culture tab.
+  useEffect(() => {
+    if (currentChat?.messages?.length === 0){
+      const greetAI = async() => {
+        const greetingMessage = `Hello! I'm Mr.GYB AI. How can I help you today?`
+        await addMessage(currentChat.id, greetingMessage, 'assistant', undefined, 'Mr.GYB AI');
+      }
+      greetAI();
+    };
+  }, []);
+
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleSendMessage = async (content: string | OpenAIMessage | ChatCompletionContentPart[]) => {
-    console.log("handlesendmessage")
+  const handleSendMessage = async (
+    content: string | OpenAIMessage | ChatCompletionContentPart[]
+  ) => {
+    console.log("handlesendmessage");
     console.log("image type is ", typeof content);
     if (isProcessing || !chatId) return;
     setIsProcessing(true);
 
     try {
       // Add user message
-      if(typeof content === 'object'){
-        if(Array.isArray(content)){
-          await addImage(chatId, content, 'user', user?.uid);
+      if (typeof content === "object") {
+        if (Array.isArray(content)) {
+          await addImage(chatId, content, "user", user?.uid);
         }
-      }else{
+      } else {
         console.log("selectedAgent is ", selectedAgent);
-        await addMessage(chatId, content, 'user', user?.uid, selectedAgent);
+        await addMessage(chatId, content, "user", user?.uid, selectedAgent);
       }
       /* Update local state immediately
       setCurrentChat((prev) => ({
@@ -167,7 +195,7 @@ const Chat: React.FC = () => {
         scrollToBottom();
       }, 1000);*/
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error("Error sending message:", error);
       // Optionally show error to user
     } finally {
       setIsProcessing(false);
@@ -184,24 +212,29 @@ const Chat: React.FC = () => {
     }
   };
 
-  // for new chat button 
+  // for new chat button
   const handleNewChat = async () => {
     const newChatId = await newchatButton();
     if (newChatId) {
       navigate(`/chat/${newChatId}`);
     }
-  }
+  };
 
   // for agent change - create new chat with selected agent
   const handleAgentChange = async (newAgent: string) => {
     if (newAgent === selectedAgent) return; // No change needed
-    
+    console.log(newAgent)
+
     try {
       // First, check if there's an existing chat with this agent
-      const existingChat = chats.find(chat => {
+      const existingChat = chats.find((chat) => {
         // Check if the chat has messages from this agent
-        return chat.messages && chat.messages.some(message => 
-          message.role === 'assistant' && message.aiAgent === newAgent
+        return (
+          chat.messages &&
+          chat.messages.some(
+            (message) =>
+              message.role === "assistant" && message.aiAgent === newAgent
+          )
         );
       });
 
@@ -209,8 +242,9 @@ const Chat: React.FC = () => {
         // If existing chat found, navigate to it
         navigate(`/chat/${existingChat.id}`);
         // Get the actual agent from the existing chat's messages
-        const agentMessage = existingChat.messages?.find(message => 
-          message.role === 'assistant' && message.aiAgent === newAgent
+        const agentMessage = existingChat.messages?.find(
+          (message) =>
+            message.role === "assistant" && message.aiAgent === newAgent
         );
         if (agentMessage?.aiAgent) {
           setSelectedAgent(agentMessage.aiAgent);
@@ -223,8 +257,14 @@ const Chat: React.FC = () => {
         if (newChatId) {
           // Add initial message from the new agent
           const initialMessage = `Hello! I'm ${newAgent}. How can I help you today?`;
-          await addMessage(newChatId, initialMessage, 'assistant', undefined, newAgent);
-          
+          await addMessage(
+            newChatId,
+            initialMessage,
+            "assistant",
+            undefined,
+            newAgent
+          );
+
           // Navigate to the new chat
           navigate(`/chat/${newChatId}`);
           // Update the current agent state
@@ -232,35 +272,34 @@ const Chat: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Error handling agent change:', error);
+      console.error("Error handling agent change:", error);
     }
   };
 
   const handleTitleKeyPress = (
     event: React.KeyboardEvent<HTMLInputElement>
   ) => {
-    if (event.key === 'Enter') {
+    if (event.key === "Enter") {
       handleTitleUpdate();
-    } else if (event.key === 'Escape') {
+    } else if (event.key === "Escape") {
       setIsEditingTitle(false);
-      setEditedTitle(currentChat?.title || '');
+      setEditedTitle(currentChat?.title || "");
     }
   };
 
   // Function to get AI profile image based on selected agent
   // add the features to get the image of the corresponding user and ai
   const getAIProfileImage = (agentName: string) => {
-
     let agentNewName = agentName.toLowerCase() + "-ai";
-    if(agentNewName === 'mr.gyb ai-ai'){
-      agentNewName = 'mr-gyb-ai';
+    if (agentNewName === "mr.gyb ai-ai") {
+      agentNewName = "mr-gyb-ai";
     }
-    const aiUser = Object.values(AI_USERS).find(ai => ai.id === agentNewName);
+    const aiUser = Object.values(AI_USERS).find((ai) => ai.id === agentNewName);
     if (aiUser) {
       return aiUser.profile_image_url;
     }
     // Fallback to default AI profile image
-    return '/ai-profile.png';
+    return "/ai-profile.png";
   };
 
   if (isLoading) {
@@ -278,14 +317,14 @@ const Chat: React.FC = () => {
   const renderMessageContent = (message: Message) => {
     try {
       // Try to parse as JSON for complex message types (like those with images)
-      if (typeof message.content === 'string') {
+      if (typeof message.content === "string") {
         try {
           const parsedContent = JSON.parse(message.content);
           if (Array.isArray(parsedContent.content)) {
             return (
               <div className="space-y-2">
                 {parsedContent.content.map((item: any, index: number) => {
-                  if (item.type === 'image_url') {
+                  if (item.type === "image_url") {
                     return (
                       <img
                         key={index}
@@ -295,11 +334,11 @@ const Chat: React.FC = () => {
                       />
                     );
                   }
-                  if (item.type === 'text') {
+                  if (item.type === "text") {
                     return (
-                      <ReactMarkdown 
-                        key={index} 
-                        className="prose prose-sm max-w-none" 
+                      <ReactMarkdown
+                        key={index}
+                        className="prose prose-sm max-w-none"
                         remarkPlugins={[remarkGfm]}
                       >
                         {item.text}
@@ -322,8 +361,8 @@ const Chat: React.FC = () => {
               <FileText size={20} />
               <span>{message.fileName}</span>
             </div>
-            <ReactMarkdown 
-              className="prose prose-sm max-w-none" 
+            <ReactMarkdown
+              className="prose prose-sm max-w-none"
               remarkPlugins={[remarkGfm]}
             >
               {message.content}
@@ -333,18 +372,18 @@ const Chat: React.FC = () => {
       }
 
       return (
-        
-        <ReactMarkdown 
-          className="prose prose-sm max-w-none" 
+        <ReactMarkdown
+          className="prose prose-sm max-w-none"
           remarkPlugins={[remarkGfm]}
         >
-          {typeof message.content === 'string' ? message.content : ''}
+          {typeof message.content === "string" ? message.content : ""}
         </ReactMarkdown>
       );
     } catch (error) {
       return <p>{message.content}</p>;
     }
   };
+
 
   return (
     <div className="min-h-[90vh] flex flex-col bg-white">
@@ -353,7 +392,7 @@ const Chat: React.FC = () => {
         title={currentChat.title}
         isEditing={isEditingTitle}
         editedTitle={editedTitle}
-        onEditToggle={() => setIsEditingTitle(true)}  
+        onEditToggle={() => setIsEditingTitle(true)}
         onTitleChange={setEditedTitle}
         onTitleUpdate={handleTitleUpdate}
         onTitleCancel={() => {
@@ -365,7 +404,7 @@ const Chat: React.FC = () => {
       />
 
       {/* Scrollable Chat Content */}
-      <div 
+      <div
         ref={messagesContainerRef}
         className="flex-1 overflow-hidden mt-20 mb-24 px-4 relative "
       >
@@ -378,26 +417,35 @@ const Chat: React.FC = () => {
                 <div
                   key={index}
                   className={`flex ${
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  {message.role === 'user' ? (
+                  {message.role === "user" ? (
                     // User message: profile image on right side
                     <div className="flex items-start space-x-2">
                       <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-gold text-navy-blue">
                         {renderMessageContent(message)}
                       </div>
-                      <img
-                        src={userData?.profile_image_url || 'https://cdn-icons-png.flaticon.com/512/63/63699.png'}
+                      {userData?.profile_image_url.startsWith('http') ? (
+                        <img
+                        src={
+                          userData?.profile_image_url
+                        }
                         alt="Profile"
                         className="w-8 h-8 rounded-full flex-shrink-0"
                       />
+                      ) : (
+                        <div className = "w-8 h-8 flex-shrink-0 items-center justify-center text-2xl font-bold object-cover pb-1">
+                          {userData?.profile_image_url}
+                        </div>
+                      )}
+                      
                     </div>
                   ) : (
                     // AI message: profile image on left side
                     <div className="flex items-start space-x-2">
                       <img
-                        src={getAIProfileImage(selectedAgent || 'Mr.GYB AI')}
+                        src={getAIProfileImage(selectedAgent || "Mr.GYB AI")}
                         alt="Profile"
                         className="w-8 h-8 rounded-full flex-shrink-0"
                       />
@@ -412,7 +460,9 @@ const Chat: React.FC = () => {
               {isProcessingAI && (
                 <div className="flex justify-start">
                   <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
-                    <p className="text-sm sm:text-base italic">GYBAI is thinking...</p>
+                    <p className="text-sm sm:text-base italic">
+                      AI is thinking...
+                    </p>
                   </div>
                 </div>
               )}
@@ -420,7 +470,7 @@ const Chat: React.FC = () => {
             </div>
           </div>
         )}
-        
+
         {/* Scroll to bottom button */}
         {showScrollButton && !videoAvatar && (
           <button
@@ -433,9 +483,8 @@ const Chat: React.FC = () => {
         )}
       </div>
 
-        
       {/* Fixed Message Input */}
- 
+
       <MessageInput
         onSendMessage={handleSendMessage}
         isProcessing={isProcessing}
@@ -444,8 +493,6 @@ const Chat: React.FC = () => {
       />
 
       <HomeFilter onFilterChange={() => {}} />
-        
-      
     </div>
   );
 };
