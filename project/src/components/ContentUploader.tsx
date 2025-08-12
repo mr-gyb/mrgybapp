@@ -2,6 +2,11 @@ import React, { useState, useRef } from 'react';
 import { Upload, Link, FileText, AlertCircle } from 'lucide-react';
 import { uploadMedia, processMediaLink } from '../api/services/media.service';
 import { useAuth } from '../contexts/AuthContext';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../firebase/firebaseConfig';
+import { getDownloadURL } from 'firebase/storage';
+import { uploadBytes } from 'firebase/storage';
+import useUserContent from '../hooks/useUserContent';
 
 interface ContentUploaderProps {
   onUpload: (result: { id: string; url: string; type: string }) => void;
@@ -14,6 +19,8 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onUpload }) => {
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const userContent = useUserContent();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -24,7 +31,33 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onUpload }) => {
     setError(null);
 
     try {
-      const result = await uploadMedia(file, user.id);
+      const storageRef = await uploadBytes(user.storageRef, file);
+      const publicUrl = await getDownloadURL(storageRef);
+
+      const contentData = {
+        userId: user.uid,
+        title: file.name,
+        fileUrl: publicUrl,
+        storagePath: storageRef.fullPath,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        type: file.type,
+        platform: 'Instagram',
+        views: 0,
+        engagement: 0,
+        url: publicUrl
+      };
+
+      console.log('Writing to Firestore:', contentData);
+      await addDoc(collection(db, 'new_content'), contentData);
+
+      const result = {
+        id: storageRef.fullPath,
+        url: publicUrl,
+        type: file.type
+      };
+
+      console.log('📊 Content data being saved:', JSON.stringify(result, null, 2));
       onUpload(result);
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -43,6 +76,7 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onUpload }) => {
 
     try {
       const result = await processMediaLink(contentUrl.trim(), user.id);
+      console.log('📊 Content data being saved:', JSON.stringify(result, null, 2));
       onUpload(result);
       setContentUrl('');
     } catch (error) {
@@ -52,6 +86,44 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onUpload }) => {
       setIsUploading(false);
     }
   };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
+    setFileName(file.name);
+    setError(null);
+  };
+
+  const handleFileSubmit = async () => {
+    if (!selectedFile || !user) return;
+    setIsUploading(true);
+    setError(null);
+    try {
+      const result = await uploadMedia(selectedFile, user.id);
+      console.log('📊 Content data being saved:', JSON.stringify(result, null, 2));
+      onUpload(result);
+      setSelectedFile(null);
+      setFileName('');
+    } catch (error) {
+      setError('An error occurred while uploading the file. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const defaultPlatformData = [
+    { name: 'Instagram', value: 45 },
+    { name: 'TikTok', value: 35 },
+    { name: 'YouTube', value: 15 },
+    { name: 'LinkedIn', value: 5 },
+  ];
+
+  const userContent = [
+    { platforms: ['Instagram', 'YouTube'] },
+    { platforms: ['TikTok'] },
+    // ...more items
+  ];
 
   return (
     <div className="space-y-8">
@@ -65,17 +137,26 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onUpload }) => {
               disabled={isUploading}
             >
               <Upload size={20} className="mr-2" />
-              {isUploading ? 'Uploading...' : 'Choose File'}
+              Choose File
             </button>
             {fileName && <span className="text-gray-600">{fileName}</span>}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="video/*,audio/*,image/*,.pdf,.doc,.docx,.txt"
+            />
+            {selectedFile && (
+              <button
+                onClick={handleFileSubmit}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full flex items-center transition duration-300"
+                disabled={isUploading}
+              >
+                {isUploading ? 'Uploading...' : 'Submit'}
+              </button>
+            )}
           </div>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            className="hidden"
-            accept="video/*,audio/*,image/*,.pdf,.doc,.docx,.txt"
-          />
         </div>
 
         <div>

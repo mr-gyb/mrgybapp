@@ -1,0 +1,227 @@
+{
+  "facebook_api_examples": {
+    "page_insights_response": {
+      "data": [
+        {
+          "name": "page_impressions",
+          "period": "day",
+          "values": [
+            {
+              "value": 25000,
+              "end_time": "2024-01-15T07:00:00+0000"
+            }
+          ],
+          "title": "Page Impressions",
+          "description": "The number of times your Page was viewed",
+          "id": "123456789/insights/page_impressions/day"
+        },
+        {
+          "name": "page_post_engagements",
+          "period": "day",
+          "values": [
+            {
+              "value": 1500,
+              "end_time": "2024-01-15T07:00:00+0000"
+            }
+          ],
+          "title": "Page Post Engagements",
+          "description": "The number of times people engaged with your posts",
+          "id": "123456789/insights/page_post_engagements/day"
+        },
+        {
+          "name": "page_engaged_users",
+          "period": "day",
+          "values": [
+            {
+              "value": 800,
+              "end_time": "2024-01-15T07:00:00+0000"
+            }
+          ],
+          "title": "Page Engaged Users",
+          "description": "The number of people who engaged with your Page",
+          "id": "123456789/insights/page_engaged_users/day"
+        }
+      ],
+      "paging": {
+        "cursors": {
+          "before": "MAZDZD",
+          "after": "MAZDZD"
+        }
+      }
+    },
+    "posts_with_metrics_response": {
+      "data": [
+        {
+          "id": "123456789_987654321",
+          "message": "Check out our latest content!",
+          "created_time": "2024-01-15T10:30:00+0000",
+          "insights": {
+            "data": [
+              {
+                "name": "post_impressions",
+                "values": [
+                  {
+                    "value": 5000,
+                    "end_time": "2024-01-15T07:00:00+0000"
+                  }
+                ]
+              },
+              {
+                "name": "post_reactions_by_type_total",
+                "values": [
+                  {
+                    "value": 450,
+                    "end_time": "2024-01-15T07:00:00+0000"
+                  }
+                ]
+              },
+              {
+                "name": "post_clicks",
+                "values": [
+                  {
+                    "value": 120,
+                    "end_time": "2024-01-15T07:00:00+0000"
+                  }
+                ]
+              },
+              {
+                "name": "post_shares",
+                "values": [
+                  {
+                    "value": 25,
+                    "end_time": "2024-01-15T07:00:00+0000"
+                  }
+                ]
+              },
+              {
+                "name": "post_comments",
+                "values": [
+                  {
+                    "value": 15,
+                    "end_time": "2024-01-15T07:00:00+0000"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "123456789_987654322",
+          "message": "Exciting news about our product launch!",
+          "created_time": "2024-01-14T15:45:00+0000",
+          "insights": {
+            "data": [
+              {
+                "name": "post_impressions",
+                "values": [
+                  {
+                    "value": 3500,
+                    "end_time": "2024-01-14T07:00:00+0000"
+                  }
+                ]
+              },
+              {
+                "name": "post_reactions_by_type_total",
+                "values": [
+                  {
+                    "value": 320,
+                    "end_time": "2024-01-14T07:00:00+0000"
+                  }
+                ]
+              },
+              {
+                "name": "post_clicks",
+                "values": [
+                  {
+                    "value": 85,
+                    "end_time": "2024-01-14T07:00:00+0000"
+                  }
+                ]
+              },
+              {
+                "name": "post_shares",
+                "values": [
+                  {
+                    "value": 18,
+                    "end_time": "2024-01-14T07:00:00+0000"
+                  }
+                ]
+              },
+              {
+                "name": "post_comments",
+                "values": [
+                  {
+                    "value": 12,
+                    "end_time": "2024-01-14T07:00:00+0000"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "paging": {
+        "cursors": {
+          "before": "QVFIUjF",
+          "after": "QVFIUjF"
+        },
+        "next": "https://graph.facebook.com/v18.0/123456789/posts?access_token=..."
+      }
+    },
+    "page_info_response": {
+      "id": "123456789",
+      "name": "Your Facebook Page Name",
+      "category": "Technology",
+      "fan_count": 15000,
+      "verification_status": "verified",
+      "followers_count": 14500,
+      "rating_count": 125,
+      "overall_star_rating": 4.5
+    },
+    "error_response": {
+      "error": {
+        "message": "Invalid OAuth 2.0 Access Token",
+        "type": "OAuthException",
+        "code": 190,
+        "error_subcode": 460,
+        "error_user_msg": "The access token is invalid",
+        "error_user_title": "Invalid Access Token",
+        "fbtrace_id": "ABC123DEF456"
+      }
+    },
+    "api_endpoints": {
+      "page_insights": "GET /{page-id}/insights",
+      "page_posts": "GET /{page-id}/posts",
+      "page_info": "GET /{page-id}",
+      "post_insights": "GET /{post-id}/insights"
+    },
+    "required_permissions": [
+      "pages_read_engagement",
+      "pages_show_list",
+      "pages_read_user_content"
+    ],
+    "metrics_available": {
+      "page_level": [
+        "page_impressions",
+        "page_engaged_users", 
+        "page_post_engagements",
+        "page_fans",
+        "page_fan_adds",
+        "page_fan_removes"
+      ],
+      "post_level": [
+        "post_impressions",
+        "post_reactions_by_type_total",
+        "post_reactions_like_total",
+        "post_reactions_love_total", 
+        "post_reactions_wow_total",
+        "post_reactions_haha_total",
+        "post_reactions_sorry_total",
+        "post_reactions_anger_total",
+        "post_clicks",
+        "post_shares",
+        "post_comments"
+      ]
+    }
+  }
+} 

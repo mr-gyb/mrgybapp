@@ -5,6 +5,8 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {getFileType} from '../../utils/fileHandling'
 import { ChatCompletionContentPart  } from "openai/resources/chat/completions";
 import { MessageContentPartParam } from "openai/resources/beta/threads/messages";
+import { collection, doc, setDoc } from 'firebase/firestore';
+import { db, storage } from "../../lib/firebase";
 
 
 
@@ -295,3 +297,22 @@ function convertToMessageParts(content: ChatCompletionContentPart[]): MessageCon
     throw new Error(`Unsupported content type: ${part.type}`);
   });
 }
+
+export const uploadContent = async (newContent: any, selectedPlatforms: string[], selectedFormats: string[]) => {
+  try {
+    const imageUrls = await Promise.all(newContent.files.map(async (file: File) => await uploadImageAndGetUrl(file)));
+    const contentData = {
+      ...newContent,
+      platforms: selectedPlatforms,
+      formats: selectedFormats,
+      imageUrls: imageUrls,
+    };
+
+    await setDoc(doc(collection(db, 'content'), newContent.id), contentData);
+
+    return contentData;
+  } catch (error) {
+    console.error('Error uploading content:', error);
+    throw error;
+  }
+};

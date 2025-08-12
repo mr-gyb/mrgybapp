@@ -110,7 +110,7 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
       <SideMenu
         isOpen={isSideMenuOpen}
         onClose={() => setIsSideMenuOpen(false)}
-        userData={profileData || {}}
+        userData={profileData || undefined}
       />
     </>
   );

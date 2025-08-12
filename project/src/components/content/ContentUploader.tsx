@@ -3,6 +3,9 @@ import { useDropzone } from 'react-dropzone';
 import { Upload, X, AlertCircle } from 'lucide-react';
 import { analyzeContent, getContentAnalysis } from '../../services/content.service';
 import { useAuth } from '../../contexts/AuthContext';
+import { setDoc, doc, collection } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { ContentItem } from '../../types/content';
 
 interface ContentUploaderProps {
   onAnalysisComplete: (derivatives: any) => void;
@@ -25,7 +28,40 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onAnalysisComplete, o
       const contentType = getContentType(file);
       const analysisId = await analyzeContent(user.id, file, contentType);
       const analysis = await getContentAnalysis(analysisId);
+      console.log("DEBUG: analysis object:", analysis);
+
+      // Create a new ContentItem from the upload result
+      const newContent: ContentItem = {
+        id: analysis.id,
+        title: `Uploaded ${analysis.category?.name ?? ''}`,
+        description: `Your uploaded ${analysis.category?.name?.toLowerCase() ?? ''} content`,
+        type: analysis.category?.type ?? '',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        originalUrl: analysis.url ?? '',
+        thumbnail: analysis.url ?? '',
+        generatedAssets: [
+          {
+            id: `${analysis.id}-asset-1`,
+            type: 'analysis',
+            status: 'pending',
+            content: `Analysis for uploaded ${analysis.category?.name?.toLowerCase() ?? ''} content`
+          }
+        ],
+        platforms: analysis.category?.platforms ?? []
+      };
+      console.log("DEBUG: newContent object:", newContent);
+
+      console.log("DEBUG: About to write to Firestore:", JSON.stringify(newContent, null, 2));
+
       onAnalysisComplete(analysis.content_derivatives);
+
+      // Persist to Firestore with userId
+      const contentWithUserId = {
+        ...newContent,
+        userId: user.uid
+      };
+      await setDoc(doc(collection(db, 'new_content'), newContent.id), contentWithUserId);
     } catch (err) {
       setError('Failed to analyze content. Please try again.');
       console.error('Content analysis error:', err);
@@ -82,7 +118,7 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onAnalysisComplete, o
             Browse Files
           </button>
           <p className="mt-4 text-sm text-gray-500">
-            Supported formats: Text, PDF, DOC, DOCX, Images, Video, Audio
+            Drag and drop your files here or click to browse
           </p>
         </div>
 
