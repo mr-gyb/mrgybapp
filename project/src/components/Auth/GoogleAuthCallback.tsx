@@ -14,7 +14,6 @@ const GoogleAuthCallback: React.FC = () => {
 
         if (res.ok) {
           const data = await res.json()
-          console.log("로그인 사용자 정보", data)
           navigate('/dashboard');
           
         } else {

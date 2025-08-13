@@ -31,7 +31,10 @@ const SignIn: React.FC = () => {
         if (result.error) {
           throw result.error; 
         }
-        navigate('/dashboard');
+        
+        // redirect to the page. 
+        const from = location.state?.from?.pathname || '/homepage';
+        navigate(from, { replace: true });
       } else {
         
         await createUserWithEmailAndPassword(auth, email, password);
