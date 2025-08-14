@@ -132,8 +132,8 @@ const GYBTeamChat: React.FC = () => {
             if (data.senderId === "ai") {
               senderName = data.aiAgent?.toUpperCase() || "KEVIN";
               // To retrieve the AI agent profile image set the proper name
-              let agentKey = data.aiAgent?.toLowerCase() + "-ai";
-              if (agentKey === "mr.gyb ai-ai") {
+              let agentKey = data.aiAgent?.toLowerCase() || "mr.gyb ai";
+              if (agentKey === "mr.gyb ai") {
                 agentKey = "mr-gyb-ai";
               }
               profileImage =
@@ -269,7 +269,7 @@ const GYBTeamChat: React.FC = () => {
         // if user tries to discuss with one of the aiagents
         if (trimmed.startsWith("@")) {
           setIsProcessing(true);
-          const validAgents = ["mr.gyb", "ceo", "coo", "chro", "cto", "cmo"];
+          const validAgents = ["mr.gyb", "chris", "sherry", "charlotte", "jake", "rachel"];
           const parts = trimmed.trim().split(" ");
           const aiAgent = parts[0].substring(1).toLowerCase(); // removing @ with aiagnetName
           const question = parts.slice(1).join(" ");
@@ -320,9 +320,22 @@ const GYBTeamChat: React.FC = () => {
             if (aiAgent === "mr.gyb") {
               upperaiAgent = "Mr.GYB AI";
             } else {
-              upperaiAgent = aiAgent.toUpperCase();
+              if (aiAgent === "chris"){
+                upperaiAgent = "Chris"
+              }
+              if (aiAgent === "sherry"){
+                upperaiAgent = "Sherry"
+              }
+              if (aiAgent === "charlotte"){
+                upperaiAgent = "Charlotte"
+              }
+              if (aiAgent === "jake"){
+                upperaiAgent = "Jake"
+              }
+              if (aiAgent === "rachel"){
+                upperaiAgent = "Rachel"
+              }
             }
-
             // 3.generate AI response
             const aiResponse = await generateAIResponse(
               [...chatHistory, { content: question }],
@@ -697,7 +710,7 @@ const GYBTeamChat: React.FC = () => {
                   <div className="flex justify-start">
                     <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
                       <p className="text-sm sm:text-base italic">
-                        {`${processingAiAgnet} AI is thinking...`}
+                        {`${processingAiAgnet} is thinking...`}
                       </p>
                     </div>
                   </div>
@@ -860,7 +873,7 @@ const GYBTeamChat: React.FC = () => {
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
-              <span className="text-m font-medium text-black">CEO</span>
+              <span className="text-m font-medium text-black">Chris</span>
               <p className="text-sm text-gray-600">
                 Strategic Planning Assistant
               </p>
@@ -868,7 +881,7 @@ const GYBTeamChat: React.FC = () => {
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
-              <span className="text-m font-medium text-black">CTO</span>
+              <span className="text-m font-medium text-black">Jake</span>
               <p className="text-sm text-gray-600">
                 Technology Strategy Assistant
               </p>
@@ -876,7 +889,7 @@ const GYBTeamChat: React.FC = () => {
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
-              <span className="text-m font-medium text-black">CHRO</span>
+              <span className="text-m font-medium text-black">Charlotte</span>
               <p className="text-sm text-gray-600">
                 Human Resources Management Assistant
               </p>
@@ -884,7 +897,7 @@ const GYBTeamChat: React.FC = () => {
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
-              <span className="text-m font-medium text-black">CMO</span>
+              <span className="text-m font-medium text-black">Rachel</span>
               <p className="text-sm text-gray-600">
                 Marketing Strategy Assistant
               </p>
@@ -892,14 +905,14 @@ const GYBTeamChat: React.FC = () => {
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
-              <span className="text-m font-medium text-black">COO</span>
+              <span className="text-m font-medium text-black">Sherry</span>
               <p className="text-sm text-gray-600">
                 Operations Management Assistant
               </p>
             </div>
 
             <p className="text-sm text-gray-600 mb-4 mt-2">
-              ex. @CEO How can I grow my business?
+              ex. @Jake How can I grow my business?
             </p>
             <h3 className="text-md font-semibold mb-2">3. Leave the room</h3>
             <p className="mb-2">

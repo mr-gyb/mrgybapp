@@ -19,11 +19,11 @@ const openai = new OpenAI({
 const getAssistantId = (aiAgent: string): string => {
   const assistantIds: Record<string, string> = {
     'Mr.GYB AI': 'asst_5FUXkLddYzdcjHPCsmfV9x3F',
-    'CEO': 'asst_3vtN1pMnvJ89RUgUTgYIQCf0',
-    'COO': 'asst_OIVmkEpenHuPVlJT8u7DCfY7',
-    'CHRO' : 'asst_VkklftyKNwCBNz0ZGKCVthwN',
-    'CTO' : 'asst_DtKsptuonX5DEOPEmHL5f1XC',
-    'CMO' : 'asst_U5JvdzL03Gii91NPzg74XSgi'
+    'Chris': 'asst_3vtN1pMnvJ89RUgUTgYIQCf0',
+    'Sherry': 'asst_OIVmkEpenHuPVlJT8u7DCfY7',
+    'Charlotte' : 'asst_VkklftyKNwCBNz0ZGKCVthwN',
+    'Jake' : 'asst_DtKsptuonX5DEOPEmHL5f1XC',
+    'Rachel' : 'asst_U5JvdzL03Gii91NPzg74XSgi'
   };
 
   return assistantIds[aiAgent] || 'asst_defaultFallbackID'; 
@@ -47,7 +47,7 @@ export const generateAIResponse = async (
   try {
     const lastMessage = messages[messages.length - 1];
     const assistantId = getAssistantId(aiAgent);
-    console.log(aiAgent);
+
 
     // Handle messages with file content
     if (typeof lastMessage.content === 'object' && Array.isArray(lastMessage.content)) {
@@ -130,6 +130,7 @@ export const generateAIResponse = async (
 
     const threadMessages = await openai.beta.threads.messages.list(thread.id);
     return threadMessages.data[0]?.content[0]?.text?.value || '';
+
   } catch (error) {
     console.error('OpenAI API error:', error);
     throw new Error('Failed to generate AI response');
@@ -190,11 +191,11 @@ const getSystemPrompt = (aiAgent: string): string => {
   const prompts: Record<string, string> = {
     'Mr.GYB AI':
       'You are Mr.GYB AI, an all-in-one business growth assistant. You specialize in digital marketing, content creation, and business strategy. Be professional, strategic, and focused on growth.',
-    CEO: 'You are the CEO AI, focused on high-level strategic planning and business development. Provide executive-level insights and leadership guidance.',
-    COO: 'You are the COO AI, specializing in operations management and process optimization. Focus on efficiency, systems, and operational excellence.',
-    CHRO: 'You are the CHRO AI, expert in human resources and organizational development. Focus on talent management, culture, and employee experience.',
-    CTO: 'You are the CTO AI, specializing in technology strategy and innovation. Provide guidance on technical decisions and digital transformation.',
-    CMO: 'You are the CMO AI, expert in marketing strategy and brand development. Focus on marketing campaigns, brand building, and customer engagement.',
+    CHRIS: 'You are the CEO AI, focused on high-level strategic planning and business development. Provide executive-level insights and leadership guidance.',
+    Sherry: 'You are the COO AI, specializing in operations management and process optimization. Focus on efficiency, systems, and operational excellence.',
+    Charlotte: 'You are the CHRO AI, expert in human resources and organizational development. Focus on talent management, culture, and employee experience.',
+    Jake: 'You are the CTO AI, specializing in technology strategy and innovation. Provide guidance on technical decisions and digital transformation.',
+    Rachel: 'You are the CMO AI, expert in marketing strategy and brand development. Focus on marketing campaigns, brand building, and customer engagement.',
   };
 
   return (

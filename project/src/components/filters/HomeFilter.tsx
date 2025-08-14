@@ -29,11 +29,11 @@ const HomeFilter: React.FC<HomeFilterProps> = ({ onFilterChange }) => {
 
   const aiTeamMembers = [
     { id: 'mrgyb', name: 'Mr.GYB AI', icon: Bot },
-    { id: 'ceo', name: 'CEO', icon: Users },
-    { id: 'coo', name: 'COO', icon: Users },
-    { id: 'chro', name: 'CHRO', icon: Users },
-    { id: 'cto', name: 'CTO', icon: Users },
-    { id: 'cmo', name: 'CMO', icon: Users },
+    { id: 'chris', name: 'Chris', icon: Users },
+    { id: 'sherry', name: 'Sherry', icon: Users },
+    { id: 'charlotte', name: 'Charlotte', icon: Users },
+    { id: 'jake', name: 'Jake', icon: Users },
+    { id: 'rachel', name: 'Rachel', icon: Users },
   ];
 
   const handleAgentToggle = (agentName: string) => {
