@@ -290,8 +290,8 @@ const Chat: React.FC = () => {
   // Function to get AI profile image based on selected agent
   // add the features to get the image of the corresponding user and ai
   const getAIProfileImage = (agentName: string) => {
-    let agentNewName = agentName.toLowerCase() + "-ai";
-    if (agentNewName === "mr.gyb ai-ai") {
+    let agentNewName = agentName.toLowerCase();
+    if (agentNewName === "mr.gyb ai") {
       agentNewName = "mr-gyb-ai";
     }
     const aiUser = Object.values(AI_USERS).find((ai) => ai.id === agentNewName);
@@ -461,7 +461,7 @@ const Chat: React.FC = () => {
                 <div className="flex justify-start">
                   <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
                     <p className="text-sm sm:text-base italic">
-                      AI is thinking...
+                      Thinking for a better answer...
                     </p>
                   </div>
                 </div>

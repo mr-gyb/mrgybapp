@@ -32,9 +32,9 @@ const DreamTeam: React.FC = () => {
       ]
     },
     {
-      id: 'ceo',
-      title: 'CEO',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCEO.png?alt=media&token=62f3fe9f-0b51-4501-becd-c9bf88d7bf0e',
+      id: 'chris',
+      title: 'CHRIS',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FChris-ai.png?alt=media&token=83b2003d-04bf-422e-a0f7-26d148a4ff46',
       specializations: [
         'STRATEGIC PLANNING',
         'BUSINESS DEVELOPMENT',
@@ -44,8 +44,8 @@ const DreamTeam: React.FC = () => {
       ]
     },
     {
-      id: 'coo',
-      title: 'COO',
+      id: 'sherry',
+      title: 'Sherry',
       image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCOO.png?alt=media&token=d57a97eb-83f5-4e0d-903e-278dc2a4d9af',
       specializations: [
         'OPERATIONS MANAGEMENT',
@@ -56,8 +56,8 @@ const DreamTeam: React.FC = () => {
       ]
     },
     {
-      id: 'chro',
-      title: 'CHRO',
+      id: 'charlotte',
+      title: 'Charlotte',
       image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCHRO.png?alt=media&token=862bbf8c-373b-4996-89fe-8d867f378d9f',
       specializations: [
         'HUMAN RESOURCES MANAGEMENT',
@@ -68,9 +68,9 @@ const DreamTeam: React.FC = () => {
       ]
     },
     {
-      id: 'cto',
-      title: 'CTO',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCTO.png?alt=media&token=e856c7b0-440d-4776-ba3b-8eb0bb89165d',
+      id: 'jake',
+      title: 'Jake',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FJake-ai.png?alt=media&token=cf28a12b-f86a-4aed-b5af-32f5de16cfe9',
       specializations: [
         'TECHNOLOGY STRATEGY',
         'INNOVATION MANAGEMENT',
@@ -80,8 +80,8 @@ const DreamTeam: React.FC = () => {
       ]
     },
     {
-      id: 'cmo',
-      title: 'CMO',
+      id: 'rachel',
+      title: 'Rachel',
       image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCMO.png?alt=media&token=4e9ddaee-c4b0-4b4d-aca8-6c4196a5dd1b',
       specializations: [
         'MARKETING STRATEGY',

@@ -49,10 +49,10 @@ export const AI_USERS: Record<string, UserProfile> = {
     updated_at: '2023-01-01T00:00:00Z',
     isAI: true
   },
-  'ceo-ai': {
-    id: 'ceo-ai',
-    name: 'CEO AI',
-    username: '@ceo_ai',
+  'chris': {
+    id: 'chris',
+    name: 'Chris',
+    username: '@chris_ai',
     bio: 'Strategic planning and business development expert. Focused on high-level decision making and organizational leadership.',
     location: 'Global',
     website: 'https://ai.mrgyb.com/ceo',
@@ -62,16 +62,16 @@ export const AI_USERS: Record<string, UserProfile> = {
     rating: 4.9,
     following: 500000,
     followers: 2000000,
-    profile_image_url: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCEO.png?alt=media&token=62f3fe9f-0b51-4501-becd-c9bf88d7bf0e',
+    profile_image_url: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FChris-ai.png?alt=media&token=83b2003d-04bf-422e-a0f7-26d148a4ff46',
     cover_image_url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
     isAI: true
   },
-  'coo-ai': {
-    id: 'coo-ai',
-    name: 'COO AI',
-    username: '@coo_ai',
+  'sherry': {
+    id: 'sherry',
+    name: 'Sherry',
+    username: '@sherry_ai',
     bio: 'Operations management and process optimization specialist. Expert in efficiency and organizational excellence.',
     location: 'Global',
     website: 'https://ai.mrgyb.com/coo',
@@ -87,10 +87,10 @@ export const AI_USERS: Record<string, UserProfile> = {
     updated_at: '2023-01-01T00:00:00Z',
     isAI: true
   },
-  'chro-ai': {
-    id: 'chro-ai',
-    name: 'CHRO AI',
-    username: '@chro_ai',
+  'charlotte': {
+    id: 'charlotte',
+    name: 'Charlotte',
+    username: '@charlotte_ai',
     bio: 'Human resources and organizational development expert. Focused on talent management and company culture.',
     location: 'Global',
     website: 'https://ai.mrgyb.com/chro',
@@ -106,10 +106,10 @@ export const AI_USERS: Record<string, UserProfile> = {
     updated_at: '2023-01-01T00:00:00Z',
     isAI: true
   },
-  'cto-ai': {
-    id: 'cto-ai',
-    name: 'CTO AI',
-    username: '@cto_ai',
+  'jake': {
+    id: 'jake',
+    name: 'Jake',
+    username: '@jake_ai',
     bio: 'Technology strategy and innovation expert. Specialized in digital transformation and technical architecture.',
     location: 'Global',
     website: 'https://ai.mrgyb.com/cto',
@@ -119,16 +119,16 @@ export const AI_USERS: Record<string, UserProfile> = {
     rating: 4.9,
     following: 400000,
     followers: 1800000,
-    profile_image_url: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCTO.png?alt=media&token=e856c7b0-440d-4776-ba3b-8eb0bb89165d',
+    profile_image_url: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FJake-ai.png?alt=media&token=cf28a12b-f86a-4aed-b5af-32f5de16cfe9',
     cover_image_url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
     isAI: true
   },
-  'cmo-ai': {
-    id: 'cmo-ai',
-    name: 'CMO AI',
-    username: '@cmo_ai',
+  'rachel': {
+    id: 'rachel',
+    name: 'Rachel',
+    username: '@rachel_ai',
     bio: 'Marketing strategy and brand development expert. Focused on customer engagement and market growth.',
     location: 'Global',
     website: 'https://ai.mrgyb.com/cmo',
