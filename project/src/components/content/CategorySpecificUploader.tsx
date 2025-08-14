@@ -23,7 +23,7 @@ interface ContentCategory {
 interface CategorySpecificUploaderProps {
   category: ContentCategory;
   onClose: () => void;
-  onUpload: (result: { id: string; url: string; type: string; category: ContentCategory; platforms: string[]; formats: string[]; linkType?: string; title?: string; blogPlatform?: string }) => void;
+  onUpload: (result: { id: string; url: string; type: string; category: ContentCategory; platforms: string[]; formats: string[]; linkType?: string; title?: string }) => void;
 }
 
 const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
@@ -41,7 +41,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
   const [showTitleModal, setShowTitleModal] = useState(false);
   const [pendingUploadData, setPendingUploadData] = useState<any>(null);
   // Add state for selected blog platform
-  const [selectedBlogPlatform, setSelectedBlogPlatform] = useState<string | null>(null);
+
   // Add state for the URL title
   const [urlTitle, setUrlTitle] = useState('');
 
@@ -111,10 +111,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
       return 'audio';
     }
     
-    // Medium links
-    if (urlLower.includes('medium.com')) {
-      return 'blog';
-    }
+
     
     // Instagram links
     if (urlLower.includes('instagram.com') || urlLower.includes('instagr.am')) {
@@ -131,10 +128,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
       return 'social-media';
     }
     
-    // LinkedIn links
-    if (urlLower.includes('linkedin.com')) {
-      return 'other';
-    }
+
     
     // TikTok links
     if (urlLower.includes('tiktok.com')) {
@@ -181,8 +175,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
         platforms: selectedPlatforms,
         formats: [], // No formats for URL uploads
         linkType: automaticLinkType, // Use automatically determined link type
-        title: urlTitle, // Pass the entered title
-        blogPlatform: selectedBlogPlatform || undefined // Pass the selected blog platform
+        title: urlTitle // Pass the entered title
       });
       setContentUrl('');
       setUrlTitle('');
@@ -232,8 +225,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
         category: pendingUploadData.category,
         platforms: pendingUploadData.platforms,
         formats: pendingUploadData.formats,
-        title: title, // Include the selected title
-        blogPlatform: category.id === 'blog' ? selectedBlogPlatform : undefined // Add blogPlatform for blogs
+        title: title // Include the selected title
       };
 
       console.log('Upload result:', uploadResult);
@@ -245,8 +237,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
         platforms: selectedPlatforms,
         formats: pendingUploadData.formats, // Pass the formats from pendingUploadData
         linkType: getLinkTypeFromUrl(uploadResult.url, category.id), // Use automatic link type detection
-        title: urlTitle, // Pass the entered title
-        blogPlatform: selectedBlogPlatform || undefined // Pass the selected blog platform
+        title: urlTitle // Pass the entered title
       });
 
       // Save to database with title
@@ -456,31 +447,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
           <h4 className="font-semibold mb-2 text-navy-blue">About {category.name}</h4>
           <p className="text-gray-600 text-sm mb-3">{category.description}</p>
           <div className="flex flex-wrap gap-2 mb-4">
-            {category.id === 'blog' ? (
-              <>
-                <button
-                  type="button"
-                  className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${selectedBlogPlatform === 'Blogger' ? 'bg-navy-blue text-white border-navy-blue' : 'bg-blue-100 text-blue-800 border-blue-200'}`}
-                  onClick={() => setSelectedBlogPlatform(selectedBlogPlatform === 'Blogger' ? null : 'Blogger')}
-                >
-                  Blogger
-                </button>
-                <button
-                  type="button"
-                  className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${selectedBlogPlatform === 'Substack' ? 'bg-navy-blue text-white border-navy-blue' : 'bg-green-100 text-green-800 border-green-200'}`}
-                  onClick={() => setSelectedBlogPlatform(selectedBlogPlatform === 'Substack' ? null : 'Substack')}
-                >
-                  Substack
-                </button>
-                <button
-                  type="button"
-                  className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${selectedBlogPlatform === 'Medium' ? 'bg-navy-blue text-white border-navy-blue' : 'bg-yellow-100 text-yellow-800 border-yellow-200'}`}
-                  onClick={() => setSelectedBlogPlatform(selectedBlogPlatform === 'Medium' ? null : 'Medium')}
-                >
-                  Medium
-                </button>
-              </>
-            ) : category.id === 'audio' ? (
+            {category.id === 'audio' ? (
               <>
                 <button
                   type="button"
@@ -488,13 +455,6 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
                   onClick={() => togglePlatform('Spotify')}
                 >
                   Spotify
-                </button>
-                <button
-                  type="button"
-                  className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${selectedPlatforms.includes('iTunes') ? 'bg-navy-blue text-white border-navy-blue' : 'bg-pink-100 text-pink-800 border-pink-200'}`}
-                  onClick={() => togglePlatform('iTunes')}
-                >
-                  iTunes
                 </button>
               </>
             ) : category.id === 'video' ? (

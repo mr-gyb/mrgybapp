@@ -19,10 +19,6 @@ export const getAllProfiles = async (): Promise<UserProfile[]> => {
   }
 };
 
-export const getInitials = (name: string) => {
-  return name.split(' ').map(n => n[0]).join('');
-};
-
 export const createProfile = async (userId: string, profile: Partial<UserProfile>) => {
   try {
     const newProfile: UserProfile = {
@@ -38,7 +34,7 @@ export const createProfile = async (userId: string, profile: Partial<UserProfile
       rating: profile.rating || 4.5,
       following: profile.following || 0,
       followers: profile.followers || 0,
-      profile_image_url: profile.profile_image_url || getInitials(profile.name || ''),
+      profile_image_url: profile.profile_image_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80',
       cover_image_url: profile.cover_image_url || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

@@ -12,7 +12,7 @@ export interface GeneratedContent {
   created_at: string;
   updated_at: string;
   type: ContentType; // Added content type
-  blogPlatform?: string | null; // Optional blog platform
+
 }
 
 export interface ContentError {
@@ -48,7 +48,7 @@ export const saveContent = async (
   generatedContent: string,
   title: string,
   type: ContentType, // Added type param
-  blogPlatform?: string | null // Optional blog platform
+
 ): Promise<GeneratedContent> => {
   try {
     const contentData = {
@@ -60,7 +60,7 @@ export const saveContent = async (
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       type, // Save type
-      blogPlatform: blogPlatform || null
+  
     };
     
     const contentRef = await addDoc(collection(db, 'generated_content'), contentData);
@@ -104,7 +104,7 @@ export const updateContent = async (
     await updateDoc(contentRef, {
       ...updates,
       updated_at: new Date().toISOString(),
-      blogPlatform: updates.blogPlatform !== undefined ? updates.blogPlatform : null
+  
     });
     
     const updatedDoc = await getDoc(contentRef);

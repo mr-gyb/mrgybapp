@@ -50,12 +50,7 @@ export const integrationCategories: IntegrationCategory[] = [
         description: 'Connect your Instagram account to manage your posts and engage with your audience.',
         connectUrl: '#',
       },
-      {
-        name: 'LinkedIn',
-        logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/LinkedIn_logo_initials.png/100px-LinkedIn_logo_initials.png',
-        description: 'Connect your LinkedIn account to manage your professional network and content.',
-        connectUrl: '#',
-      },
+
       {
         name: 'TikTok',
         logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a9/TikTok_logo.svg/100px-TikTok_logo.svg.png',

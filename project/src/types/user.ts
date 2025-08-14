@@ -18,6 +18,7 @@ export interface UserProfile {
   cover_image_url: string;
   created_at: string;
   updated_at: string;
+  authProvider?: 'email' | 'facebook' | 'google';
   isAI?: boolean;
   isPlaceholder?: boolean;
   darkMode?: boolean;
@@ -43,7 +44,7 @@ export const AI_USERS: Record<string, UserProfile> = {
     rating: 5.0,
     following: 1000000,
     followers: 5000000,
-    profile_image_url: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58',
+    profile_image_url: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FChris%20real.jpg?alt=media&token=f71aa569-3cf4-41c0-af3d-cd4693126a64',
     cover_image_url: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
@@ -81,7 +82,7 @@ export const AI_USERS: Record<string, UserProfile> = {
     rating: 4.8,
     following: 300000,
     followers: 1500000,
-    profile_image_url: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCOO.png?alt=media&token=d57a97eb-83f5-4e0d-903e-278dc2a4d9af',
+    profile_image_url: 'https://images.unsplash.com/photo-1573497491765-dccce02b29df?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80',
     cover_image_url: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
@@ -100,7 +101,7 @@ export const AI_USERS: Record<string, UserProfile> = {
     rating: 4.7,
     following: 200000,
     followers: 1000000,
-    profile_image_url: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCHRO.png?alt=media&token=862bbf8c-373b-4996-89fe-8d867f378d9f',
+    profile_image_url: 'https://images.unsplash.com/photo-1573496799652-408c2ac9fe98?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80',
     cover_image_url: 'https://images.unsplash.com/photo-1521737852567-6949f3f9f2b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
@@ -138,7 +139,7 @@ export const AI_USERS: Record<string, UserProfile> = {
     rating: 4.8,
     following: 350000,
     followers: 1600000,
-    profile_image_url: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCMO.png?alt=media&token=4e9ddaee-c4b0-4b4d-aca8-6c4196a5dd1b',
+    profile_image_url: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80',
     cover_image_url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',

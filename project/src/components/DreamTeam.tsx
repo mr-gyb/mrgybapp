@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef} from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, MessageSquare, Send, Mic, Camera, Paperclip, Image as ImageIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useChat } from '../contexts/ChatContext';
@@ -14,15 +14,13 @@ const DreamTeam: React.FC = () => {
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const navigate = useNavigate();
-  const { createNewChat, addMessage, currentChatId, chats, setSelectedAgent } = useChat();
-  // For scrolling to bottom of the screen
-  const screenEndRef = useRef<HTMLDivElement>(null);
+  const { createNewChat, addMessage, currentChatId } = useChat();
 
   const teamMembers: TeamMember[] = [
     {
       id: 'mrgyb',
       title: 'Mr.GYB AI',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58',
+      image: 'https://drive.google.com/uc?export=view&id=1H1PYdJ4qNz8a2R6WaxaYw22awKagmEy9',
       specializations: [
         'ALL-IN-ONE BUSINESS GROWTH ASSISTANT',
         'DIGITAL MARKETING',
@@ -32,6 +30,7 @@ const DreamTeam: React.FC = () => {
       ]
     },
     {
+
       id: 'chris',
       title: 'CHRIS',
       image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FChris-ai.png?alt=media&token=83b2003d-04bf-422e-a0f7-26d148a4ff46',
@@ -44,6 +43,7 @@ const DreamTeam: React.FC = () => {
       ]
     },
     {
+
       id: 'sherry',
       title: 'Sherry',
       image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCOO.png?alt=media&token=d57a97eb-83f5-4e0d-903e-278dc2a4d9af',
@@ -95,47 +95,26 @@ const DreamTeam: React.FC = () => {
 
   const handleMemberClick = (memberId: string) => {
     setSelectedMember(memberId === selectedMember ? null : memberId);
-    screenEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleStartChat = async (newAgent: string) => {
-    try {
-      // check if there is an existing chat
-      // chats have several chat room objects.
-      // .find() => return the first room that satisfy the requirement.
-      // if there are a message that have role == assistant and aiAgent == selectedAgent
-      // Then return true otherwise return false to indicate whether there are existing chat.
-      const existingChat = chats.find((chat) => {
-        return (
-          chat.messages &&
-          chat.messages.some(
-            (message) =>
-              message.role === "assistant" && message.aiAgent === newAgent
-          )
-        );
-      });
+  const handleStartChat = (memberTitle: string) => {
+    navigate(`/new-chat`, { state: { selectedAgent: memberTitle, chatId: newChatId } });
+  };
 
-      if (existingChat) {
-        navigate(`/chat/${existingChat.id}`)
-      } else{
-        const newChatId = await createNewChat();
+  const handleSendMessage = () => {
+    if (input.trim() && currentChatId && selectedMember) {
+      const memberTitle = teamMembers.find(m => m.id === selectedMember)?.title || '';
+      addMessage(currentChatId, 'user', input);
+      setInput('');
+      setTimeout(() => {
+        addMessage(currentChatId, 'assistant', `Response from ${memberTitle}: "${input}"`);
+      }, 1000);
+    }
+  };
 
-        if (newChatId) {
-          // Add initial message from the new agent
-          const initialMessage = `Hello! I'm ${newAgent}. How can I help you today?`;
-          await addMessage(
-            newChatId,
-            initialMessage,
-            "assistant",
-            undefined,
-            newAgent
-          );
-          navigate(`/chat/${newChatId}`)
-          setSelectedAgent(newAgent)
-        }
-      }
-    } catch (error){
-      console.error("Error Handling going to the agent chat", error)
+  const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      handleSendMessage();
     }
   };
 
@@ -143,8 +122,8 @@ const DreamTeam: React.FC = () => {
     <div className="bg-white min-h-screen text-navy-blue">
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center mb-6">
-          <Link to={`/chat/${currentChatId}`} className="mr-4 text-navy-blue">
-            <ChevronLeft size={24} /> 
+          <Link to="/new-chat" className="mr-4 text-navy-blue">
+            <ChevronLeft size={24} />
           </Link>
           <h1 className="text-3xl font-bold text-navy-blue">GYB AI Team Members</h1>
         </div>
@@ -195,10 +174,37 @@ const DreamTeam: React.FC = () => {
                   </li>
                 ))}
             </ul>
+            <div className="flex items-center bg-white rounded-full p-2">
+              <button className="p-2 text-gray-500 hover:text-navy-blue">
+                <Paperclip size={20} />
+              </button>
+              <button className="p-2 text-gray-500 hover:text-navy-blue">
+                <Camera size={20} />
+              </button>
+              <button className="p-2 text-gray-500 hover:text-navy-blue">
+                <ImageIcon size={20} />
+              </button>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                className="flex-grow bg-transparent border-none focus:outline-none px-4 py-2 text-navy-blue"
+              />
+              <button className="p-2 text-gray-500 hover:text-navy-blue">
+                <Mic size={20} />
+              </button>
+              <button
+                onClick={handleSendMessage}
+                className="p-2 text-blue-500 hover:text-blue-600"
+              >
+                <Send size={20} />
+              </button>
+            </div>
           </div>
         )}
       </div>
-      <div ref = {screenEndRef} />
     </div>
   );
 };

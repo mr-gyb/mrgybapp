@@ -38,8 +38,11 @@ class PlatformApiService {
 
   private loadConfigs() {
     // Load API configurations from environment variables
+    const youtubeApiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+    console.log('Loading YouTube API key:', youtubeApiKey ? 'Present' : 'Missing');
+    
     this.configs.set('youtube', {
-      apiKey: import.meta.env.VITE_YOUTUBE_API_KEY
+      apiKey: youtubeApiKey
     });
 
     this.configs.set('instagram', {
@@ -67,6 +70,9 @@ class PlatformApiService {
       clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID,
       clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET
     });
+    
+    console.log('Loaded configs:', Array.from(this.configs.keys()));
+    console.log('YouTube config:', this.configs.get('youtube'));
   }
 
   /**
@@ -78,12 +84,71 @@ class PlatformApiService {
       
       switch (platform.toLowerCase()) {
         case 'youtube':
-          // Handle both youtube.com and youtu.be URLs
+          // Handle various YouTube URL formats
+          console.log('Extracting YouTube ID from URL:', url);
+          
+          // Try URL parsing first
           if (urlObj.hostname.includes('youtube.com')) {
-            return urlObj.searchParams.get('v');
+            const videoId = urlObj.searchParams.get('v');
+            if (videoId) {
+              console.log('Extracted YouTube ID from search params:', videoId);
+              return videoId;
+            }
+            
+            // Handle /shorts/ URLs
+            if (urlObj.pathname.includes('/shorts/')) {
+              const shortsMatch = urlObj.pathname.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
+              if (shortsMatch) {
+                console.log('Extracted YouTube ID from shorts path:', shortsMatch[1]);
+                return shortsMatch[1];
+              }
+            }
+            
+            // Handle /embed/ URLs
+            if (urlObj.pathname.includes('/embed/')) {
+              const embedMatch = urlObj.pathname.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+              if (embedMatch) {
+                console.log('Extracted YouTube ID from embed path:', embedMatch[1]);
+                return embedMatch[1];
+              }
+            }
+            
+            // Handle /v/ URLs
+            if (urlObj.pathname.includes('/v/')) {
+              const vMatch = urlObj.pathname.match(/\/v\/([a-zA-Z0-9_-]{11})/);
+              if (vMatch) {
+                console.log('Extracted YouTube ID from v path:', vMatch[1]);
+                return vMatch[1];
+              }
+            }
           } else if (urlObj.hostname.includes('youtu.be')) {
-            return urlObj.pathname.slice(1);
+            const videoId = urlObj.pathname.slice(1);
+            if (videoId && videoId.length === 11) {
+              console.log('Extracted YouTube ID from youtu.be path:', videoId);
+              return videoId;
+            }
           }
+          
+          // Fallback to regex patterns for edge cases
+          const patterns = [
+            /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+            /youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/,
+            /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+            /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+            /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+            /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+          ];
+          
+          for (const pattern of patterns) {
+            const match = url.match(pattern);
+            if (match) {
+              const videoId = match[1];
+              console.log('Extracted YouTube ID from regex pattern:', videoId);
+              return videoId;
+            }
+          }
+          
+          console.log('Failed to extract YouTube ID from URL:', url);
           break;
           
         case 'instagram':
@@ -122,8 +187,11 @@ class PlatformApiService {
    * YouTube Data API v3
    */
   async fetchYouTubeViews(contentItem: ContentItem): Promise<ApiResponse> {
+    console.log('fetchYouTubeViews called with content item:', contentItem);
+    
     const config = this.configs.get('youtube');
     if (!config?.apiKey) {
+      console.error('YouTube API key not configured');
       return {
         success: false,
         error: 'YouTube API key not configured'
@@ -132,24 +200,33 @@ class PlatformApiService {
 
     const videoId = this.extractPlatformId(contentItem.originalUrl || '', 'youtube');
     if (!videoId) {
+      console.error('Could not extract YouTube video ID from URL:', contentItem.originalUrl);
       return {
         success: false,
         error: 'Could not extract YouTube video ID from URL'
       };
     }
 
+    console.log('Making YouTube API request for video ID:', videoId);
+    const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoId}&key=${config.apiKey}`;
+    console.log('API URL (key hidden):', apiUrl.replace(config.apiKey, '***API_KEY_HIDDEN***'));
+
     try {
-      const response = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoId}&key=${config.apiKey}`
-      );
+      const response = await fetch(apiUrl);
+
+      console.log('YouTube API response status:', response.status, response.statusText);
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('YouTube API error response:', errorText);
         throw new Error(`YouTube API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('YouTube API response data:', data);
       
       if (!data.items || data.items.length === 0) {
+        console.error('No video data returned from YouTube API');
         return {
           success: false,
           error: 'Video not found or not accessible'
@@ -157,8 +234,9 @@ class PlatformApiService {
       }
 
       const stats = data.items[0].statistics;
+      console.log('YouTube video statistics:', stats);
       
-      return {
+      const result = {
         success: true,
         data: {
           platform: 'youtube',
@@ -169,7 +247,11 @@ class PlatformApiService {
         },
         rateLimitRemaining: parseInt(response.headers.get('X-RateLimit-Remaining') || '0')
       };
+      
+      console.log('Returning YouTube API result:', result);
+      return result;
     } catch (error) {
+      console.error('Error in fetchYouTubeViews:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

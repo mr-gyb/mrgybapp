@@ -1,13 +1,34 @@
 import React from 'react';
 import { Check, Star, Users, Globe, Zap, Building, ShoppingCart, FileText, Tag } from 'lucide-react';
 
-const CultureCard: React.FC = () => {
+interface CultureCardProps {
+  paymentType?: 'monthly' | 'annually';
+}
+
+const CultureCard: React.FC<CultureCardProps> = ({ paymentType = 'monthly' }) => {
   return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8 flex-1 flex flex-col">
       {/* Header */}
       <div className="text-center mb-6">
-        <h2 className="text-4xl font-bold text-gray-900 mb-2">Start up</h2>
+        <h2 className="text-4xl font-bold text-gray-900 mb-2">Startup</h2>
         <p className="text-lg text-blue-600 font-medium">Elevate your brand with Mr. GYB's Level 1, tailored for budgets under $10k.</p>
+      </div>
+
+      {/* Pricing */}
+      <div className="text-center mb-6">
+        {paymentType === 'monthly' ? (
+          <>
+            <div className="text-4xl font-bold text-gray-900">$100</div>
+            <div className="text-lg text-gray-600">/month</div>
+          </>
+        ) : (
+          <>
+            <div className="text-4xl font-bold text-gray-900">$1000</div>
+            <div className="text-lg text-gray-600">/year</div>
+            <div className="text-base text-blue-600 mt-2">with last 2 months free</div>
+            <div className="text-sm text-gray-500">(saving $200)</div>
+          </>
+        )}
       </div>
 
       {/* Description */}

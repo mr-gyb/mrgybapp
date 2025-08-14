@@ -1,5 +1,5 @@
-import React from 'react';
-import { useLocation, BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { useTheme } from './contexts/ThemeContext';
 import { useAuth } from './contexts/AuthContext';
 import Header from './components/Header';
@@ -63,9 +63,9 @@ import TrialSignupStep2 from './components/TrialSignupStep2';
 import TrialSignupConfirmation from './components/TrialSignupConfirmation';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFound from './components/NotFound';
+import FacebookIntegration from './components/settings/integrations/FacebookIntegration';
 
 import GoogleAuthCallback from './components/Auth/GoogleAuthCallback';
-
 
 // Import template components
 import BusinessPlan from './components/templates/BusinessPlan';
@@ -74,6 +74,7 @@ import MarketAnalysis from './components/templates/MarketAnalysis';
 import MarketingSales from './components/templates/MarketingSales';
 import FulfilmentPlan from './components/templates/FulfilmentPlan';
 import MediaPlan from './components/templates/MediaPlan';
+
 
 const getPageTitle = (pathname: string) => {
   switch (pathname) {
@@ -411,6 +412,11 @@ const InnerApp: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
           <Route path="/settings/integrations" element={
             <ProtectedRoute>
               <Integrations />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings/integrations/facebook" element={
+            <ProtectedRoute>
+                <FacebookIntegration />
             </ProtectedRoute>
           } />
           <Route path="/settings/help" element={

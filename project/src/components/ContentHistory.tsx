@@ -63,11 +63,7 @@ const ContentHistory: React.FC<ContentHistoryProps> = ({ contents, onEdit, onDel
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-semibold text-navy-blue">{content.title}</h3>
-                {content.type === 'written' && content.blogPlatform && (
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-navy-blue text-white ml-2">
-                    {content.blogPlatform}
-                  </span>
-                )}
+                
               </div>
               <div className="flex space-x-2">
                 <button

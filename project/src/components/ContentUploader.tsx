@@ -116,7 +116,7 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onUpload }) => {
     { name: 'Instagram', value: 45 },
     { name: 'TikTok', value: 35 },
     { name: 'YouTube', value: 15 },
-    { name: 'LinkedIn', value: 5 },
+    
   ];
 
   const userContent = [

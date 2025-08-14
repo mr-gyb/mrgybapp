@@ -6,7 +6,9 @@ import ContentList from './content/ContentList';
 import ContentSuggestions from './content/ContentSuggestions';
 import ContentCategorySelector from './content/ContentCategorySelector';
 import CategorySpecificUploader from './content/CategorySpecificUploader';
-import CreationInspirations from './content/CreationInspirations';
+import CreationInspirationsLazyWrapper from './content/CreationInspirationsLazyWrapper';
+import SpotifyMonetization from './monetization/SpotifyMonetization';
+import SpotifyDebugTest from './SpotifyDebugTest';
 import { ContentItem, ContentType } from '../types/content';
 import { useUserContent } from '../hooks/useUserContent';
 import { getDisplayContent } from '../utils/contentUtils';
@@ -14,10 +16,11 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { fetchYouTubeViewCounts } from '../utils/platformUtils';
 import { getFacebookMetrics } from '../api/services/facebook.service';
-import ContentTypeBarChart from "./analytics/ContentTypeBarChart";
-import PlatformPieChart from "./analytics/PlatformPieChart";
+import ContentTypeDistribution from "./analytics/ContentTypeDistribution";
+import PlatformDistribution from "./analytics/PlatformDistribution";
 import { saveUserContent } from '../services/userContent.service';
 import { useAuth } from '../contexts/AuthContext';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 interface PieLabelProps {
   cx: number;
@@ -70,6 +73,7 @@ const GYBStudio: React.FC = () => {
     addContent, 
     refreshContent,
     removeContent,
+    removeAllContent,
     contentStats
   } = useUserContent();
 
@@ -79,18 +83,309 @@ const GYBStudio: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
+  const [deleteSuccessMessage, setDeleteSuccessMessage] = useState('');
   const [viewingContent, setViewingContent] = useState<ContentItem | null>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [isLoadingView, setIsLoadingView] = useState(false);
+  // YouTube view count state
   const [youtubeVideoViews, setYouTubeVideoViews] = useState<number>(0);
   const [youtubeChannelId, setYouTubeChannelId] = useState<string>('');
   const [youtubeChannelViews, setYouTubeChannelViews] = useState<number | null>(null);
   const [youtubeChannelInput, setYouTubeChannelInput] = useState<string>('');
+  const [isLoadingYouTubeData, setIsLoadingYouTubeData] = useState(false);
+  const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(false);
+  const [youtubeDebugInfo, setYoutubeDebugInfo] = useState<string>('');
+  
+  // Calculate YouTube views from user content
+  const calculateYouTubeViews = () => {
+    const youtubeContent = userContent.filter(item => 
+      item.platforms && 
+      item.platforms.some(p => p.toLowerCase().includes('youtube'))
+    );
+    
+    console.log('YouTube content found:', youtubeContent.map(item => ({
+      id: item.id,
+      title: item.title,
+      platforms: item.platforms,
+      views: item.views,
+      engagement: item.engagement
+    })));
+    
+    // Sum up views from all YouTube content
+    const totalViews = youtubeContent.reduce((sum, item) => {
+      // Use engagement data as a proxy for views if views is 0
+      const viewCount = item.views || item.engagement || 0;
+      console.log(`YouTube item "${item.title}": views=${item.views}, engagement=${item.engagement}, using=${viewCount}`);
+      return sum + viewCount;
+    }, 0);
+    
+    console.log('Total calculated YouTube views:', totalViews);
+    return totalViews;
+  };
+
+  // Manual refresh function for YouTube data
+  const refreshYouTubeData = async () => {
+    console.log('🔄 Manually refreshing YouTube data...');
+    setYoutubeDebugInfo('Refreshing YouTube data...');
+    setYoutubeQuotaExceeded(false);
+    
+    // Find all YouTube video IDs from userContent
+    const youtubeIds: string[] = userContent
+      .filter(item =>
+        item.platforms?.some(p => p.toLowerCase().includes('youtube')) &&
+        typeof item.originalUrl === 'string' && !!item.originalUrl
+      )
+      .map(item => {
+        // Try to extract YouTube video ID from URL
+        const match = (item.originalUrl as string).match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        return match ? match[1] : null;
+      })
+      .filter((id): id is string => !!id);
+    
+    console.log('📹 Found YouTube video IDs:', youtubeIds);
+    setYoutubeDebugInfo(`Found ${youtubeIds.length} YouTube videos: ${youtubeIds.join(', ')}`);
+    
+    if (youtubeIds.length === 0) {
+      setYoutubeDebugInfo('No YouTube videos found in your content');
+      setYouTubeVideoViews(0);
+      return;
+    }
+    
+    try {
+      const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+      
+      if (!apiKey) {
+        setYoutubeDebugInfo('❌ YouTube API key not found. Check your .env file.');
+        const calculatedViews = calculateYouTubeViews();
+        setYouTubeVideoViews(calculatedViews);
+        return;
+      }
+      
+      setIsLoadingYouTubeData(true);
+      setYoutubeDebugInfo(`🔑 API key found. Fetching view counts for ${youtubeIds.length} videos...`);
+      
+      // Use the existing fetchYouTubeViewCounts function
+      const viewCounts = await fetchYouTubeViewCounts(youtubeIds, apiKey);
+      console.log('✅ YouTube API response:', viewCounts);
+      
+      const totalViews = Object.values(viewCounts).reduce((sum, v) => sum + v, 0);
+      console.log('📊 Total YouTube views from API:', totalViews);
+      
+      setYouTubeVideoViews(totalViews);
+      setYoutubeDebugInfo(`✅ Success! Total views: ${totalViews.toLocaleString()}`);
+      setIsLoadingYouTubeData(false);
+      
+    } catch (error) {
+      console.error('❌ Error fetching YouTube view counts:', error);
+      
+      if (error instanceof Error && error.message.includes('quota exceeded')) {
+        setYoutubeDebugInfo('⚠️ Quota exceeded. Using calculated views as fallback.');
+        setYoutubeQuotaExceeded(true);
+        const calculatedViews = calculateYouTubeViews();
+        setYouTubeVideoViews(calculatedViews);
+      } else {
+        setYoutubeDebugInfo(`❌ API Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Fallback to calculated views
+        const calculatedViews = calculateYouTubeViews();
+        setYouTubeVideoViews(calculatedViews);
+      }
+      
+      setIsLoadingYouTubeData(false);
+    }
+  };
+
+  // Force YouTube API test with hardcoded videos
+  const forceYouTubeAPITest = async () => {
+    console.log('🎯 FORCING YOUTUBE API TEST WITH HARDCODED VIDEOS');
+    setYoutubeDebugInfo('🎯 Forcing YouTube API test...');
+    setYoutubeQuotaExceeded(false);
+    
+    // Hardcoded test videos to force API calls
+    const hardcodedVideos = [
+      {
+        id: 'KrZcB_RA0i8',
+        title: 'User\'s Video (KrZcB_RA0i8)',
+        originalUrl: 'https://www.youtube.com/watch?v=KrZcB_RA0i8'
+      },
+      {
+        id: '4gdWNPQszsM',
+        title: 'Test Video (4gdWNPQszsM)',
+        originalUrl: 'https://www.youtube.com/watch?v=4gdWNPQszsM'
+      },
+      {
+        id: 'dQw4w9WgXcQ',
+        title: 'Rick Roll (dQw4w9WgXcQ)',
+        originalUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+      }
+    ];
+    
+    console.log('Testing with hardcoded videos:', hardcodedVideos);
+    setYoutubeDebugInfo(`Testing ${hardcodedVideos.length} hardcoded videos...`);
+    
+    try {
+      const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+      
+      if (!apiKey) {
+        setYoutubeDebugInfo('❌ YouTube API key not found. Check your .env file.');
+        return;
+      }
+      
+      setIsLoadingYouTubeData(true);
+      setYoutubeDebugInfo('🔑 API key found. Testing with hardcoded videos...');
+      
+      // Test each video individually
+      let totalViews = 0;
+      const results = [];
+      
+      for (const video of hardcodedVideos) {
+        try {
+          const url = `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${video.id}&key=${apiKey}`;
+          console.log('Testing video:', video.title, 'with URL:', url.replace(apiKey, '***API_KEY_HIDDEN***'));
+          
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          if (data.items && data.items.length > 0) {
+            const viewCount = parseInt(data.items[0].statistics.viewCount || '0');
+            const likeCount = parseInt(data.items[0].statistics.likeCount || '0');
+            const commentCount = parseInt(data.items[0].statistics.commentCount || '0');
+            
+            totalViews += viewCount;
+            results.push({
+              title: video.title,
+              views: viewCount,
+              likes: likeCount,
+              comments: commentCount
+            });
+            
+            console.log(`✅ ${video.title}: ${viewCount.toLocaleString()} views, ${likeCount} likes, ${commentCount} comments`);
+          } else {
+            console.log(`❌ ${video.title}: No data returned`);
+            results.push({
+              title: video.title,
+              views: 0,
+              likes: 0,
+              comments: 0
+            });
+          }
+        } catch (videoError) {
+          console.error(`❌ Error testing ${video.title}:`, videoError);
+          results.push({
+            title: video.title,
+            views: 0,
+            likes: 0,
+            comments: 0
+          });
+        }
+      }
+      
+      console.log('=== FORCED API TEST COMPLETE ===');
+      console.log('Total views fetched:', totalViews);
+      console.log('Results:', results);
+      
+      setYouTubeVideoViews(totalViews);
+      setYoutubeDebugInfo(`🎯 Forced API Test Complete!\n\nTotal Views: ${totalViews.toLocaleString()}\n\nVideos Tested:\n${results.map(r => `• ${r.title}: ${r.views.toLocaleString()} views`).join('\n')}`);
+      setIsLoadingYouTubeData(false);
+      
+    } catch (error) {
+      console.error('❌ Error in forced API test:', error);
+      setYoutubeDebugInfo(`❌ Forced API test error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setIsLoadingYouTubeData(false);
+    }
+  };
+
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [facebookMetrics, setFacebookMetrics] = useState<{
     total_impressions: number;
     total_reactions: number;
   } | null>(null);
+
+  // Platform filter for monetization
+  const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
+
+  // Handle platform filter changes
+  useEffect(() => {
+    if (selectedPlatform !== 'all') {
+      console.log(`Platform filter changed to: ${selectedPlatform}`);
+      // You can add additional logic here for platform-specific data fetching
+      // or analytics tracking
+    }
+  }, [selectedPlatform]);
+
+  // Recalculate YouTube views when userContent changes
+  useEffect(() => {
+    const calculatedViews = calculateYouTubeViews();
+    setYouTubeVideoViews(calculatedViews);
+    console.log('YouTube views updated:', calculatedViews);
+  }, [userContent]);
+
+  // Filter monetization data based on selected platform
+  const getFilteredMonetizationData = () => {
+    const baseMetrics = [
+      { name: 'Followers Growth', value: '+15%', platform: 'all' },
+      { name: 'Clickthrough Rate', value: '3.2%', platform: 'all' },
+      { name: 'CPC (Cost Per Click)', value: '$0.45', platform: 'all' },
+      { name: 'CPM (Cost Per Mille)', value: '$5.20', platform: 'all' },
+      { name: 'AOV (Average Order Value)', value: '$75', platform: 'all' },
+      { name: 'LTV (Lifetime Value)', value: '$250', platform: 'all' },
+    ];
+
+    // Platform-specific metrics
+    const platformMetrics = {
+      spotify: [
+        { name: 'Followers', value: 'Live Data', platform: 'spotify' },
+        { name: 'Track Count', value: 'Live Data', platform: 'spotify' },
+        { name: 'Playlist Name', value: 'Live Data', platform: 'spotify' },
+      ],
+      instagram: [
+        { name: 'Sponsored Posts', value: '$120', platform: 'instagram' },
+        { name: 'Story Views', value: '8.7K', platform: 'instagram' },
+        { name: 'Engagement Rate', value: '4.8%', platform: 'instagram' },
+        { name: 'Brand Deals', value: '3', platform: 'instagram' },
+        { name: 'Affiliate Sales', value: '$89', platform: 'instagram' },
+        { name: 'Influencer Score', value: '7.2/10', platform: 'instagram' },
+      ],
+      facebook: [
+        { name: 'Page Revenue', value: '$95', platform: 'facebook' },
+        { name: 'Ad Performance', value: 'B+', platform: 'facebook' },
+        { name: 'Community Growth', value: '+12%', platform: 'facebook' },
+        { name: 'Post Reach', value: '15.2K', platform: 'facebook' },
+        { name: 'Group Monetization', value: '$67', platform: 'facebook' },
+        { name: 'Business Leads', value: '23', platform: 'facebook' },
+      ],
+      pinterest: [
+        { name: 'Pin Revenue', value: '$34', platform: 'pinterest' },
+        { name: 'Monthly Views', value: '12.8K', platform: 'pinterest' },
+        { name: 'Click-through Rate', value: '2.1%', platform: 'pinterest' },
+        { name: 'Product Sales', value: '$156', platform: 'pinterest' },
+        { name: 'Board Followers', value: '892', platform: 'pinterest' },
+        { name: 'Shopping Clicks', value: '89', platform: 'pinterest' },
+      ],
+      youtube: [
+        { name: 'Ad Revenue', value: '$234', platform: 'youtube' },
+        { name: 'Channel Views', value: '45.2K', platform: 'youtube' },
+        { name: 'Subscriber Growth', value: '+18%', platform: 'youtube' },
+        { name: 'Watch Time', value: '2.3K hrs', platform: 'youtube' },
+        { name: 'Sponsorship Deals', value: '$450', platform: 'youtube' },
+        { name: 'Merch Sales', value: '$89', platform: 'youtube' },
+      ],
+      others: [
+        { name: 'Cross-Platform', value: '$78', platform: 'others' },
+        { name: 'Email Revenue', value: '$45', platform: 'others' },
+        { name: 'Webinar Sales', value: '$234', platform: 'others' },
+        { name: 'Consulting', value: '$500', platform: 'others' },
+        { name: 'Digital Products', value: '$123', platform: 'others' },
+        { name: 'Partnerships', value: '$189', platform: 'others' },
+      ],
+    };
+
+    if (selectedPlatform === 'all') {
+      return baseMetrics;
+    }
+
+    return platformMetrics[selectedPlatform as keyof typeof platformMetrics] || baseMetrics;
+  };
 
   // Force close all modals function
   const closeAllModals = () => {
@@ -98,8 +393,41 @@ const GYBStudio: React.FC = () => {
     setShowUploader(false);
     setShowViewModal(false);
     setShowSuccessMessage(false);
-    setSelectedCategory(null);
-    setViewingContent(null);
+    setShowDeleteSuccess(false);
+  };
+
+  // Custom delete handler with success notification
+  const handleContentDelete = async (contentId: string) => {
+    try {
+      await removeContent(contentId);
+      setDeleteSuccessMessage('Content deleted successfully!');
+      setShowDeleteSuccess(true);
+      
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => {
+        setShowDeleteSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Error deleting content:', error);
+      // Could add error notification here
+    }
+  };
+
+  // Custom delete all handler with success notification
+  const handleDeleteAllContent = async () => {
+    try {
+      await removeAllContent();
+      setDeleteSuccessMessage('All content deleted successfully!');
+      setShowDeleteSuccess(true);
+      
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => {
+        setShowDeleteSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Error deleting all content:', error);
+      // Could add error notification here
+    }
   };
 
   // Debug: Log modal states
@@ -240,238 +568,62 @@ const GYBStudio: React.FC = () => {
 
   const hasRealContent = userContent.some(item => !item.id.startsWith('default-'));
 
-  // Grouping logic for content types
-  const groupContentType = (item: ContentItem): 'Blogs' | 'Audio' | 'Video' | 'Social Media' | 'Other' => {
-    if (item.type === 'written') return 'Blogs';
-    if (item.type === 'audio') return 'Audio';
-    if (item.type === 'video') return 'Video';
-    if (item.type === 'photo') {
-      if (item.platforms && item.platforms.some((p: string) => ['Instagram', 'Pinterest', 'Facebook'].includes(p))) {
-        return 'Social Media';
-      }
-    }
-    if (item.platforms && item.platforms.some((p: string) => ['LinkedIn', 'Other'].includes(p))) {
-      return 'Other';
-    }
-    return 'Other';
-  };
 
-  // Grouping logic for platforms
-  const groupPlatform = (platform: string): 'Blogs' | 'Audio' | 'Video' | 'Social Media' | 'YouTube' | 'Other' => {
-    // Debug: log what platforms are being processed
-    console.log('Processing platform:', platform);
 
-    const platformLower = platform.toLowerCase();
-    
-    if ([ 'instagram', 'pinterest', 'facebook' ].includes(platformLower)) return 'Social Media';
-    if ([ 'linkedin', 'other' ].includes(platformLower)) return 'Other';
-    if (platformLower === 'blog' || platformLower === 'blogger' || platformLower === 'substack' || platformLower === 'medium') return 'Blogs';
-    if (platformLower === 'spotify' || platformLower === 'itunes') return 'Audio';
-    if (platformLower === 'youtube') return 'YouTube';
-    return 'Other';
-  };
+  // Use shared analytics hook
+  const analyticsData = useAnalytics(userContent, youtubeVideoViews);
+  
+  // Calculate additional metrics for GYBStudio
+  const totalContent = userContent.length;
+  const realContent = userContent.filter((item: ContentItem) => !item.id.startsWith('default-'));
+  const totalEngagement = userContent.reduce((sum: number, item: ContentItem) => sum + (item.engagement || 0), 0);
+  const averageEngagement = totalContent > 0 ? totalEngagement / totalContent : 0;
 
-  // Calculate unified content analytics
-  const calculateContentAnalytics = () => {
-    const totalContent = userContent.length;
-    const realContent = userContent.filter((item: ContentItem) => !item.id.startsWith('default-'));
 
-    // Content type distribution (segmented by blogPlatform for written content)
-    const contentTypeDistribution: Record<string, number> = {};
-    userContent.forEach((item: ContentItem) => {
-      let group: string;
-      if (item.type === 'written') {
-        group = item.blogPlatform || 'Blogs';
-      } else if (item.type === 'audio') {
-        group = 'Audio';
-      } else if (item.type === 'video') {
-        if (item.platforms && item.platforms.some((p: string) => p.toLowerCase() === 'youtube')) {
-          group = 'YouTube';
-        } else {
-          group = 'Other';
-        }
-      } else if (item.type === 'photo') {
-        if (item.platforms && item.platforms.some((p: string) => ['instagram', 'pinterest', 'facebook'].includes(p.toLowerCase()))) {
-          group = 'Social Media';
-        } else {
-          group = 'Other';
-        }
-      } else {
-        group = 'Other';
-      }
-      contentTypeDistribution[group] = (contentTypeDistribution[group] || 0) + 1;
-    });
 
-    // Platform distribution (grouped)
-    const platformCounts: Record<string, number> = {};
-    userContent.forEach((item: ContentItem) => {
-      console.log('GYBStudio - Processing content item:', item.title, 'Platforms:', item.platforms);
-      // Handle platforms array
-      (item.platforms || []).forEach((platform: string) => {
-        const group = groupPlatform(platform);
-        console.log('GYBStudio - Platform:', platform, 'Grouped as:', group);
-        platformCounts[group] = (platformCounts[group] || 0) + 1;
-      });
-      
-      // Handle blogPlatform for written content
-      if (item.type === 'written' && item.blogPlatform) {
-        const group = groupPlatform(item.blogPlatform);
-        console.log('GYBStudio - BlogPlatform:', item.blogPlatform, 'Grouped as:', group);
-        platformCounts[group] = (platformCounts[group] || 0) + 1;
-      }
-    });
+  // Debug: Log all user content to see structure
+  console.log('All User Content Debug:', userContent.map(item => ({
+    id: item.id,
+    title: item.title,
+    type: item.type,
+    platforms: item.platforms,
+    originalUrl: item.originalUrl
+  })));
 
-    console.log('GYBStudio - Final platformCounts:', platformCounts);
-
-    // Calculate engagement metrics
-    const totalEngagement = userContent.reduce((sum: number, item: ContentItem) => sum + (item.engagement || 0), 0);
-    const averageEngagement = totalContent > 0 ? totalEngagement / totalContent : 0;
-
-    return {
-      totalContent,
-      realContent: realContent.length,
-      contentTypeDistribution,
-      platformCounts,
-      totalEngagement,
-      averageEngagement
-    };
-  };
-
-  const analytics = calculateContentAnalytics();
-
-  // Color map for platform groups
-  const PLATFORM_GROUP_COLORS: Record<string, string> = {
-    'Blogs': '#3B82F6',
-    'Audio': '#F59E0B',
-    'Video': '#10B981',
-    'Social Media': '#E1306C',
-    'YouTube': '#FF0000',
-    'Other': '#6B7280'
-  };
-
-  // Color map for content type groups (updated for legend)
-  const CONTENT_TYPE_COLORS: Record<string, string> = {
-    'Blogger': '#FF9900', // bright orange
-    'Medium': '#757575', // gray
-    'Substack': '#FFA500', // orange
-    'Spotify': '#1DB954', // green
-    'iTunes': '#FF69B4', // bright pink
-    'YouTube': '#FF0000', // red
-    'Instagram': '#E1306C', // deep pink
-    'Pinterest': '#FF0000', // red
-    'Facebook': '#1877F3', // blue
-    'Other': '#FFD700', // gold
-    'LinkedIn': '#235789' // gold (same as Other)
-  };
-
-  // Only show these keys in the legend
-  const LEGEND_KEYS = [
-    'Blogger', 'Medium', 'Substack', 'Spotify', 'iTunes', 'YouTube', 'Instagram', 'Pinterest', 'Facebook', 'LinkedIn','Other'
-  ];
-
-  // 1. Prepare grouped data
-  const blogTypes = ['Blogger', 'Substack', 'Medium'];
-  const audioTypes = ['Spotify', 'iTunes'];
-  const socialMediaTypes = ['Instagram', 'Pinterest', 'Facebook'];
-  const otherTypes = ['LinkedIn', 'Other'];
-  const groupedContentData = [
-    {
-      name: 'Blogs',
-      Blogger: userContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'blogger').length,
-      Substack: userContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'substack').length,
-      Medium: userContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'medium').length,
-      views: userContent
-        .filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'blogger')
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-      SubstackViews: userContent
-        .filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'substack')
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-      MediumViews: userContent
-        .filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'medium')
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-    },
-    {
-      name: 'Audio',
-      Spotify: userContent.filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'spotify')).length,
-      iTunes: userContent.filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'itunes')).length,
-      views: userContent
-        .filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'spotify'))
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-      iTunesViews: userContent
-        .filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'itunes'))
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-    },
-    {
-      name: 'YouTube',
-      count: userContent.filter(item => item.type === 'video' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'youtube')).length,
-      views: userContent
-        .filter(item => item.type === 'video' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'youtube'))
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-    },
-    {
-      name: 'Social Media',
-      Instagram: userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'instagram')).length,
-      Pinterest: userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'pinterest')).length,
-      Facebook: userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'facebook')).length,
-      views: userContent
-        .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'instagram'))
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-      PinterestViews: userContent
-        .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'pinterest'))
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-      FacebookViews: userContent
-        .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'facebook'))
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-    },
-    {
-      name: 'Other',
-      LinkedIn: userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'linkedin')).length,
-      Other: userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'other')).length,
-      views: userContent
-        .filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'linkedin'))
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-      OtherViews: userContent
-        .filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'other'))
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-    }
-  ].filter(category => {
-    // Filter out categories with no content
-    if (category.name === 'Blogs') {
-      return (category as any).Blogger > 0 || (category as any).Substack > 0 || (category as any).Medium > 0;
-    } else if (category.name === 'Audio') {
-      return (category as any).Spotify > 0 || (category as any).iTunes > 0;
-    } else if (category.name === 'Social Media') {
-      return (category as any).Instagram > 0 || (category as any).Pinterest > 0 || (category as any).Facebook > 0;
-    } else if (category.name === 'Other') {
-      return (category as any).LinkedIn > 0 || (category as any).Other > 0;
-    } else {
-      return (category as any).count > 0;
+  // Debug: Log all unique platforms found
+  const allPlatforms = new Set<string>();
+  userContent.forEach(item => {
+    if (item.platforms) {
+      item.platforms.forEach(p => allPlatforms.add(p.toLowerCase()));
     }
   });
+  console.log('All unique platforms found:', Array.from(allPlatforms));
 
-  const platformData = Object.entries(analytics.platformCounts)
-    .filter(([platform, count]) => count > 0) // Only show platforms with actual content
-    .map(([platform, count]) => ({
-      name: platform,
-      value: count,
-      percentage: analytics.totalContent > 0 ? (count / analytics.totalContent) * 100 : 0,
-      color: PLATFORM_GROUP_COLORS[platform] || '#8884d8'
-    }));
+  let barData = analyticsData.barData;
+  if (barData.length > 15) {
+    barData = [...barData]
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 15);
+  }
+
+  // Debug: Show what will be displayed in the chart
+  console.log('Final barData for chart:', barData);
+  console.log('Chart will display these platforms:', barData.map(item => item.name));
+
+  const platformData = analyticsData.platformData;
 
   console.log('GYBStudio - Final platformData:', platformData);
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C80'];
+
 
   const metrics = [
-    { name: 'Total Content', value: analytics.totalContent.toString() },
-    { name: 'Real Content', value: analytics.realContent.toString() },
-    { name: 'Content Types', value: Object.keys(analytics.contentTypeDistribution).length.toString() },
-    { name: 'Platforms Used', value: Object.keys(analytics.platformCounts).length.toString() },
-    { name: 'Avg Engagement', value: analytics.averageEngagement.toFixed(1) },
-    { name: 'Total Engagement', value: analytics.totalEngagement.toString() },
+            { name: 'Total Content', value: totalContent.toString() },
+        { name: 'Real Content', value: realContent.length.toString() },
+        { name: 'Content Types', value: Object.keys(analyticsData.CONTENT_TYPE_COLORS).length.toString() },
+        { name: 'Platforms Used', value: Object.keys(analyticsData.PLATFORM_GROUP_COLORS).length.toString() },
+        { name: 'Avg Engagement', value: averageEngagement.toFixed(1) },
+        { name: 'Total Engagement', value: totalEngagement.toString() },
   ];
-
-
 
   const handleContentClick = (item: ContentItem) => {
     // Handle content item click - could open editor or show details
@@ -529,7 +681,7 @@ const GYBStudio: React.FC = () => {
     setSelectedCategory(null);
   };
 
-  const handleUploadComplete = async (result: { id: string; url: string; type: string; category: any; platforms?: string[]; title?: string; blogPlatform?: string | null }) => {
+  const handleUploadComplete = async (result: { id: string; url: string; type: string; category: any; platforms?: string[]; title?: string }) => {
     // Create a new ContentItem from the upload result
     const defaultPlatforms = result.category && result.category.platforms && result.category.platforms.length > 0
       ? result.category.platforms
@@ -564,7 +716,7 @@ const GYBStudio: React.FC = () => {
         }
       ],
       platforms: result.platforms && result.platforms.length > 0 ? result.platforms : defaultPlatforms,
-      blogPlatform: result.blogPlatform || null // Include the selected blog platform
+      
     };
 
     // Add to the content list
@@ -629,39 +781,25 @@ const GYBStudio: React.FC = () => {
 
   const PLATFORM_COLORS: Record<string, string> = {
     YouTube: '#FF0000',
-    Instagram: '#E1306C',
-    LinkedIn: '#0077B5',
+    Instagram: '#C13584',
     Spotify: '#1DB954',
+    Pinterest: '#E60023', 
     Blog: '#F4B400',
-    Medium: '#00AB6C',
-    'All Platforms': '#6C63FF',
-    Twitter: '#1DA1F2',
-    Facebook: '#1877F3',
+    Other: '#9E9E9E',
+    Facebook: '#1877F3'
     // Add more as needed
   };
 
   const CustomBarTooltip = ({ active, payload, label }: { active: boolean; payload: any[]; label: string }) => {
     if (active && payload && payload.length) {
       const barData = payload[0].payload;
-      // For Blogs, show counts for Medium, Blogger, Substack, and total views
-      if (label === 'Blogs') {
-        return (
-          <div className="bg-white p-3 rounded shadow text-sm border border-gray-200">
-            <div className="font-semibold mb-1">{label}</div>
-            <div>Blogger content: {barData.Blogger ?? 0}</div>
-            <div>Substack content: {barData.Substack ?? 0}</div>
-            <div>Medium content: {barData.Medium ?? 0}</div>
-            <div>View count: {barData.views ?? 0}</div>
-          </div>
-        );
-      }
+
       // For Audio
       if (label === 'Audio') {
         return (
           <div className="bg-white p-3 rounded shadow text-sm border border-gray-200">
             <div className="font-semibold mb-1">{label}</div>
             <div>Spotify content: {barData.Spotify ?? 0}</div>
-            <div>iTunes content: {barData.iTunes ?? 0}</div>
             <div>View count: {barData.views ?? 0}</div>
           </div>
         );
@@ -685,7 +823,6 @@ const GYBStudio: React.FC = () => {
         return (
           <div className="bg-white p-3 rounded shadow text-sm border border-gray-200">
             <div className="font-semibold mb-1">{label}</div>
-            <div>LinkedIn content: {barData.LinkedIn ?? 0}</div>
             <div>Other content: {barData.Other ?? 0}</div>
             <div>View count: {barData.views ?? 0}</div>
           </div>
@@ -717,8 +854,7 @@ const GYBStudio: React.FC = () => {
     // Find all YouTube video IDs from userContent
     const youtubeIds: string[] = userContent
       .filter(item =>
-        item.type === 'video' &&
-        item.platforms?.some(p => p.toLowerCase() === 'youtube') &&
+        item.platforms?.some(p => p.toLowerCase().includes('youtube')) &&
         typeof item.originalUrl === 'string' && !!item.originalUrl
       )
       .map(item => {
@@ -727,17 +863,80 @@ const GYBStudio: React.FC = () => {
         return match ? match[1] : null;
       })
       .filter((id): id is string => !!id);
-    const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
-    if (youtubeIds.length > 0) {
-      fetchYouTubeViewCounts(youtubeIds, apiKey)
-        .then((result: Record<string, number>) => {
-          const totalViews = Object.values(result).reduce((sum, v) => sum + v, 0);
-          setYouTubeVideoViews(totalViews);
-        })
-        .catch(() => setYouTubeVideoViews(0));
-    } else {
-      setYouTubeVideoViews(0);
-    }
+    
+    console.log('Found YouTube video IDs:', youtubeIds);
+    
+    // Fetch YouTube view counts from API
+    const fetchYouTubeViews = async () => {
+      const maxRetries = 3;
+      let retryCount = 0;
+      
+      setIsLoadingYouTubeData(true);
+      
+      const attemptFetch = async (): Promise<void> => {
+        try {
+          const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+          
+          if (!apiKey) {
+            console.warn('YouTube API key not found. Using fallback view calculation.');
+            const calculatedViews = calculateYouTubeViews();
+            setYouTubeVideoViews(calculatedViews);
+            setIsLoadingYouTubeData(false);
+            return;
+          }
+          
+          if (youtubeIds.length > 0) {
+            console.log(`Fetching YouTube view counts (attempt ${retryCount + 1}/${maxRetries}) for videos:`, youtubeIds);
+            
+            // Use the existing fetchYouTubeViewCounts function
+            const viewCounts = await fetchYouTubeViewCounts(youtubeIds, apiKey);
+            console.log('YouTube API response:', viewCounts);
+            
+            const totalViews = Object.values(viewCounts).reduce((sum, v) => sum + v, 0);
+            console.log('Total YouTube views from API:', totalViews);
+            
+            setYouTubeVideoViews(totalViews);
+          } else {
+            console.log('No YouTube videos found, setting views to 0');
+            setYouTubeVideoViews(0);
+          }
+          
+          setIsLoadingYouTubeData(false);
+        } catch (error) {
+          console.error(`YouTube API attempt ${retryCount + 1} failed:`, error);
+          
+          // Check if it's a quota exceeded error
+          if (error instanceof Error && error.message.includes('quota exceeded')) {
+            console.log('YouTube API quota exceeded, will use fallback calculation');
+            setYoutubeQuotaExceeded(true);
+            const calculatedViews = calculateYouTubeViews();
+            setYouTubeVideoViews(calculatedViews);
+            setIsLoadingYouTubeData(false);
+            return;
+          }
+          
+          if (retryCount < maxRetries - 1) {
+            retryCount++;
+            const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 2s, 4s, 8s
+            console.log(`Retrying in ${delay}ms...`);
+            
+            setTimeout(() => {
+              attemptFetch();
+            }, delay);
+          } else {
+            console.error('All YouTube API attempts failed. Using fallback calculation.');
+            // Final fallback to calculated views
+            const calculatedViews = calculateYouTubeViews();
+            setYouTubeVideoViews(calculatedViews);
+            setIsLoadingYouTubeData(false);
+          }
+        }
+      };
+      
+      await attemptFetch();
+    };
+    
+    fetchYouTubeViews();
 
     // Fetch Facebook metrics
     const fetchFacebookData = async () => {
@@ -757,47 +956,6 @@ const GYBStudio: React.FC = () => {
     
     fetchFacebookData();
   }, [userContent]);
-
-  // Add YouTube video views to groupedContentData if available
-  const groupedContentDataWithYouTube = groupedContentData.map(row => {
-    if (row.name === 'YouTube') {
-      return { ...row, views: youtubeVideoViews };
-    }
-    return row;
-  });
-
-  // --- Responsive Bar Size Calculation ---
-  // Limit to top 15 categories for performance if needed
-  let barData = groupedContentDataWithYouTube;
-  if (barData.length > 15) {
-    barData = [...barData]
-      .sort((a, b) => (b.views || 0) - (a.views || 0))
-      .slice(0, 15);
-  }
-  const numBarGroups = barData.length;
-  // Minimum width per bar for readability
-  const minBarWidth = 450;
-  // Get container width using a ref and state
-  const [containerWidth, setContainerWidth] = React.useState<number>(0);
-  const chartContainerRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    function handleResize() {
-      if (chartContainerRef.current) {
-        setContainerWidth(chartContainerRef.current.offsetWidth);
-      }
-    }
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  // Calculate barSize so all bars fit, but never thinner than minBarWidth
-  const barSize = containerWidth && numBarGroups > 0
-    ? Math.max(Math.floor(containerWidth / numBarGroups) - 16, minBarWidth)
-    : minBarWidth;
-  // Dynamically adjust label font size
-  const labelFontSize = containerWidth && numBarGroups > 0
-    ? Math.max(10, Math.min(16, Math.floor(containerWidth / (numBarGroups * 2))))
-    : 14;
 
   return (
     <div className="bg-white min-h-screen text-navy-blue">
@@ -830,27 +988,31 @@ const GYBStudio: React.FC = () => {
           </div>
         </div>
 
-        {/* Success Notification */}
+        {/* Success Message */}
         {showSuccessMessage && (
-          <div className="fixed top-4 right-4 z-50 bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg max-w-sm">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-green-400" />
-              </div>
-              <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-green-800">
-                  {successMessage}
-                </p>
-              </div>
-              <div className="ml-4 flex-shrink-0">
-                <button
-                  onClick={() => setShowSuccessMessage(false)}
-                  className="inline-flex text-green-400 hover:text-green-600 focus:outline-none"
-                >
-                  <XIcon className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+          <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center">
+            <CheckCircle className="mr-2" size={20} />
+            {successMessage}
+            <button
+              onClick={() => setShowSuccessMessage(false)}
+              className="ml-4 text-white hover:text-green-100"
+            >
+              <XIcon size={20} />
+            </button>
+          </div>
+        )}
+
+        {/* Delete Success Message */}
+        {showDeleteSuccess && (
+          <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center">
+            <CheckCircle className="mr-2" size={20} />
+            {deleteSuccessMessage}
+            <button
+              onClick={() => setShowDeleteSuccess(false)}
+              className="ml-4 text-white hover:text-red-100"
+            >
+              <XIcon size={20} />
+            </button>
           </div>
         )}
 
@@ -877,26 +1039,33 @@ const GYBStudio: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-8">
           {/* Content Type Distribution */}
           <div>
-            <h2 className="text-2xl font-bold mb-4">Content Type Distribution</h2>
-            <ContentTypeBarChart
-              barData={barData}
+            <ContentTypeDistribution
+              barData={analyticsData.barData}
               userContent={userContent}
-              blogTypes={blogTypes}
-              audioTypes={audioTypes}
-              socialMediaTypes={socialMediaTypes}
-              otherTypes={otherTypes}
-              CONTENT_TYPE_COLORS={CONTENT_TYPE_COLORS}
-              LEGEND_KEYS={LEGEND_KEYS}
+              blogTypes={analyticsData.blogTypes}
+              audioTypes={analyticsData.audioTypes}
+              socialMediaTypes={analyticsData.socialMediaTypes}
+              otherTypes={analyticsData.otherTypes}
+              CONTENT_TYPE_COLORS={analyticsData.CONTENT_TYPE_COLORS}
+              LEGEND_KEYS={analyticsData.LEGEND_KEYS}
               CustomBarTooltip={CustomBarTooltip}
+              isLoadingYouTubeData={isLoadingYouTubeData}
+              youtubeQuotaExceeded={youtubeQuotaExceeded}
+              onResetQuota={() => {
+                setYoutubeQuotaExceeded(false);
+                // Trigger a refresh of YouTube data
+                const event = new Event('focus');
+                window.dispatchEvent(event);
+              }}
             />
+
           </div>
 
           {/* Platform Distribution */}
           <div>
-            <h2 className="text-2xl font-bold mb-4">Platform Distribution</h2>
-            <PlatformPieChart
-              platformData={platformData}
-              COLORS={COLORS}
+            <PlatformDistribution
+              platformData={analyticsData.platformData}
+              COLORS={analyticsData.COLORS}
               renderCustomPieLabel={renderCustomPieLabel}
             />
           </div>
@@ -906,26 +1075,173 @@ const GYBStudio: React.FC = () => {
 
         {/* Monetization Section */}
         <div className="bg-white p-6 rounded-lg shadow mb-8">
-          <h2 className="text-2xl font-bold mb-4">Monetization</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold">Monetization</h2>
+            <div className="flex items-center space-x-3">
+              <label htmlFor="platform-filter" className="text-sm font-medium text-gray-700">
+                Filter by Platform:
+              </label>
+              <div className="relative">
+                <select
+                  id="platform-filter"
+                  value={selectedPlatform}
+                  onChange={(e) => setSelectedPlatform(e.target.value)}
+                  className="px-4 py-2 pr-8 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+                >
+                  <option value="all">🌐 All Platforms</option>
+                  <option value="spotify">🎵 Spotify</option>
+                  <option value="instagram">📸 Instagram</option>
+                  <option value="facebook">📘 Facebook</option>
+                  <option value="pinterest">📌 Pinterest</option>
+                  <option value="youtube">📺 YouTube</option>
+                  <option value="others">🔗 Others</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              {selectedPlatform !== 'all' && (
+                <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                  {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)} View
+                </div>
+              )}
+              {selectedPlatform !== 'all' && (
+                <button
+                  onClick={() => setSelectedPlatform('all')}
+                  className="px-3 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+                  title="Reset to all platforms"
+                >
+                  Reset Filter
+                </button>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[
-              { name: 'Followers Growth', value: '+15%' },
-              { name: 'Clickthrough Rate', value: '3.2%' },
-              { name: 'CPC (Cost Per Click)', value: '$0.45' },
-              { name: 'CPM (Cost Per Mille)', value: '$5.20' },
-              { name: 'AOV (Average Order Value)', value: '$75' },
-              { name: 'LTV (Lifetime Value)', value: '$250' },
-            ].map((metric) => (
-              <div key={metric.name} className="bg-gray-50 p-4 rounded-lg">
+            {getFilteredMonetizationData().map((metric) => (
+              <div 
+                key={metric.name} 
+                className={`bg-gray-50 p-4 rounded-lg border-l-4 transition-all duration-200 hover:shadow-md ${
+                  metric.platform === 'spotify' ? 'border-l-green-500' :
+                  metric.platform === 'instagram' ? 'border-l-pink-500' :
+                  metric.platform === 'facebook' ? 'border-l-blue-500' :
+                  metric.platform === 'pinterest' ? 'border-l-red-500' :
+                  metric.platform === 'youtube' ? 'border-l-red-600' :
+                  metric.platform === 'others' ? 'border-l-purple-500' :
+                  'border-l-gray-400'
+                }`}
+              >
                 <h3 className="text-sm text-gray-600 mb-1">{metric.name}</h3>
                 <p className="text-2xl font-bold">{metric.value}</p>
+                {metric.platform !== 'all' && (
+                  <div className="mt-2 text-xs text-gray-500 capitalize">
+                    {metric.platform} metric
+                  </div>
+                )}
               </div>
             ))}
+          </div>
+          
+          {/* Platform Summary */}
+          {selectedPlatform !== 'all' && (
+            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+              <h3 className="text-lg font-semibold text-blue-800 mb-3 flex items-center">
+                <TrendingUp className="w-5 h-5 mr-2" />
+                {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)} Performance Summary
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {getFilteredMonetizationData().reduce((total, metric) => {
+                      const value = metric.value.replace(/[^0-9.]/g, '');
+                      return total + (parseFloat(value) || 0);
+                    }, 0).toFixed(0)}
+                  </div>
+                  <div className="text-sm text-blue-600">Total Value</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {getFilteredMonetizationData().length}
+                  </div>
+                  <div className="text-sm text-green-600">Metrics Tracked</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {selectedPlatform === 'youtube' ? 'High' : 
+                     selectedPlatform === 'instagram' ? 'Medium' : 
+                     selectedPlatform === 'facebook' ? 'Medium' : 
+                     selectedPlatform === 'spotify' ? 'Low' : 
+                     selectedPlatform === 'pinterest' ? 'Medium' : 'Variable'}
+                  </div>
+                  <div className="text-sm text-purple-600">Revenue Potential</div>
+                </div>
+              </div>
+              
+              {/* Platform-Specific Tips */}
+              <div className="mt-4 pt-4 border-t border-blue-200">
+                <h4 className="text-sm font-medium text-blue-700 mb-2">💡 {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)} Optimization Tips:</h4>
+                <div className="text-xs text-blue-600 space-y-1">
+                  {selectedPlatform === 'youtube' && (
+                    <>
+                      <div>• Focus on SEO-optimized titles and descriptions</div>
+                      <div>• Create engaging thumbnails to increase CTR</div>
+                      <div>• Maintain consistent upload schedule</div>
+                    </>
+                  )}
+                  {selectedPlatform === 'instagram' && (
+                    <>
+                      <div>• Use relevant hashtags for discoverability</div>
+                      <div>• Post during peak engagement hours</div>
+                      <div>• Engage with your audience through stories and reels</div>
+                    </>
+                  )}
+                  {selectedPlatform === 'facebook' && (
+                    <>
+                      <div>• Create shareable, community-focused content</div>
+                      <div>• Use Facebook Groups for community building</div>
+                      <div>• Leverage Facebook Ads for targeted reach</div>
+                    </>
+                  )}
+                  {selectedPlatform === 'spotify' && (
+                    <>
+                      <div>• Monitor follower growth trends</div>
+                      <div>• Track playlist performance</div>
+                      <div>• Analyze track engagement patterns</div>
+                    </>
+                  )}
+                  {selectedPlatform === 'pinterest' && (
+                    <>
+                      <div>• Create visually appealing pins</div>
+                      <div>• Use rich pins for better engagement</div>
+                      <div>• Optimize for Pinterest SEO</div>
+                    </>
+                  )}
+                  {selectedPlatform === 'others' && (
+                    <>
+                      <div>• Diversify across multiple platforms</div>
+                      <div>• Focus on email marketing and direct sales</div>
+                      <div>• Build personal brand and authority</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Spotify Debug Test Component */}
+          <div className="mt-6 mb-6">
+            <SpotifyDebugTest />
+          </div>
+          
+          {/* Spotify Monetization Component */}
+          <div className="mt-6">
+            <SpotifyMonetization />
           </div>
         </div>
 
         {/* Creation Inspirations */}
-        <CreationInspirations 
+        <CreationInspirationsLazyWrapper 
           limit={3} 
           showRefreshButton={true}
           onSuggestionsGenerated={handleSuggestionsGenerated}
@@ -961,8 +1277,9 @@ const GYBStudio: React.FC = () => {
             onItemClick={handleContentClick}
             showDefaults={true}
             onUploadClick={handleUploadClick}
-            onDelete={removeContent}
+            onDelete={handleContentDelete}
             onView={handleViewContent}
+            onDeleteAll={handleDeleteAllContent}
           />
         </div>
       </div>
@@ -1083,6 +1400,7 @@ const GYBStudio: React.FC = () => {
               </a>
             ) : (
               <div>No preview available.</div>
+              
             )}
             
             {!viewingContent.isAISuggestion && (

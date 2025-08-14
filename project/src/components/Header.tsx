@@ -5,7 +5,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import SideMenu from './SideMenu';
 import { getProfile } from '../lib/firebase/profile';
 import { UserProfile } from '../types/user';
-import { useChat } from '../contexts/ChatContext';
 
 interface HeaderProps {
   getPageTitle: (pathname: string) => string;
@@ -15,11 +14,10 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const { isDarkMode } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentChatId } = useChat();
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -48,7 +46,7 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
   }, [user]);
 
   const handleLogoClick = () => {
-    navigate(`/chat/${currentChatId}`, { state: { selectedAgent: 'Mr.GYB AI' } });
+    navigate('/new-chat', { state: { selectedAgent: 'Mr.GYB AI' } });
   };
 
   const handleTitleClick = () => {
@@ -81,17 +79,11 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
               profileData ? getExperienceColor(profileData.experienceLevel) : 'border-navy-blue dark:border-gold'
             } focus:outline-none focus:ring-2 focus:ring-navy-blue dark:focus:ring-gold transition-colors`}
           >
-              {profileData?.profile_image_url.startsWith('http') ? (
-              <img
-                src={profileData?.profile_image_url}
-                alt={profileData?.name}
-                className="w-full h-full object-cover"
-              />
-              ) : (
-              <div className = "w-full h-full flex items-center justify-center text-2xl font-bold object-cover pb-1">
-                  {profileData?.profile_image_url}
-                </div>
-              )}
+            <img
+              src={profileData?.profile_image_url || 'https://cdn-icons-png.flaticon.com/512/63/63699.png'}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
           </button>
 
           <h1 
