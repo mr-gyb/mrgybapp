@@ -11,12 +11,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useChat } from '../../contexts/ChatContext';
 
-// For finding a corresponding chatId for user.
-import { query, collection, where, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
-import { useAuth } from '../../contexts/AuthContext';
-
-
 interface HomeFilterProps {
   onFilterChange: (filters: { agentType: string[] }) => void;
 }
@@ -57,13 +51,6 @@ const HomeFilter: React.FC<HomeFilterProps> = ({ onFilterChange }) => {
       navigate(`/chat/${newChatId}`);
     }
   }
-
-
-
-  const handleNavigateToTeamChat = async() => {
-    navigate(`/gyb-team-chat`);
-  }
-
 
   return (
     <div className="fixed bottom-32 right-4 z-50">
@@ -113,7 +100,7 @@ const HomeFilter: React.FC<HomeFilterProps> = ({ onFilterChange }) => {
               Dream Team
             </button>
             <button
-              onClick={handleNavigateToTeamChat}
+              onClick={() => handleNavigate('/gyb-team-chat')}
               className="w-full flex items-center p-2 text-left hover:bg-gray-50 rounded"
             >
               <MessagesSquare size={20} className="mr-2 text-navy-blue" />

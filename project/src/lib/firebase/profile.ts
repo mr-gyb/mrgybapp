@@ -3,7 +3,6 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { UserProfile } from '../../types/user';
 import { v4 as uuidv4 } from 'uuid';
-import { getInitials } from '../../services/profile.service';
 
 export const getProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
@@ -80,11 +79,7 @@ export const updateProfile = async (userId: string, updates: Partial<UserProfile
     const updatedProfile = {
       ...currentProfile,
       ...updates,
-      profile_image_url: profileImage
-  ? profileImageUrl // if user upload new image
-  : updates.profile_image_url?.startsWith('http')
-    ? updates.profile_image_url // if the image i still in url
-    : getInitials(updates.name || currentProfile.name),
+      profile_image_url: profileImageUrl,
       cover_image_url: coverImageUrl,
       updated_at: new Date().toISOString()
     };

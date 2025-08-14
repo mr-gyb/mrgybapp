@@ -202,10 +202,40 @@ export const processMediaLink = async (
     const contentType = ContentType.LINK;
     const timestamp = Date.now();
 
+    // Check if this is a Spotify playlist URL
+    let spotifyData = null;
+    let enhancedTitle = `Link Content - ${new Date().toLocaleDateString()}`;
+    let enhancedDescription = `External link content: ${url}`;
+
+    try {
+      const { spotifyService } = await import('./spotify.service');
+      if (spotifyService.isSpotifyPlaylist(url)) {
+        console.log('🎵 Detected Spotify playlist URL, fetching data...');
+        const playlistResponse = await spotifyService.fetchPlaylistData(url);
+        
+        if (playlistResponse.success && playlistResponse.data) {
+          const playlist = playlistResponse.data as any;
+          spotifyData = playlist;
+          
+          // Update title and description with playlist info
+          enhancedTitle = `Spotify Playlist: ${playlist.name}`;
+          enhancedDescription = `Playlist: ${playlist.name} - ${playlist.description || 'No description'}`;
+          
+          // Track follower growth
+          if (playlist.followers?.total) {
+            await spotifyService.trackFollowerGrowth(playlist.id, playlist.followers.total);
+            console.log('📈 Spotify follower growth tracked');
+          }
+        }
+      }
+    } catch (spotifyError) {
+      console.warn('⚠️ Spotify processing failed, continuing with basic link processing:', spotifyError);
+    }
+
     const mediaData = {
       userId,
-      title: `Link Content - ${new Date().toLocaleDateString()}`,
-      description: `External link content: ${url}`,
+      title: enhancedTitle,
+      description: enhancedDescription,
       contentType,
       status: 'pending',
       originalUrl: url,
@@ -216,7 +246,8 @@ export const processMediaLink = async (
         formats,
         tags: [],
         uploadTimestamp: timestamp,
-        uploadMethod: 'url'
+        uploadMethod: 'url',
+        spotifyData // Store Spotify data if available
       },
       analytics: {
         views: 0,

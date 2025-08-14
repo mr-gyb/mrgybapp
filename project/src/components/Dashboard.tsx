@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Star, Briefcase, Users, MessageCircle, Gift, DollarSign, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useUserContent } from '../hooks/useUserContent';
 import { useContentPerformance } from '../hooks/useContentPerformance';
-import { doc, updateDoc, collection, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, onSnapshot, getDoc, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import platformApiService from '../api/services/platform-apis.service';
 import { detectPlatform, getPlatformDisplayName } from '../utils/platformUtils';
@@ -16,7 +16,7 @@ import EnterpriseCard from './EnterpriseCard';
 import TrialSection from './TrialSection';
 
 const Commerce: React.FC = () => {
-  const { content: userContent, updateContent } = useUserContent();
+  const { content: userContent, updateContent, refreshContent } = useUserContent();
   const { 
     performanceData, 
     isLoading: performanceLoading, 
@@ -31,6 +31,14 @@ const Commerce: React.FC = () => {
   } = useContentPerformance();
   
   const [paymentType, setPaymentType] = useState<'monthly' | 'annually'>('annually');
+  const [contentStats, setContentStats] = useState({ byType: {}, byPlatform: {} });
+  const [error, setError] = useState<string | null>(null);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [barChartData, setBarChartData] = useState<any[]>([]);
+  const [pieChartData, setPieChartData] = useState<any[]>([]);
+  const [viewingContent, setViewingContent] = useState<ContentItem | null>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [isUpdatingViews, setIsUpdatingViews] = useState(false);
   
   const rating = 4.7;
   const fullStars = Math.floor(rating);
@@ -42,11 +50,7 @@ const Commerce: React.FC = () => {
     Facebook: "#1877F3",
     Pinterest: "#E60023",
     Instagram: "#C13584",
-    iTunes: "#FF2D55",
     Spotify: "#1DB954",
-    Blogger: "#FF8000",
-    Medium: "#757575",
-    Substack: "#FF9900",
     Other: "#FFD700",
     // Add more as needed
   };
@@ -70,6 +74,70 @@ const Commerce: React.FC = () => {
     { day: 'Sun', dailyEarnings: 250, weeklyTrend: 220 },
   ];
 
+  // Real-time content listener
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'media_content'), (snapshot) => {
+      const contentList = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data
+        } as ContentItem;
+      });
+      
+      // Update charts with new content data
+      updateChartData(contentList);
+      
+      // Trigger performance update for new content
+      handleContentChange(contentList);
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  // Handle content changes and update view counts
+  const handleContentChange = useCallback(async (contentList: ContentItem[]) => {
+    setIsUpdatingViews(true);
+    try {
+      // Update performance data for all content
+      await updateAllContentPerformance();
+      
+      // Refresh content to get updated view counts
+      await refreshContent();
+      
+      // Update chart data
+      updateChartData(contentList);
+    } catch (error) {
+      console.error('Error updating view counts:', error);
+      setError('Failed to update view counts');
+    } finally {
+      setIsUpdatingViews(false);
+    }
+  }, [updateAllContentPerformance, refreshContent]);
+
+  // Update chart data based on content
+  const updateChartData = useCallback((contentList: ContentItem[]) => {
+    // Aggregate by type for bar chart
+    const byType: Record<string, number> = {};
+    for (const item of contentList) {
+      if (item.type) {
+        byType[item.type] = (byType[item.type] || 0) + (item.views || 0);
+      }
+    }
+    setBarChartData(Object.entries(byType).map(([type, views]) => ({ type, views })));
+
+    // Pie chart: aggregate by platforms
+    const byPlatform: Record<string, number> = {};
+    for (const item of contentList) {
+      if (item.platforms && item.platforms.length > 0) {
+        item.platforms.forEach(platform => {
+          byPlatform[platform] = (byPlatform[platform] || 0) + (item.views || 0);
+        });
+      }
+    }
+    setPieChartData(Object.entries(byPlatform).map(([name, value]) => ({ name, value })));
+  }, []);
+
   // Suppose userContent is an array of all uploaded content items
   const platformCounts: Record<string, number> = {};
   (userContent as Array<{ platforms?: string[] }>).forEach((item) => {
@@ -83,8 +151,8 @@ const Commerce: React.FC = () => {
   // Normalize platform counts
   const normalizedPlatformCounts = {};
   Object.entries(platformCounts).forEach(([name, count]) => {
-    if (name === 'Newsletter' || name === 'Blog' || name === 'LinkedIn') {
-      normalizedPlatformCounts['Other'] = (normalizedPlatformCounts['Other'] || 0) + count;
+    if (name === 'Newsletter' || name === 'Blog') {
+      normalizedPlatformCounts['Social Media'] = (normalizedPlatformCounts['Social Media'] || 0) + count;
     } else {
       normalizedPlatformCounts[name] = count;
     }
@@ -137,7 +205,7 @@ const Commerce: React.FC = () => {
     const RADIAN = Math.PI / 180;
     const radius = outerRadius + 18;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const y = cy + radius * radius * Math.sin(-midAngle * RADIAN);
     return (
       <text
         x={x}
@@ -175,14 +243,6 @@ const Commerce: React.FC = () => {
     return null;
   };
 
-  const [contentStats, setContentStats] = useState({ byType: {}, byPlatform: {} });
-  const [error, setError] = useState<string | null>(null);
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [barChartData, setBarChartData] = useState<any[]>([]);
-  const [pieChartData, setPieChartData] = useState<any[]>([]);
-  const [viewingContent, setViewingContent] = useState<ContentItem | null>(null);
-  const [showViewModal, setShowViewModal] = useState(false);
-
   async function updateStats() {
     // Since ContentItem doesn't have views property, we'll use a mock approach
     const updatedContent = userContent.map(item => ({
@@ -199,16 +259,6 @@ const Commerce: React.FC = () => {
     const interval = setInterval(updateStats, 60 * 60 * 1000); // every hour
     return () => clearInterval(interval);
   }, [userContent]);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'media_content'), (snapshot) => {
-      const contentList = snapshot.docs.map(doc => doc.data() as ContentItem);
-      // Note: This would need to be handled by the useUserContent hook
-      // For now, we'll just update the chart data
-      setChartData(aggregateViewsByType(contentList));
-    });
-    return () => unsubscribe();
-  }, []);
 
   // Aggregate data for charts
   React.useEffect(() => {
@@ -328,13 +378,13 @@ const Commerce: React.FC = () => {
     }
   };
 
-  const hasData = platformData && platformData.length > 0 && platformData.some(d => d.value > 0);
+  const hasData = platformData && platformData.length > 0 && platformData.some(d => (d.value as number) > 0);
 
   return (
     <div className="min-h-screen bg-white">
       {/* Header Section */}
       <div className="text-center py-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Beautiful websites</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">GYB Platform Plans</h1>
         <p className="text-lg text-gray-600">Free for 14 days</p>
       </div>
 
@@ -366,7 +416,7 @@ const Commerce: React.FC = () => {
 
       {/* Cards - Side by Side */}
       <div className="flex justify-between px-4 gap-4 w-full max-w-none">
-        <CultureCard />
+        <CultureCard paymentType={paymentType} />
         <ProCard paymentType={paymentType} />
         <EnterpriseCard paymentType={paymentType} />
       </div>

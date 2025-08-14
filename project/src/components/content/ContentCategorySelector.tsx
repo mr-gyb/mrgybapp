@@ -29,15 +29,6 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
 
   const contentCategories: ContentCategory[] = [
     {
-      id: 'blog',
-      name: 'Blogs',
-      description: 'Upload blog posts, articles, and written content',
-      icon: <FileText size={32} className="text-blue-500" />,
-      type: 'written',
-      platforms: ['Blog'],
-      examples: ['Blog posts', 'Articles', 'Reports', 'Whitepapers', 'Scripts']
-    },
-    {
       id: 'audio',
       name: 'Audio',
       description: 'Upload audio files for podcast content and transcriptions',
@@ -65,13 +56,13 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
       examples: ['Instagram posts', 'Pinterest pins', 'Facebook images']
     },
     {
-      id: 'other',
-      name: 'Other',
-      description: 'Upload content for networking platforms like LinkedIn, etc.',
+      id: 'others',
+      name: 'Others',
+      description: 'Upload content for other platforms and miscellaneous content types',
       icon: <Link size={32} className="text-orange-500" />,
       type: 'written',
-      platforms: ['LinkedIn', 'Other'],
-      examples: ['LinkedIn articles', 'Networking content']
+      platforms: ['Other'],
+      examples: ['Other content', 'Miscellaneous content', 'Custom platforms']
     }
   ];
 

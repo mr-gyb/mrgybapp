@@ -70,14 +70,14 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
       examples: ['Instagram posts', 'Pinterest pins', 'Facebook images']
     },
     {
-      id: 'other',
-      name: 'Other',
-      description: 'Upload content for networking platforms like LinkedIn, etc.',
+      id: 'others',
+      name: 'Others',
+      description: 'Upload content for other platforms and miscellaneous content types',
       icon: <Link size={32} className="text-orange-500" />,
       type: 'written',
-      platforms: ['LinkedIn', 'Other'],
+      platforms: ['Other'],
       fileTypes: ['PDF', 'DOC', 'DOCX', 'TXT', 'RTF'],
-      examples: ['LinkedIn articles', 'Networking content']
+      examples: ['Other content', 'Miscellaneous content', 'Custom platforms']
     }
   ];
 

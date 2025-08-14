@@ -5,6 +5,9 @@ import contentPerformanceService, {
   PerformanceData 
 } from '../services/contentPerformance.service';
 import { ContentItem } from '../types/content';
+import { useUserContent } from './useUserContent';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export interface UseContentPerformanceReturn {
   // Performance data
@@ -46,11 +49,7 @@ export function useContentPerformance(): UseContentPerformanceReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTracking, setIsTracking] = useState(false);
-
-  // Load initial performance data
-  useEffect(() => {
-    loadPerformanceData();
-  }, []);
+  const { content: userContent } = useUserContent();
 
   const loadPerformanceData = useCallback(async () => {
     setIsLoading(true);
@@ -66,15 +65,81 @@ export function useContentPerformance(): UseContentPerformanceReturn {
     }
   }, []);
 
+  // Load initial performance data
+  useEffect(() => {
+    loadPerformanceData();
+  }, [loadPerformanceData]);
+
+  // Real-time performance data listener
+  useEffect(() => {
+    if (!isTracking) return;
+
+    const unsubscribe = onSnapshot(collection(db, 'content_performance'), (snapshot) => {
+      console.log('Performance data change detected:', snapshot.docChanges().length, 'changes');
+      
+      const newPerformanceData: ContentPerformanceSummary[] = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (!data.deleted) {
+          newPerformanceData.push({
+            contentId: doc.id,
+            totalViews: data.totalViews || 0,
+            totalLikes: data.totalLikes || 0,
+            totalShares: data.totalShares || 0,
+            totalComments: data.totalComments || 0,
+            platformBreakdown: data.platformBreakdown || [],
+            lastUpdated: data.lastUpdated || new Date().toISOString()
+          });
+        }
+      });
+      
+      console.log('Updated performance data:', newPerformanceData.length, 'items');
+      setPerformanceData(newPerformanceData);
+    }, (error) => {
+      console.error('Error in performance data listener:', error);
+    });
+
+    return () => unsubscribe();
+  }, [isTracking]);
+
+  // Auto-update performance when content changes
+  useEffect(() => {
+    if (userContent.length > 0 && isTracking) {
+      // Debounce the update to avoid too many API calls
+      const timeoutId = setTimeout(() => {
+        console.log('Auto-updating performance for', userContent.length, 'content items');
+        updateAllContentPerformance();
+      }, 2000); // Wait 2 seconds after content changes
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [userContent, isTracking]);
+
+  // Listen for performance data changes
+  useEffect(() => {
+    if (isTracking) {
+      const interval = setInterval(() => {
+        loadPerformanceData();
+      }, 30000); // Refresh performance data every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [isTracking, loadPerformanceData]);
+
   const startTracking = useCallback((intervalMinutes: number = 60) => {
     try {
       contentPerformanceService.startTracking(intervalMinutes);
       setIsTracking(true);
       setError(null);
+      
+      // Immediately update performance for existing content
+      if (userContent.length > 0) {
+        updateAllContentPerformance();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start tracking');
     }
-  }, []);
+  }, [userContent.length]);
 
   const stopTracking = useCallback(() => {
     try {

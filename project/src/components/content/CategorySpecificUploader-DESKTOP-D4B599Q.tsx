@@ -44,7 +44,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
   const [pendingUploadData, setPendingUploadData] = useState<any>(null);
   const [selectedLinkType, setSelectedLinkType] = useState<string>('blog');
   // Add state for selected blog platform
-  const [selectedBlogPlatform, setSelectedBlogPlatform] = useState<string | null>(null);
+
   // Add state for the URL title
   const [urlTitle, setUrlTitle] = useState('');
 
@@ -174,7 +174,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
         platforms: pendingUploadData.platforms,
         formats: pendingUploadData.formats,
         title: title, // Include the selected title
-        blogPlatform: category.id === 'blog' ? selectedBlogPlatform : undefined // Add blogPlatform for blogs
+
       };
 
       console.log('Upload result:', uploadResult);
@@ -423,31 +423,7 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
           <h4 className="font-semibold mb-2 text-navy-blue">About {category.name}</h4>
           <p className="text-gray-600 text-sm mb-3">{category.description}</p>
           <div className="flex flex-wrap gap-2 mb-4">
-            {category.id === 'blog' ? (
-              <>
-                <button
-                  type="button"
-                  className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${selectedBlogPlatform === 'Blogger' ? 'bg-navy-blue text-white border-navy-blue' : 'bg-blue-100 text-blue-800 border-blue-200'}`}
-                  onClick={() => setSelectedBlogPlatform(selectedBlogPlatform === 'Blogger' ? null : 'Blogger')}
-                >
-                  Blogger
-                </button>
-                <button
-                  type="button"
-                  className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${selectedBlogPlatform === 'Substack' ? 'bg-navy-blue text-white border-navy-blue' : 'bg-green-100 text-green-800 border-green-200'}`}
-                  onClick={() => setSelectedBlogPlatform(selectedBlogPlatform === 'Substack' ? null : 'Substack')}
-                >
-                  Substack
-                </button>
-                <button
-                  type="button"
-                  className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${selectedBlogPlatform === 'Medium' ? 'bg-navy-blue text-white border-navy-blue' : 'bg-yellow-100 text-yellow-800 border-yellow-200'}`}
-                  onClick={() => setSelectedBlogPlatform(selectedBlogPlatform === 'Medium' ? null : 'Medium')}
-                >
-                  Medium
-                </button>
-              </>
-            ) : category.id === 'audio' ? (
+            {category.id === 'audio' ? (
               <>
                 <button
                   type="button"

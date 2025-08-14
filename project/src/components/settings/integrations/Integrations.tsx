@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { ChevronLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import IntegrationCard from './IntegrationCard';
 import { useIntegration } from '../../../hooks/useIntegration';
 
@@ -59,6 +59,7 @@ const integrations = [
 
 const Integrations: React.FC = () => {
   const [connectedIntegrations, setConnectedIntegrations] = useState<string[]>([]);
+  const navigate = useNavigate();
 
   const handleConnect = async (integrationName: string) => {
     try {
@@ -66,6 +67,11 @@ const Integrations: React.FC = () => {
     } catch (error) {
       console.error('Failed to connect integration:', error);
     }
+  };
+
+  const handleFacebookConnect = () => {
+    // Navigate to Facebook integration page using React Router
+    navigate('/settings/integrations/facebook');
   };
 
   const handleDisconnect = async (integrationName: string) => {
@@ -91,7 +97,7 @@ const Integrations: React.FC = () => {
             <IntegrationCard
               key={integration.name}
               integration={integration}
-              onConnect={handleConnect}
+              onConnect={integration.name === 'Facebook' ? handleFacebookConnect : handleConnect}
               onDisconnect={handleDisconnect}
               isConnected={connectedIntegrations.includes(integration.name)}
             />

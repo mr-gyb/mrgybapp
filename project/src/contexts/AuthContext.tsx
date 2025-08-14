@@ -1,13 +1,9 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { auth, db } from '../lib/firebase';
+import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithPopup } from 'firebase/auth';
+import { auth, db, facebookProvider } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile } from '../types/user';
-
 import { storage } from '../utils/storage';
-
-import { getInitials } from '../services/profile.service';
-
 
 interface AuthContextType {
   user: User | null;
@@ -16,6 +12,7 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ user?: User; error?: any }>;
   signUp: (email: string, password: string) => Promise<{ user?: User; error?: any }>;
+  signInWithFacebook: () => Promise<{ user?: User; error?: any }>;
   logout: () => Promise<void>;
   updateUserData: (updates: Partial<UserProfile>) => Promise<void>;
 }
@@ -53,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               rating: 4.5,
               following: 0,
               followers: 0,
-              profile_image_url: getInitials(currentUser.displayName),
+              profile_image_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80',
               cover_image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
@@ -74,13 +71,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => unsubscribe();
   }, []);
-
-  function getInitials(name?: string | null): string {
-    if (!name) return "U"; // fallback for unknown
-    const words = name.trim().split(" ");
-    if (words.length === 1) return words[0][0].toUpperCase();
-    return (words[0][0] + words[1][0]).toUpperCase();
-  }
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -107,6 +97,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { user: userCredential.user };
     } catch (error) {
       console.error('Sign up error:', error);
+      return { error };
+    }
+  };
+
+  const signInWithFacebook = async () => {
+    try {
+      const result = await signInWithPopup(auth, facebookProvider);
+      
+      // Check if this is a new user
+      if (result._tokenResponse?.isNewUser) {
+        // Create a new profile for Facebook user
+        const userDocRef = doc(db, 'profiles', result.user.uid);
+        const defaultProfile: UserProfile = {
+          id: result.user.uid,
+          name: result.user.displayName || result.user.email?.split('@')[0] || 'Facebook User',
+          username: `@${result.user.displayName?.toLowerCase().replace(/\s+/g, '') || 'facebookuser'}`,
+          email: result.user.email || '',
+          bio: 'Tell us about yourself...',
+          location: 'Location',
+          website: 'https://example.com',
+          industry: 'Technology',
+          experienceLevel: 1,
+          rating: 4.5,
+          following: 0,
+          followers: 0,
+          profile_image_url: result.user.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80',
+          cover_image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          authProvider: 'facebook'
+        };
+        
+        await setDoc(userDocRef, defaultProfile);
+        setUserData(defaultProfile);
+      }
+      
+      return { user: result.user };
+    } catch (error) {
+      console.error('Facebook sign in error:', error);
       return { error };
     }
   };
@@ -138,6 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     signIn,
     signUp,
+    signInWithFacebook,
     logout,
     updateUserData,
   };

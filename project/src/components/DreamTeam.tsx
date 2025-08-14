@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef} from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, MessageSquare, Send, Mic, Camera, Paperclip, Image as ImageIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useChat } from '../contexts/ChatContext';
@@ -14,15 +14,13 @@ const DreamTeam: React.FC = () => {
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const navigate = useNavigate();
-  const { createNewChat, addMessage, currentChatId, chats, setSelectedAgent } = useChat();
-  // For scrolling to bottom of the screen
-  const screenEndRef = useRef<HTMLDivElement>(null);
+  const { createNewChat, addMessage, currentChatId } = useChat();
 
   const teamMembers: TeamMember[] = [
     {
       id: 'mrgyb',
       title: 'Mr.GYB AI',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58',
+      image: 'https://drive.google.com/uc?export=view&id=1H1PYdJ4qNz8a2R6WaxaYw22awKagmEy9',
       specializations: [
         'ALL-IN-ONE BUSINESS GROWTH ASSISTANT',
         'DIGITAL MARKETING',
@@ -34,7 +32,7 @@ const DreamTeam: React.FC = () => {
     {
       id: 'ceo',
       title: 'CEO',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCEO.png?alt=media&token=62f3fe9f-0b51-4501-becd-c9bf88d7bf0e',
+      image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
       specializations: [
         'STRATEGIC PLANNING',
         'BUSINESS DEVELOPMENT',
@@ -46,7 +44,7 @@ const DreamTeam: React.FC = () => {
     {
       id: 'coo',
       title: 'COO',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCOO.png?alt=media&token=d57a97eb-83f5-4e0d-903e-278dc2a4d9af',
+      image: 'https://images.unsplash.com/photo-1573497491765-dccce02b29df?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
       specializations: [
         'OPERATIONS MANAGEMENT',
         'PROCESS OPTIMIZATION',
@@ -58,7 +56,7 @@ const DreamTeam: React.FC = () => {
     {
       id: 'chro',
       title: 'CHRO',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCHRO.png?alt=media&token=862bbf8c-373b-4996-89fe-8d867f378d9f',
+      image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
       specializations: [
         'HUMAN RESOURCES MANAGEMENT',
         'TALENT ACQUISITION',
@@ -70,7 +68,7 @@ const DreamTeam: React.FC = () => {
     {
       id: 'cto',
       title: 'CTO',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCTO.png?alt=media&token=e856c7b0-440d-4776-ba3b-8eb0bb89165d',
+      image: 'https://images.unsplash.com/photo-1573496799652-408c2ac9fe98?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
       specializations: [
         'TECHNOLOGY STRATEGY',
         'INNOVATION MANAGEMENT',
@@ -82,7 +80,7 @@ const DreamTeam: React.FC = () => {
     {
       id: 'cmo',
       title: 'CMO',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCMO.png?alt=media&token=4e9ddaee-c4b0-4b4d-aca8-6c4196a5dd1b',
+      image: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
       specializations: [
         'MARKETING STRATEGY',
         'BRAND MANAGEMENT',
@@ -95,47 +93,26 @@ const DreamTeam: React.FC = () => {
 
   const handleMemberClick = (memberId: string) => {
     setSelectedMember(memberId === selectedMember ? null : memberId);
-    screenEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleStartChat = async (newAgent: string) => {
-    try {
-      // check if there is an existing chat
-      // chats have several chat room objects.
-      // .find() => return the first room that satisfy the requirement.
-      // if there are a message that have role == assistant and aiAgent == selectedAgent
-      // Then return true otherwise return false to indicate whether there are existing chat.
-      const existingChat = chats.find((chat) => {
-        return (
-          chat.messages &&
-          chat.messages.some(
-            (message) =>
-              message.role === "assistant" && message.aiAgent === newAgent
-          )
-        );
-      });
+  const handleStartChat = (memberTitle: string) => {
+    navigate(`/new-chat`, { state: { selectedAgent: memberTitle, chatId: newChatId } });
+  };
 
-      if (existingChat) {
-        navigate(`/chat/${existingChat.id}`)
-      } else{
-        const newChatId = await createNewChat();
+  const handleSendMessage = () => {
+    if (input.trim() && currentChatId && selectedMember) {
+      const memberTitle = teamMembers.find(m => m.id === selectedMember)?.title || '';
+      addMessage(currentChatId, 'user', input);
+      setInput('');
+      setTimeout(() => {
+        addMessage(currentChatId, 'assistant', `Response from ${memberTitle}: "${input}"`);
+      }, 1000);
+    }
+  };
 
-        if (newChatId) {
-          // Add initial message from the new agent
-          const initialMessage = `Hello! I'm ${newAgent}. How can I help you today?`;
-          await addMessage(
-            newChatId,
-            initialMessage,
-            "assistant",
-            undefined,
-            newAgent
-          );
-          navigate(`/chat/${newChatId}`)
-          setSelectedAgent(newAgent)
-        }
-      }
-    } catch (error){
-      console.error("Error Handling going to the agent chat", error)
+  const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      handleSendMessage();
     }
   };
 
@@ -143,8 +120,8 @@ const DreamTeam: React.FC = () => {
     <div className="bg-white min-h-screen text-navy-blue">
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center mb-6">
-          <Link to={`/chat/${currentChatId}`} className="mr-4 text-navy-blue">
-            <ChevronLeft size={24} /> 
+          <Link to="/new-chat" className="mr-4 text-navy-blue">
+            <ChevronLeft size={24} />
           </Link>
           <h1 className="text-3xl font-bold text-navy-blue">GYB AI Team Members</h1>
         </div>
@@ -195,10 +172,37 @@ const DreamTeam: React.FC = () => {
                   </li>
                 ))}
             </ul>
+            <div className="flex items-center bg-white rounded-full p-2">
+              <button className="p-2 text-gray-500 hover:text-navy-blue">
+                <Paperclip size={20} />
+              </button>
+              <button className="p-2 text-gray-500 hover:text-navy-blue">
+                <Camera size={20} />
+              </button>
+              <button className="p-2 text-gray-500 hover:text-navy-blue">
+                <ImageIcon size={20} />
+              </button>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                className="flex-grow bg-transparent border-none focus:outline-none px-4 py-2 text-navy-blue"
+              />
+              <button className="p-2 text-gray-500 hover:text-navy-blue">
+                <Mic size={20} />
+              </button>
+              <button
+                onClick={handleSendMessage}
+                className="p-2 text-blue-500 hover:text-blue-600"
+              >
+                <Send size={20} />
+              </button>
+            </div>
           </div>
         )}
       </div>
-      <div ref = {screenEndRef} />
     </div>
   );
 };

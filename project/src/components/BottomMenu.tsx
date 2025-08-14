@@ -9,13 +9,15 @@ const BottomMenu: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
-  const { currentChatId, createNewChat, setSelectedAgent } = useChat();
+  const { currentChatId, createNewChat } = useChat();
 
   const handleChatNavigation = async () => {
     if (!currentChatId) {
       const newChatId = await createNewChat();
       if (newChatId) {
         navigate(`/chat/${newChatId}`);
+      } else {
+        navigate('/new-chat');
       }
     } else {
       navigate(`/chat/${currentChatId}`);

@@ -44,9 +44,6 @@ const Commerce: React.FC = () => {
     Instagram: "#C13584",
     iTunes: "#FF2D55",
     Spotify: "#1DB954",
-    Blogger: "#FF8000",
-    Medium: "#757575",
-    Substack: "#FF9900",
     Other: "#FFD700",
     // Add more as needed
   };
@@ -84,7 +81,7 @@ const Commerce: React.FC = () => {
   const normalizedPlatformCounts = {};
   Object.entries(platformCounts).forEach(([name, count]) => {
     if (name === 'Newsletter' || name === 'Blog' || name === 'LinkedIn') {
-      normalizedPlatformCounts['Other'] = (normalizedPlatformCounts['Other'] || 0) + count;
+      normalizedPlatformCounts['Social Media'] = (normalizedPlatformCounts['Social Media'] || 0) + count;
     } else {
       normalizedPlatformCounts[name] = count;
     }
@@ -334,7 +331,7 @@ const Commerce: React.FC = () => {
     <div className="min-h-screen bg-white">
       {/* Header Section */}
       <div className="text-center py-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Beautiful websites</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">GYB Platform Plans</h1>
         <p className="text-lg text-gray-600">Free for 14 days</p>
       </div>
 

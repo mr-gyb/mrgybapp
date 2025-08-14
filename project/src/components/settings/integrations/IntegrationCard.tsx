@@ -33,8 +33,21 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
         setIsLoading(false);
       }
     } else {
-      // Only show auth popup for OAuth-based integrations
-      const oauthProviders = ['google', 'facebook', 'instagram', 'linkedin', 'twitter', 'tiktok', 'salesforce', 'make', 'zapier'];
+      // Handle Facebook integration specially - bypass all OAuth flows
+      if (integration.name.toLowerCase() === 'facebook') {
+        setIsLoading(true);
+        try {
+          await onConnect(integration.name);
+        } catch (error) {
+          console.error('Failed to connect Facebook:', error);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+      
+      // Only show auth popup for other OAuth-based integrations
+      const oauthProviders = ['google', 'instagram', 'linkedin', 'twitter', 'tiktok', 'salesforce', 'make', 'zapier'];
       
       if (oauthProviders.includes(integration.name.toLowerCase())) {
         const authUrl = getAuthUrl(integration.name);
@@ -81,12 +94,15 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
         </button>
       </div>
 
-      <AuthPopup
-        isOpen={showAuthPopup}
-        onClose={() => setShowAuthPopup(false)}
-        title={`Connect ${integration.name}`}
-        url={getAuthUrl(integration.name)}
-      />
+      {/* Don't show AuthPopup for Facebook - it has its own integration page */}
+      {integration.name.toLowerCase() !== 'facebook' && (
+        <AuthPopup
+          isOpen={showAuthPopup}
+          onClose={() => setShowAuthPopup(false)}
+          title={`Connect ${integration.name}`}
+          url={getAuthUrl(integration.name)}
+        />
+      )}
     </>
   );
 };

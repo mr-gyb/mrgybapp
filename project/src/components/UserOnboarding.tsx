@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { Apple, Mail, Phone, ChevronDown, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Apple, Mail, Phone, ChevronDown, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { createProfile } from '../services/profile.service';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-
 
 const UserOnboarding: React.FC = () => {
   const { signUp } = useAuth();
@@ -19,14 +17,10 @@ const UserOnboarding: React.FC = () => {
   const [lastName, setLastName] = useState('');
   const [birthday, setBirthday] = useState('');
   const [password, setPassword] = useState(location.state?.password || '');
-  const [userCredential, setUserCredential] = useState(location.state?.userCredential || null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [country, setCountry] = useState('US');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  // for previewUrl
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const handleContinue = () => {
     setError('');
@@ -38,8 +32,12 @@ const UserOnboarding: React.FC = () => {
       setError('Please enter your first and last name');
       return;
     }
-    if (step === 2 && ! notificationsEnabled){
-      setError('Please enable notifications');
+    if (step === 2 && !birthday) {
+      setError('Please enter your birthday');
+      return;
+    }
+    if (step === 3 && !password) {
+      setError('Please enter a password');
       return;
     }
     if (step === 4) {
@@ -48,26 +46,6 @@ const UserOnboarding: React.FC = () => {
     }
     setStep(step + 1);
   };
-
-  // for getting the initial to display the profile
-  const getInitials = (first: string, last: string) => {
-    const f = first?.[0]?.toUpperCase() || '';
-    const l = last?.[0]?.toUpperCase() || '';
-    return `${f}${l}` || "No Name";
-  };
-
-  // for tracking the file change(profile)
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  }
 
   const handleBack = () => {
     setStep(step - 1);
@@ -78,50 +56,22 @@ const UserOnboarding: React.FC = () => {
     setError('');
 
     try {
-      let currentUser = auth.currentUser;
+      // Create user with email and password
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // If no current user and we have userCredential from SignIn, use it
-      if (!currentUser ) {
-        setError('No authenticated user found.');
-        return;
-      }
-
-      // for making null to test if user upload their own image
-      let profileImageUrl = null;
-
-
-      
-      // If still no user, create one
-      if (!currentUser) {
-        const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
-        console.log('email', email);
-        currentUser = newUserCredential.user;
-
-        await currentUser.reload(); 
-      }
-
-      if (selectedFile){
-        const storage = getStorage();
-        // const fileName = `${firstName.toLowerCase()} - ${lastName.toLowerCase()}`;
-        const imageRef = ref(storage, `profile-images/${currentUser.uid}`);
-        await uploadBytes(imageRef, selectedFile);
-        profileImageUrl = await getDownloadURL(imageRef);
-      }
-      
-      if (currentUser) {
+      if (userCredential.user) {
         // Create profile for the new user
-        await createProfile(currentUser.uid, {
+        await createProfile(userCredential.user.uid, {
           email,
           name: `${firstName} ${lastName}`,
           username: `@${firstName.toLowerCase()}${lastName.toLowerCase()}`,
-          profile_image_url: profileImageUrl || '',
-          //phoneNumber,
-          //birthday,
-          //notificationsEnabled,
-          //country
+          phoneNumber,
+          birthday,
+          notificationsEnabled,
+          country
         });
 
-        navigate('/dashboard');
+        navigate('/home');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during sign up');
@@ -141,13 +91,8 @@ const UserOnboarding: React.FC = () => {
         )}
         {step === 0 && (
           <>
-          <h1 className="text-3xl font-bold mb-6 text-center">Welcome to GYB AI❗</h1>
-        </>
-        )}
-            {/*
+            <h1 className="text-3xl font-bold mb-6 text-center">Welcome to GYB AI</h1>
             <div className="space-y-4">
-               remove the apple button and or button for now
-
               <button className="w-full bg-black text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center">
                 <Apple size={24} className="mr-2" />
                 Continue with Apple
@@ -157,7 +102,6 @@ const UserOnboarding: React.FC = () => {
                 <span className="px-4 text-gray-500">or</span>
                 <div className="flex-grow border-t border-gray-300"></div>
               </div>
-              
               <input
                 type="tel"
                 value={phoneNumber}
@@ -165,12 +109,16 @@ const UserOnboarding: React.FC = () => {
                 placeholder="Phone number"
                 className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
               />
-
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
+              />
             </div>
           </>
-          */} 
-        
-        
+        )}
         {step === 1 && (
           <>
             <h2 className="text-2xl font-bold mb-4">What's your name?</h2>
@@ -194,6 +142,48 @@ const UserOnboarding: React.FC = () => {
         )}
         {step === 2 && (
           <>
+            <h2 className="text-2xl font-bold mb-4">When's your birthday?</h2>
+            <input
+              type="date"
+              value={birthday}
+              onChange={(e) => setBirthday(e.target.value)}
+              className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
+            />
+          </>
+        )}
+        {step === 3 && (
+          <>
+            <h2 className="text-2xl font-bold mb-4">Create a password</h2>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
+            />
+          </>
+        )}
+        {step === 4 && (
+          <>
+            <h2 className="text-2xl font-bold mb-4 dark:text-black">Enable notifications</h2>
+            <div className="flex items-center justify-between dark:text-black">
+              <span>Receive notifications</span>
+              <label className="relative inline-block w-14 h-7">
+                <input
+                  type="checkbox"
+                  checked={notificationsEnabled}
+                  onChange={(e) => setNotificationsEnabled(e.target.checked)}
+                  className="opacity-0 w-0 h-0"
+                />
+                <span className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 rounded-full transition-colors duration-300 ${notificationsEnabled ? 'bg-navy-blue' : 'bg-gray-300'}`}>
+                  <span className={`absolute h-5 w-5 left-1 bottom-1 bg-white rounded-full transition-transform duration-300 ${notificationsEnabled ? 'transform translate-x-7' : ''}`}></span>
+                </span>
+              </label>
+            </div>
+          </>
+        )}
+        {step === 5 && (
+          <>
             <h2 className="text-2xl font-bold mb-4">Select your country</h2>
             <div className="relative">
               <select
@@ -215,65 +205,6 @@ const UserOnboarding: React.FC = () => {
             </div>
           </>
         )}
-        {/*
-        {step === 3 && (
-          <>
-            <h2 className="text-2xl font-bold mb-4 dark:text-black">Enable notifications</h2>
-            <div className="flex items-center justify-between dark:text-black">
-              <span>Receive notifications</span>
-              <label className="relative inline-block w-14 h-7">
-                <input
-                  type="checkbox"
-                  checked={notificationsEnabled}
-                  onChange={(e) => setNotificationsEnabled(e.target.checked)}
-                  className="opacity-0 w-0 h-0"
-                />
-                <span className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 rounded-full transition-colors duration-300 ${notificationsEnabled ? 'bg-navy-blue' : 'bg-gray-300'}`}>
-                  <span className={`absolute h-5 w-5 left-1 bottom-1 bg-white rounded-full transition-transform duration-300 ${notificationsEnabled ? 'transform translate-x-7' : ''}`}></span>
-                </span>
-              </label>
-            </div>
-          </>
-        )}
-          */}
-        {step === 3 && (
-          <>
-            <h2 className="text-2xl font-bold mb-4 dark:text-balck">Profile Image</h2>
-            <div className="flex items-center justify-between space-x-4">
-              {previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt="Profile Preview"
-                  className="w-24 h-24 rounded-full object-cover border"
-                  />
-              ) : (
-                <div className='w-24 h-24 rounded-full bg-gray-300 text-blue flex items-center justify-center text-2xl font-bold'>
-                  {getInitials(firstName, lastName)}
-                </div>
-              )}
-
-              <label className="cursor-pointer bg-gold text-white px-4 py-2 rounded hover:bg-yellow-600">
-                Upload Image
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </label>
-            </div>
-          </>
-        )}
-
-        {step === 4 && (
-          <>
-            <div className="flex flex-col items-center justify-center space-y-4 dark:text-black animate-fade-in">
-              <CheckCircle className="w-16 h-16 text-green-500 animate-bounce" />
-              <span className="text-center">Your account has been created successfully and is ready to use! 🎉</span>
-            </div>
-          </>
-        )}
-
         {error && <p className="text-red-500 mt-2">{error}</p>}
         <button
           onClick={handleContinue}

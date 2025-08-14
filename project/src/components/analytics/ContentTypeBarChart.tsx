@@ -1,5 +1,5 @@
 import React from 'react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell } from 'recharts';
 
 interface ContentTypeBarChartProps {
   barData: any[];
@@ -48,6 +48,7 @@ const ContentTypeBarChart: React.FC<ContentTypeBarChartProps> = ({
 
   // Limit to top 15 categories for performance
   let displayData = barData;
+  
   if (displayData.length > 15) {
     displayData = [...displayData]
       .sort((a, b) => (b.views || 0) - (a.views || 0))
@@ -92,125 +93,32 @@ const ContentTypeBarChart: React.FC<ContentTypeBarChartProps> = ({
             />
             <Tooltip content={CustomBarTooltip as any} />
             <Legend 
-              payload={LEGEND_KEYS.map(key => ({
+              payload={(LEGEND_KEYS || []).map(key => ({
                 value: key,
                 type: 'square',
                 color: CONTENT_TYPE_COLORS[key] || '#8884d8',
               }))}
               formatter={(value) => <span style={{ fontWeight: 'bold', color: CONTENT_TYPE_COLORS[value] || '#000' }}>{value}</span>}
             />
-            {/* Grouped bars for Blogs */}
-            {blogTypes.map(type => (
-              <Bar
-                key={type}
-                dataKey={type}
-                fill={CONTENT_TYPE_COLORS[type]}
-                name={type}
-                barSize={barSize}
-                isAnimationActive={false}
-                label={(props) => {
-                  const { x, y, width } = props;
-                  let views = 0;
-                  if (type === 'Blogger') {
-                    views = userContent.filter((item: any) => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'blogger').reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
-                  } else if (type === 'Substack') {
-                    views = userContent.filter((item: any) => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'substack').reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
-                  } else if (type === 'Medium') {
-                    views = userContent.filter((item: any) => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'medium').reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
-                  }
-                  return (
-                    <text x={x + width / 2} y={y - 16} textAnchor="middle" fill="#222" fontSize={11} fontWeight={500}>
-                      {views > 0 ? `${views.toLocaleString()} views` : ''}
-                    </text>
-                  );
-                }}
-              />
-            ))}
-            {/* Grouped bars for Audio */}
-            {audioTypes.map(type => (
-              <Bar
-                key={type}
-                dataKey={type}
-                fill={CONTENT_TYPE_COLORS[type]}
-                name={type}
-                barSize={barSize}
-                isAnimationActive={false}
-                label={(props) => {
-                  const { x, y, width } = props;
-                  let views = 0;
-                  if (type === 'Spotify') {
-                    views = userContent.filter((item: any) => item.type === 'audio' && item.platforms && item.platforms.some((p: any) => p.toLowerCase() === 'spotify')).reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
-                  } else if (type === 'iTunes') {
-                    views = userContent.filter((item: any) => item.type === 'audio' && item.platforms && item.platforms.some((p: any) => p.toLowerCase() === 'itunes')).reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
-                  }
-                  return (
-                    <text x={x + width / 2} y={y - 16} textAnchor="middle" fill="#222" fontSize={11} fontWeight={500}>
-                      {views > 0 ? `${views.toLocaleString()} views` : ''}
-                    </text>
-                  );
-                }}
-              />
-            ))}
-            {/* Grouped bars for Social Media */}
-            {socialMediaTypes.map(type => (
-              <Bar
-                key={type}
-                dataKey={type}
-                fill={CONTENT_TYPE_COLORS[type]}
-                name={type}
-                barSize={barSize}
-                isAnimationActive={false}
-                label={(props) => {
-                  const { x, y, width } = props;
-                  let views = 0;
-                  if (type === 'Instagram') {
-                    views = userContent.filter((item: any) => item.type === 'photo' && item.platforms && item.platforms.some((p: any) => p.toLowerCase() === 'instagram')).reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
-                  } else if (type === 'Pinterest') {
-                    views = userContent.filter((item: any) => item.type === 'photo' && item.platforms && item.platforms.some((p: any) => p.toLowerCase() === 'pinterest')).reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
-                  } else if (type === 'Facebook') {
-                    views = userContent.filter((item: any) => item.type === 'photo' && item.platforms && item.platforms.some((p: any) => p.toLowerCase() === 'facebook')).reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
-                  }
-                  return (
-                    <text x={x + width / 2} y={y - 16} textAnchor="middle" fill="#222" fontSize={11} fontWeight={500}>
-                      {views > 0 ? `${views.toLocaleString()} views` : ''}
-                    </text>
-                  );
-                }}
-              />
-            ))}
-            {/* Grouped bars for Other */}
-            {otherTypes.map(type => (
-              <Bar
-                key={type}
-                dataKey={type}
-                fill={CONTENT_TYPE_COLORS[type]}
-                name={type}
-                barSize={barSize}
-                isAnimationActive={false}
-                label={(props) => {
-                  const { x, y, width } = props;
-                  let views = 0;
-                  if (type === 'LinkedIn') {
-                    views = userContent.filter((item: any) => item.platforms && item.platforms.some((p: any) => p.toLowerCase() === 'linkedin')).reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
-                  } else if (type === 'Other') {
-                    views = userContent.filter((item: any) => item.platforms && item.platforms.some((p: any) => p.toLowerCase() === 'other')).reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
-                  }
-                  return (
-                    <text x={x + width / 2} y={y - 16} textAnchor="middle" fill="#222" fontSize={11} fontWeight={500}>
-                      {views > 0 ? `${views.toLocaleString()} views` : ''}
-                    </text>
-                  );
-                }}
-              />
-            ))}
-            {/* Single bar for YouTube */}
+            {/* Single bar for all platforms */}
             <Bar
               dataKey="count"
-              name="YouTube"
-              fill={CONTENT_TYPE_COLORS['YouTube']}
               barSize={barSize}
               isAnimationActive={false}
-            />
+              label={(props) => {
+                const { x, y, width, payload } = props;
+                const views = payload?.views || 0;
+                return (
+                  <text x={x + width / 2} y={y - 16} textAnchor="middle" fill="#222" fontSize={11} fontWeight={500}>
+                    {views > 0 ? `${views.toLocaleString()} views` : ''}
+                  </text>
+                );
+              }}
+            >
+              {displayData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color || CONTENT_TYPE_COLORS[entry.name] || '#8884d8'} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       )}
