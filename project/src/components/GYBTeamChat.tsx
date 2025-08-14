@@ -37,6 +37,86 @@ const GYBTeamChat: React.FC = () => {
   const [newChatParticipants, setNewChatParticipants] = useState('');
   const messageEndRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const [chatParticipants, setChatParticipants] = useState<{
+    [chatId: string]: string[];
+  }>({});
+  // For storing participants profile image
+  const [profileImage, setProfileImage] = useState<{ [uid: string]: string }>(
+    {}
+  );
+  // For storing the previous messages.
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  // For showing the instruction (how to use)
+  const [showInsturction, setshowInstruction] = useState(false);
+  // Getting the currentChatId
+  const { currentChatId } = useChat();
+  // for the processing message
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingAiAgnet, setIsProcessingAiAgent] = useState("");
+  // For test
+  const [message123, setMessage123] = useState("");
+
+  // Getting the existing message based on the chat
+  // For right side of the dream_team ( Messages lists )
+  useEffect(() => {
+
+
+    if (!selectedChat) return;
+    if (!user || !user.uid) return;
+
+    // Construct a message query for the chat
+    const q = query(
+      collection(db, `dream_team_chat/${selectedChat}/messages`),
+      orderBy("timestamp", "asc")
+    );
+
+    // Register the snapshot for that chat
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      // Should get a name from profile field
+      // So use asnyc function.
+      // For get the sender name from the Profile field and
+      // stores it into the sender(string) inthe ChatMessage[] interface.
+      const fetchMessagesWithSender = async () => {
+        const loadedMessages: ChatMessage[] = await Promise.all(
+          snapshot.docs.map(async (mdoc) => {
+            const data = mdoc.data() as Omit<ChatMessage, "id" | "sender">;
+            let senderName = "Unknown";
+            let profileImage =
+              "https://cdn-icons-png.flaticon.com/512/63/63699.png";
+
+            if (data.senderId === "ai") {
+              senderName = data.aiAgent?.toUpperCase() || "KEVIN";
+              // To retrieve the AI agent profile image set the proper name
+              let agentKey = data.aiAgent?.toLowerCase() || "mr.gyb ai";
+              if (agentKey === "mr.gyb ai") {
+                agentKey = "mr-gyb-ai";
+              }
+              profileImage =
+                AI_USERS[agentKey]?.profile_image_url ||
+                "https://cdn-icons-png.flaticon.com/512/63/63699.png";
+            } else if (data.senderId) {
+              const profileSnap = await getDoc(
+                doc(db, "profiles", data.senderId)
+              );
+              
+              if (profileSnap.exists()) {
+                senderName = profileSnap.data().name || "No Name";
+                profileImage =
+                  profileSnap.data().profile_image_url || profileImage;
+              }
+            }
+
+            return {
+              id: mdoc.id,
+              sender: senderName,
+              profileImage,
+              ...data,
+            };
+          })
+        );
+        setChatMessages(loadedMessages);
+        setMessage("");
+      };
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -58,6 +138,198 @@ const GYBTeamChat: React.FC = () => {
         )
       );
       setMessage('');
+      try {
+        
+        // trim a message to get the email
+        const trimmed = message.trim();
+
+        // if user tries to discuss with one of the aiagents
+        if (trimmed.startsWith("@")) {
+          setIsProcessing(true);
+          const validAgents = ["mr.gyb", "chris", "sherry", "charlotte", "jake", "rachel"];
+          const parts = trimmed.trim().split(" ");
+          const aiAgent = parts[0].substring(1).toLowerCase(); // removing @ with aiagnetName
+          const question = parts.slice(1).join(" ");
+
+          // for UI updates
+          setIsProcessingAiAgent(aiAgent);
+
+          // if it is not a vaild question
+          if (!question) {
+            alert("Please provide a message after the agent name!");
+            return;
+          }
+
+          // if it is not a valid ai agent name
+          if (!validAgents.includes(aiAgent)) {
+            alert(
+              'Agent "${aiAgnet}" is not available, please look at the help instruction at the top right corner to see the vaild ai agents'
+            );
+            return;
+          }
+
+          // 1. stores the user question
+          await addDoc(
+            collection(db, `dream_team_chat/${selectedChat}/messages`),
+            {
+              content: message,
+              senderId: user?.uid,
+              senderType: "user",
+              timestamp: new Date().toISOString(),
+            }
+          );
+
+          try {
+            // 2. Retrieve the current message
+            const messageQuery = query(
+              collection(db, `dream_team_chat/${selectedChat}/messages`),
+              orderBy("timestamp", "asc")
+            );
+            const snapshot = await getDocs(messageQuery);
+            const chatHistory: OpenAIMessage[] = snapshot.docs.map((doc) => {
+              const data = doc.data();
+              return {
+                role: data.senderId === user?.uid ? "user" : "assistant",
+                content: data.content,
+              };
+            });
+            let upperaiAgent = "";
+            if (aiAgent === "mr.gyb") {
+              upperaiAgent = "Mr.GYB AI";
+            } else {
+              if (aiAgent === "chris"){
+                upperaiAgent = "Chris"
+              }
+              if (aiAgent === "sherry"){
+                upperaiAgent = "Sherry"
+              }
+              if (aiAgent === "charlotte"){
+                upperaiAgent = "Charlotte"
+              }
+              if (aiAgent === "jake"){
+                upperaiAgent = "Jake"
+              }
+              if (aiAgent === "rachel"){
+                upperaiAgent = "Rachel"
+              }
+            }
+            // 3.generate AI response
+            const aiResponse = await generateAIResponse(
+              [...chatHistory, { content: question }],
+              upperaiAgent
+            );
+
+            // 4. Stores the response to the firebase
+            await addDoc(
+              collection(db, `dream_team_chat/${selectedChat}/messages`),
+              {
+                content: aiResponse,
+                senderId: "ai",
+                senderType: "assistant",
+                aiAgent: upperaiAgent,
+                timestamp: new Date().toISOString(),
+              }
+            );
+            setIsProcessing(false);
+            setIsProcessingAiAgent("");
+            setMessage(""); //reset the text input area
+          } catch (err) {
+            console.error("Fail to generate AI reponse", err);
+          }
+
+          return;
+        }
+
+        // if user input starts with invitation
+        if (trimmed.startsWith("/invite")) {
+          const parts = trimmed.split(" ");
+          if (parts.length < 2) {
+            alert("Provide valid email");
+            return;
+          }
+          const email = parts[1];
+          await inviteUserByEmail(email, selectedChat);
+          setMessage("");
+          return;
+        }
+
+        // if user type /exit to delete the chatroom
+        // Auotomatically move the selectedChat to the first room of the remaining chats
+        if (trimmed.startsWith("/exit")) {
+          const chatRef = doc(db, "dream_team_chat", selectedChat);
+          await updateDoc(chatRef, {
+            teamMembers: arrayRemove(user?.uid),
+          });
+
+          const remainingChats = teamChats.filter(
+            (chat) => chat.id !== selectedChat
+          );
+          setSelectedChat(remainingChats[0]?.id);
+          return;
+        }
+
+        addDoc(collection(db, `dream_team_chat/${selectedChat}/messages`), {
+          content: message,
+          senderId: user?.uid,
+          senderType: "user",
+          timestamp: new Date().toISOString(),
+        });
+        setMessage("");
+      } catch (error) {
+        console.error("Error sending message:", error);
+      }
+    }
+  };
+
+  // inviting user through valid email
+  // Getting the user information via email in profile field and
+  // create chat_invitation field also add the inviting user to the teamMembers field.
+  const inviteUserByEmail = async (email: string, chatId: string) => {
+    const q = query(collection(db, "profiles"), where("email", "==", email));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      alert(`${email} IS NOT OUR USER`);
+      return;
+    }
+
+    const invitedUserDoc = snapshot.docs[0];
+    const invitedUid = invitedUserDoc.id;
+
+    await addDoc(collection(db, "chat_invitations"), {
+      chatId,
+      invitedUid,
+      invitedEmail: email,
+      invitedBy: user?.uid,
+      createdAt: serverTimestamp(),
+    });
+
+    // Add to the participants
+    const chatRef = doc(db, "dream_team_chat", chatId);
+    await updateDoc(chatRef, {
+      teamMembers: arrayUnion(invitedUid),
+    });
+
+    setMessage("");
+    //alert('user invited')
+  };
+
+  // Handling when user accept the invitation
+  // Delete the chat_invitation data in the chat_invitations field.
+  const handleAccept = async (invite: any) => {
+    // 2. delete invitation
+    await deleteDoc(doc(db, "chat_invitations", invite.id));
+  };
+
+  // Handling decline the invitation
+  // delete the chat_invitaion and should delete this person from the teamMembers.
+  const handleDecline = async (invite: any) => {
+    // find the inviteId
+    const invites = invitations.find((inv) => inv.id === invite.id);
+    await deleteDoc(doc(db, "chat_invitations", invite.id));
+    // If the inviteId is same as declined room then remove it
+    if (invite && selectedChat === invite.chatId) {
+      setSelectedChat(null);
     }
   };
 
@@ -155,6 +427,17 @@ const GYBTeamChat: React.FC = () => {
                     </div>
                   </div>
                 ))}
+
+                {isProcessing && (
+                  <div className="flex justify-start">
+                    <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
+                      <p className="text-sm sm:text-base italic">
+                        {`${processingAiAgnet} is thinking...`}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div ref={messageEndRef} />
               </div>
               <div className="p-4 border-t border-gray-200">
@@ -235,6 +518,112 @@ const GYBTeamChat: React.FC = () => {
           </div>
         </div>
       )}
+
+
+      {/* New Instruction model */}
+      {showInsturction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-lg relative mt-[-40px]">
+            <h2 className="text-xl font-bold mb-4">❓ How to Use</h2>
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 mr-2 mt-3 text-xl"
+              onClick={() => setshowInstruction(false)}
+            >
+              ❌
+            </button>
+            <h3 className="text-md font-semibold mb-2">
+              1. Invitation Process
+            </h3>
+            <p className="mb-2">
+              If you want to invite a team member, type the following command:
+            </p>
+            <pre className="bg-gray-100 text-sm text-black p-3 rounded-md overflow-x-auto mb-2">
+              <code>/invite [email]</code>
+            </pre>
+            <p className="text-sm text-gray-600">
+              Replace <code>[email]</code> with the team member's actual email.
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              ex. /invite test@gmail.com
+            </p>
+
+            <h3 className="text-md font-semibold mb-2">
+              2. Talk with AI agent
+            </h3>
+            <p className="mb-2">
+              If you want to discuss or have a question to ai Agent, type the
+              following command:
+            </p>
+            <pre className="bg-gray-100 text-sm text-black p-3 rounded-md overflow-x-auto mb-2">
+              <code>@[aiAgent] [question]</code>
+            </pre>
+            <p className="text-sm text-gray-600 mb-2">
+              Replace <code>[aiAgent]</code> with one of our aiAgent actual
+              name.
+            </p>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">Mr.GYB</span>
+              <p className="text-sm text-gray-600">
+                All-In-One Business Growth Assistant
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">Chris</span>
+              <p className="text-sm text-gray-600">
+                Strategic Planning Assistant
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">Jake</span>
+              <p className="text-sm text-gray-600">
+                Technology Strategy Assistant
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">Charlotte</span>
+              <p className="text-sm text-gray-600">
+                Human Resources Management Assistant
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">Rachel</span>
+              <p className="text-sm text-gray-600">
+                Marketing Strategy Assistant
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">Sherry</span>
+              <p className="text-sm text-gray-600">
+                Operations Management Assistant
+              </p>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-4 mt-2">
+              ex. @Jake How can I grow my business?
+            </p>
+            <h3 className="text-md font-semibold mb-2">3. Leave the room</h3>
+            <p className="mb-2">
+              If you want to leave the room, type the following command:
+            </p>
+            <pre className="bg-gray-100 text-sm text-black p-3 rounded-md overflow-x-auto mb-2">
+              <code>/exit</code>
+            </pre>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -30,9 +30,10 @@ const DreamTeam: React.FC = () => {
       ]
     },
     {
-      id: 'ceo',
-      title: 'CEO',
-      image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
+
+      id: 'chris',
+      title: 'CHRIS',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FChris-ai.png?alt=media&token=83b2003d-04bf-422e-a0f7-26d148a4ff46',
       specializations: [
         'STRATEGIC PLANNING',
         'BUSINESS DEVELOPMENT',
@@ -42,9 +43,10 @@ const DreamTeam: React.FC = () => {
       ]
     },
     {
-      id: 'coo',
-      title: 'COO',
-      image: 'https://images.unsplash.com/photo-1573497491765-dccce02b29df?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
+
+      id: 'sherry',
+      title: 'Sherry',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCOO.png?alt=media&token=d57a97eb-83f5-4e0d-903e-278dc2a4d9af',
       specializations: [
         'OPERATIONS MANAGEMENT',
         'PROCESS OPTIMIZATION',
@@ -54,9 +56,9 @@ const DreamTeam: React.FC = () => {
       ]
     },
     {
-      id: 'chro',
-      title: 'CHRO',
-      image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
+      id: 'charlotte',
+      title: 'Charlotte',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCHRO.png?alt=media&token=862bbf8c-373b-4996-89fe-8d867f378d9f',
       specializations: [
         'HUMAN RESOURCES MANAGEMENT',
         'TALENT ACQUISITION',
@@ -66,9 +68,9 @@ const DreamTeam: React.FC = () => {
       ]
     },
     {
-      id: 'cto',
-      title: 'CTO',
-      image: 'https://images.unsplash.com/photo-1573496799652-408c2ac9fe98?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
+      id: 'jake',
+      title: 'Jake',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FJake-ai.png?alt=media&token=cf28a12b-f86a-4aed-b5af-32f5de16cfe9',
       specializations: [
         'TECHNOLOGY STRATEGY',
         'INNOVATION MANAGEMENT',
@@ -78,9 +80,9 @@ const DreamTeam: React.FC = () => {
       ]
     },
     {
-      id: 'cmo',
-      title: 'CMO',
-      image: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80&crop=faces,center',
+      id: 'rachel',
+      title: 'Rachel',
+      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCMO.png?alt=media&token=4e9ddaee-c4b0-4b4d-aca8-6c4196a5dd1b',
       specializations: [
         'MARKETING STRATEGY',
         'BRAND MANAGEMENT',
