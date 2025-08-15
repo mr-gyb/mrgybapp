@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { X, Video, Image, Headphones, FileText, Link, Upload, ArrowRight } from 'lucide-react';
 import { ContentType } from '../../types/content';
+import FacebookIntegrationManager from '../integrations/FacebookIntegrationManager';
+import InstagramIntegrationManager from '../integrations/InstagramIntegrationManager';
 
 interface ContentCategory {
   id: string;
@@ -26,6 +28,8 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<ContentCategory | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showFacebookIntegration, setShowFacebookIntegration] = useState(false);
+  const [showInstagramIntegration, setShowInstagramIntegration] = useState(false);
 
   const contentCategories: ContentCategory[] = [
     {
@@ -137,6 +141,36 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
               </div>
             </div>
 
+            {/* Social Media Icons - Show only for Social Media category */}
+            {selectedCategory.id === 'social-media' && (
+              <div className="flex justify-center items-center space-x-6 py-4 mb-4">
+                <button
+                  onClick={() => setShowFacebookIntegration(true)}
+                  className="flex flex-col items-center space-y-2 group cursor-pointer hover:scale-105 transition-transform"
+                >
+                  <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center group-hover:bg-blue-700 transition-colors">
+                    <span className="text-white font-bold text-lg">f</span>
+                  </div>
+                  <span className="text-sm text-gray-600 font-medium group-hover:text-blue-600 transition-colors">Facebook</span>
+                </button>
+                <button
+                  onClick={() => setShowInstagramIntegration(true)}
+                  className="flex flex-col items-center space-y-2 group cursor-pointer hover:scale-105 transition-transform"
+                >
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center group-hover:from-purple-600 group-hover:to-pink-600 transition-colors">
+                    <span className="text-white font-bold text-lg">📷</span>
+                  </div>
+                  <span className="text-sm text-gray-600 font-medium group-hover:text-purple-600 transition-colors">Instagram</span>
+                </button>
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">P</span>
+                  </div>
+                  <span className="text-sm text-gray-600 font-medium">Pinterest</span>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex justify-end space-x-4 pt-4">
               <button
@@ -150,13 +184,41 @@ const ContentCategorySelector: React.FC<ContentCategorySelectorProps> = ({
                 className="px-6 py-2 bg-navy-blue text-white rounded-full hover:bg-opacity-90 transition-colors flex items-center"
               >
                 <Upload size={20} className="mr-2" />
-                Continue to Upload
+                Continue
               </button>
             </div>
           </div>
         )}
-    </div>
-  );
-};
+
+        {/* Facebook Integration Modal */}
+        {showFacebookIntegration && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <FacebookIntegrationManager
+              onClose={() => setShowFacebookIntegration(false)}
+              onPostUploaded={(result) => {
+                console.log('Facebook post uploaded:', result);
+                // You can handle the upload result here
+                setShowFacebookIntegration(false);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Instagram Integration Modal */}
+        {showInstagramIntegration && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <InstagramIntegrationManager
+              onClose={() => setShowInstagramIntegration(false)}
+              onPostUploaded={(result) => {
+                console.log('Instagram post uploaded:', result);
+                // You can handle the upload result here
+                setShowInstagramIntegration(false);
+              }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
 
 export default ContentCategorySelector; 

@@ -1,187 +1,220 @@
-# Facebook Integration for GYB App
+# Facebook Integration Setup Guide
 
-This document describes the Facebook integration feature that allows users to connect their Facebook accounts and upload posts directly from the GYB application.
+This guide explains how to set up Facebook integration to allow users to upload posts directly from their personal Facebook accounts.
 
-## Features
+## 🚀 **Features**
 
-- **Facebook Account Connection**: Users can connect their personal Facebook accounts
-- **Direct Post Upload**: Create and upload posts directly to Facebook
-- **Scheduled Posting**: Schedule posts for optimal engagement times
-- **Multi-Format Support**: Support for text, images, links, and rich media
-- **Permission Management**: Automatic permission checking and management
+- **Direct Facebook Login**: Users can connect their personal Facebook accounts
+- **Post Upload**: Upload posts directly to Facebook profiles or pages
+- **Account Management**: Manage multiple Facebook pages and personal profiles
+- **Privacy Controls**: Set privacy settings for each post
+- **Secure Authentication**: OAuth-based authentication with Facebook
 
-## Setup Requirements
+## 📋 **Prerequisites**
 
-### 1. Facebook App Configuration
+1. **Facebook Developer Account**: You need a Facebook Developer account
+2. **Facebook App**: Create a Facebook app in the Developer Console
+3. **Environment Variables**: Configure your app credentials
 
-1. Create a Facebook App in the [Facebook Developer Portal](https://developers.facebook.com/)
-2. Configure the following settings:
-   - App Type: Consumer
-   - Platform: Web
-   - Valid OAuth Redirect URIs: Add your app's domain
-   - App Domains: Your app's domain
+## 🔧 **Setup Instructions**
 
-### 2. Firebase Configuration
+### 1. Create Facebook App
 
-Ensure your Firebase project has Facebook authentication enabled:
+1. Go to [Facebook Developers](https://developers.facebook.com/)
+2. Click "Create App" and select "Consumer" or "Business"
+3. Fill in your app details
+4. Note down your **App ID** and **App Secret**
 
-1. Go to Firebase Console > Authentication > Sign-in method
-2. Enable Facebook provider
-3. Add your Facebook App ID and App Secret
-4. Configure OAuth redirect URI
+### 2. Configure Facebook App
+
+1. In your Facebook app dashboard, go to **Settings > Basic**
+2. Add your domain to **App Domains**
+3. Add your redirect URI: `https://yourdomain.com/facebook-callback`
+4. Go to **Facebook Login > Settings**
+5. Add your redirect URI to **Valid OAuth Redirect URIs**
 
 ### 3. Environment Variables
 
-Add the following environment variables to your `.env` file:
+Create or update your `.env` file:
 
 ```env
-VITE_FACEBOOK_APP_ID=your_facebook_app_id
-VITE_FACEBOOK_APP_SECRET=your_facebook_app_secret
-VITE_FIREBASE_API_KEY=your_firebase_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
-VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id
-VITE_FIREBASE_APP_ID=your_firebase_app_id
+VITE_FACEBOOK_APP_ID=your_facebook_app_id_here
+VITE_FACEBOOK_APP_SECRET=your_facebook_app_secret_here
 ```
 
-## Usage
+### 4. Facebook Login Permissions
 
-### 1. Accessing Facebook Integration
+Your app will request these permissions:
+- `email` - User's email address
+- `public_profile` - Basic profile information
+- `publish_actions` - Post to user's timeline
+- `pages_manage_posts` - Post to pages the user manages
+- `pages_read_engagement` - Read page insights
 
-1. Navigate to **Settings** → **Manage Integration** → **Facebook Login**
-2. Click on the Facebook integration card
-3. You'll be redirected to the Facebook integration page
+## 🎯 **User Flow**
 
-### 2. Connecting Facebook Account
+### **Path 1: From Content Category Selector**
+1. User selects "Social Media" category
+2. Clicks on Facebook icon (blue "f" button)
+3. Facebook integration modal opens
+4. User connects Facebook account
+5. User can upload posts directly
 
-1. Click **"Connect Facebook Account"**
-2. Complete Facebook OAuth flow
-3. Grant necessary permissions:
-   - `publish_actions` - To post to your profile
-   - `publish_pages` - To post to pages you manage
-   - `email` - For account identification
-   - `public_profile` - For basic profile information
+### **Path 2: From Settings**
+1. User goes to **Settings → Manage Integration → Facebook Login**
+2. Facebook integration manager opens
+3. User connects Facebook account
+4. User can manage integration and upload posts
 
-### 3. Creating and Uploading Posts
+## 🔐 **Security Features**
 
-1. Go to the **"Create Post"** tab
-2. Write your post message
-3. Optionally add:
-   - Links
-   - Images (via URL)
-   - Scheduled posting time
-4. Click **"Post Now"** or **"Schedule"**
+- **OAuth 2.0**: Secure authentication flow
+- **Token Storage**: Access tokens stored in localStorage (consider server-side storage for production)
+- **Permission Scoping**: Only requests necessary permissions
+- **Secure API Calls**: All Facebook API calls use HTTPS
+- **Token Validation**: Automatic token validation and refresh
 
-### 4. Managing Connection
+## 📱 **Component Architecture**
 
-- **View Status**: See connection status and permissions
-- **Disconnect**: Remove Facebook account connection
-- **Reconnect**: Re-establish connection if needed
+```
+ContentCategorySelector
+├── Social Media Icons
+│   └── Facebook Icon (Clickable)
+│       └── FacebookIntegrationManager
+│           ├── Login/Logout
+│           ├── Account Management
+│           └── Post Upload Form
 
-## Technical Implementation
+IntegrationsSettings
+├── Settings → Manage Integration
+│   └── Facebook Integration
+│       └── FacebookIntegrationManager
+```
 
-### Components
+## 🛠 **Technical Implementation**
 
-- `FacebookIntegration.tsx` - Main integration page
-- `FacebookLogin.tsx` - Account connection component
-- `FacebookPostUploader.tsx` - Post creation and upload
-- `useFacebookIntegration.ts` - Custom hook for state management
+### **Services**
+- `facebookIntegration.service.ts` - Core Facebook API integration
+- Handles authentication, post uploads, and account management
 
-### Services
+### **Components**
+- `FacebookIntegrationManager.tsx` - Main integration interface
+- `IntegrationsSettings.tsx` - Settings page for integrations
+- `ContentCategorySelector.tsx` - Updated with Facebook integration
 
-- `facebook-integration.service.ts` - Core integration logic
-- Handles authentication, posting, and account management
+### **Types**
+- `facebook.ts` - TypeScript interfaces for Facebook data
 
-### Data Flow
+## 📊 **API Endpoints Used**
 
-1. User initiates Facebook connection
-2. Firebase handles OAuth authentication
-3. Facebook access token is obtained
-4. Account information is stored locally
-5. User can create and upload posts
-6. Posts are sent directly to Facebook via Graph API
+- **Authentication**: Facebook Login SDK
+- **User Profile**: `GET /me` with access token
+- **User Pages**: `GET /me/accounts` with access token
+- **Post Upload**: `POST /{user-id}/feed` with access token
 
-## Security Considerations
+## 🚨 **Error Handling**
 
-- Access tokens are stored locally (consider Firebase storage for production)
-- Permissions are validated before posting
-- OAuth flow follows Facebook's security guidelines
-- No sensitive data is logged or exposed
+The integration handles various error scenarios:
+- **Network Errors**: Retry mechanisms and user-friendly messages
+- **Authentication Errors**: Automatic logout and re-authentication prompts
+- **Permission Errors**: Clear messaging about required permissions
+- **API Rate Limits**: Graceful degradation and user notifications
 
-## Error Handling
+## 🔄 **State Management**
 
-The integration includes comprehensive error handling for:
-- Authentication failures
-- Permission issues
-- Network errors
-- Invalid post data
-- Facebook API rate limits
+- **Integration Status**: Tracks connection state and permissions
+- **User Accounts**: Manages personal profile and business pages
+- **Post Data**: Handles post creation and upload state
+- **Error States**: Manages various error conditions
 
-## Future Enhancements
+## 🎨 **UI/UX Features**
 
-- **Analytics Dashboard**: Post performance metrics
-- **Bulk Posting**: Upload multiple posts at once
-- **Content Templates**: Pre-designed post templates
-- **Audience Targeting**: Advanced targeting options
-- **Cross-Platform Sync**: Sync with other social platforms
+- **Responsive Design**: Works on desktop and mobile devices
+- **Loading States**: Clear feedback during operations
+- **Success Messages**: Confirmation of successful actions
+- **Error Display**: User-friendly error messages
+- **Modal Dialogs**: Clean, focused interfaces
 
-## Troubleshooting
+## 📝 **Usage Examples**
 
-### Common Issues
+### **Connect Facebook Account**
+```typescript
+// User clicks Facebook icon
+const handleFacebookClick = () => {
+  setShowFacebookIntegration(true);
+};
 
-1. **"Failed to connect Facebook account"**
-   - Check Facebook App configuration
-   - Verify OAuth redirect URIs
-   - Ensure Firebase Facebook auth is enabled
+// Facebook integration modal opens
+<FacebookIntegrationManager
+  onClose={() => setShowFacebookIntegration(false)}
+  onPostUploaded={handlePostUploaded}
+/>
+```
 
-2. **"Insufficient permissions"**
-   - Re-authenticate with Facebook
-   - Grant required permissions during OAuth
-   - Check Facebook App review status
+### **Upload Post to Facebook**
+```typescript
+const postData = {
+  message: "Hello from GYB Studio!",
+  privacy: "EVERYONE",
+  image: selectedImageFile
+};
 
-3. **"Post upload failed"**
-   - Verify account connection
-   - Check post content for policy violations
-   - Ensure valid image URLs
+const postId = await facebookIntegrationService.uploadPost(postData);
+```
 
-### Support
+## 🚀 **Future Enhancements**
+
+- **Scheduled Posts**: Schedule posts for future publication
+- **Analytics**: Track post performance and engagement
+- **Bulk Upload**: Upload multiple posts at once
+- **Content Templates**: Pre-defined post templates
+- **Cross-Platform**: Extend to Instagram and other platforms
+
+## 🐛 **Troubleshooting**
+
+### **Common Issues**
+
+1. **"App not configured" error**
+   - Check your Facebook App ID in environment variables
+   - Verify app domain configuration
+
+2. **"Invalid redirect URI" error**
+   - Ensure redirect URI matches exactly in Facebook app settings
+   - Check for trailing slashes or protocol mismatches
+
+3. **"Permissions not granted" error**
+   - User must approve all requested permissions
+   - Check Facebook app review status
+
+4. **"Token expired" error**
+   - Tokens automatically refresh
+   - User may need to re-authenticate
+
+### **Debug Mode**
+
+Enable debug logging by setting:
+```typescript
+console.log('Facebook integration debug:', {
+  appId: import.meta.env.VITE_FACEBOOK_APP_ID,
+  status: await facebookIntegrationService.getLoginStatus()
+});
+```
+
+## 📚 **Additional Resources**
+
+- [Facebook Login Documentation](https://developers.facebook.com/docs/facebook-login/)
+- [Facebook Graph API Reference](https://developers.facebook.com/docs/graph-api/)
+- [Facebook App Review Process](https://developers.facebook.com/docs/app-review/)
+- [OAuth 2.0 Security Best Practices](https://oauth.net/2/oauth-best-practice/)
+
+## 🤝 **Support**
 
 For technical support or questions about the Facebook integration:
-- Check Facebook Developer documentation
-- Review Firebase authentication setup
-- Contact the development team
+1. Check this README for common solutions
+2. Review Facebook Developer documentation
+3. Check browser console for error messages
+4. Verify environment variable configuration
 
-## API Reference
+---
 
-### Facebook Integration Service
-
-```typescript
-interface FacebookAccount {
-  id: string;
-  name: string;
-  accessToken: string;
-  permissions: string[];
-  isConnected: boolean;
-  connectedAt: string;
-}
-
-interface FacebookPostData {
-  message: string;
-  link?: string;
-  imageUrl?: string;
-  scheduledTime?: string;
-  pageId?: string;
-}
-```
-
-### Key Methods
-
-- `connectFacebookAccount(accessToken)` - Connect Facebook account
-- `uploadPost(postData)` - Upload post to Facebook
-- `disconnectFacebookAccount()` - Remove connection
-- `getConnectedAccount()` - Get current connection status
-
-## License
-
-This integration is part of the GYB application and follows the same licensing terms.
+**Note**: This integration is designed for development and testing. For production use, consider implementing server-side token storage and additional security measures.

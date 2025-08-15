@@ -70,7 +70,7 @@ const getPageTitle = (pathname: string) => {
   switch (pathname) {
     case '/':
       return 'Home';
-    case '/homepage':
+    case '/home':
       return 'Home';
     case '/Commerce':
       return 'Commerce';
@@ -108,7 +108,7 @@ const App: React.FC = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<HomePage />} />
-            <Route path="/homepage" element={<HomePage />} />
+            <Route path="/home" element={<HomePage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

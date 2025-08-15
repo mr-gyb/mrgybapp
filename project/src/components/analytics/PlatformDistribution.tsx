@@ -44,32 +44,7 @@ const PlatformDistribution: React.FC<PlatformDistributionProps> = ({
         </div>
       )}
       
-      {/* Platform Summary */}
-      {hasData && (
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-700 mb-3">Platform Summary</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {platformData
-              .filter(item => item.value > 0)
-              .sort((a, b) => b.value - a.value)
-              .slice(0, 6)
-              .map((platform, index) => (
-                <div key={platform.name} className="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: platform.color }}
-                  ></div>
-                  <span className="text-sm font-medium text-gray-700 capitalize">
-                    {platform.name}
-                  </span>
-                  <span className="text-xs text-gray-500 ml-auto">
-                    {platform.value}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };

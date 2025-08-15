@@ -26,7 +26,7 @@ const BottomMenu: React.FC = () => {
 
   const menuItems = [
     {
-      path: '/homepage',
+      path: '/home',
       icon: Home,
       label: 'Home',
       isCustomNav: false
