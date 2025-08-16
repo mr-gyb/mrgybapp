@@ -6,7 +6,7 @@ import Header from './components/Header';
 import BottomMenu from './components/BottomMenu';
 
 // Lazy load components for code splitting
-const Login = lazy(() => import('./components/Login'));
+const Login = lazy(() => import('./components/Auth/Login'));
 const SignIn = lazy(() => import('./components/SignIn'));
 const NewChat = lazy(() => import('./components/NewChat'));
 const Chat = lazy(() => import('./components/Chat'));

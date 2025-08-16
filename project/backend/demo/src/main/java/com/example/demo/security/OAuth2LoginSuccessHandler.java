@@ -70,6 +70,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         // 4) Redirect to frontend 
         String q = "name=" + URLEncoder.encode(name == null ? "" : name, StandardCharsets.UTF_8);
-        response.sendRedirect(redirectSuccess + "/auth/callback?" + q);
+        response.sendRedirect("http://localhost:5173/auth/callback");
     }
 }

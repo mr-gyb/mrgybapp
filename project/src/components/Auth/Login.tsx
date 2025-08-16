@@ -1,22 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Mail, Lock, AlertCircle, LogIn, Apple } from 'lucide-react';
+import { Mail, Lock, AlertCircle, LogIn, Apple, Facebook } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { API_BASE } from '../../api/config';
+// import { API_BASE } from '../../api/config';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFacebookLoading, setIsFacebookLoading] = useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn } = useAuth();
+  const { signIn , signInWithFacebook} = useAuth();
 
-  // for Google OAuth2 start
-  const loginWithGoogle = () => {
+  /* for Google OAuth2 start
+  const loginWithGoogle = async() => {
     window.location.href = `${API_BASE}/oauth2/authorization/google`;
-  }
+
+    const result = await signIn(email, password)
+  }*/
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -39,6 +46,26 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleFacebookLogin = async () => {
+    setIsFacebookLoading(true);
+    setError(null);
+    
+    try {
+      const result = await signInWithFacebook();
+      
+      if (result.error) {
+        setError('Facebook authentication failed. Please try again.');
+        console.error('Facebook auth error:', result.error);
+      } else if (result.user) {
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      setError('Facebook authentication failed. Please try again.');
+      console.error('Facebook auth error:', err);
+    } finally {
+      setIsFacebookLoading(false);
+    }
+  };
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
@@ -50,21 +77,20 @@ const Login: React.FC = () => {
           <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
             Welcome back!
           </h2>
-          {/*
-          <button
-            type="button"
-            onClick={loginWithGoogle}
-            className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 font-semibold flex items-center justify-center mb-4 hover:bg-gray-50"
-          >
-            <Apple size={24} className="mr-2" />
-            Continue with Google(Not Yet developed)
-          </button>
-          
+
           <button className="w-full bg-black text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center mb-4">
             <Apple size={24} className="mr-2" />
             Continue with Apple
           </button>
-          */}
+          
+          <button 
+            onClick={handleFacebookLogin}
+            disabled={isFacebookLoading}
+            className="w-full bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center mb-4 transition-colors duration-200 disabled:opacity-50"
+          >
+            <Facebook size={24} className="mr-2" />
+            {isFacebookLoading ? 'Connecting...' : 'Continue with Facebook'}
+          </button>
 
           <div className="flex items-center my-4">
             <div className="flex-grow border-t border-gray-300"></div>
@@ -88,7 +114,7 @@ const Login: React.FC = () => {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-navy-blue focus:border-navy-blue sm:text-sm dark:text-black"
+                  className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-navy-blue focus:border-navy-blue sm:text-sm"
                   placeholder="Enter your email"
                 />
               </div>
@@ -109,7 +135,7 @@ const Login: React.FC = () => {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-navy-blue focus:border-navy-blue sm:text-sm dark:text-black"
+                  className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-navy-blue focus:border-navy-blue sm:text-sm"
                   placeholder="Enter your password"
                 />
               </div>
@@ -165,7 +191,7 @@ const Login: React.FC = () => {
 
             <div className="text-center mt-4">
               <span className="text-gray-600">Don't have an account?</span>
-              <Link to="/signin" state={{ mode: 'signup' }} className="ml-2 text-navy-blue hover:text-navy-blue/80 font-medium">
+              <Link to="/signin" className="ml-2 text-navy-blue hover:text-navy-blue/80 font-medium">
                 Sign up
               </Link>
             </div>
