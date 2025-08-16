@@ -96,20 +96,27 @@ export const useUserContent = () => {
   }, [loadContent]);
 
   // Check if user has real content (not default content)
-  const hasRealContent = content.some(item => !item.id.startsWith('default-'));
+  const hasRealContent =
+  Array.isArray(content) && content.some(item => !item.id.startsWith('default-'));
 
   // Get content statistics
   const contentStats = {
-    total: content.length,
-    realContent: content.filter(item => !item.id.startsWith('default-')).length,
-    byType: content.reduce((acc, item) => {
-      acc[item.type] = (acc[item.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    byStatus: content.reduce((acc, item) => {
-      acc[item.status] = (acc[item.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>)
+    total: Array.isArray(content) ? content.length : 0,
+    realContent: Array.isArray(content) 
+      ? content.filter(item => !item.id.startsWith('default-')).length 
+      : 0,
+    byType: Array.isArray(content) 
+      ? content.reduce((acc, item) => {
+          acc[item.type] = (acc[item.type] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      : {},
+    byStatus: Array.isArray(content) 
+      ? content.reduce((acc, item) => {
+          acc[item.status] = (acc[item.status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      : {}
   };
 
   return {
