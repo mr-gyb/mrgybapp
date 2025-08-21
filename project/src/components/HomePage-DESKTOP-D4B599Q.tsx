@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import ContentTypeBarChart from './analytics/ContentTypeBarChart';
-import PlatformPieChart from './analytics/PlatformPieChart';
+import ContentTypeDistribution from './analytics/ContentTypeDistribution';
+import PlatformDistribution from './analytics/PlatformDistribution';
 import { useUserContent } from '../hooks/useUserContent';
 import { ContentItem } from '../types/content';
 import { getFacebookMetrics } from '../api/services/facebook.service';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 // Google Fonts import for Space Mono and Roboto Mono
 const fontLinks = [
@@ -16,149 +17,85 @@ const fontLinks = [
 ];
 
 const HomePage: React.FC = () => {
-  const { content: userContent } = useUserContent();
-          const [analyticsData, setAnalyticsData] = useState({
-    barData: [] as any[],
-    platformData: [] as Array<{name: string; value: number; percentage: number; color: string}>,
-    blogTypes: [] as string[],
-    audioTypes: [] as string[],
-    socialMediaTypes: [] as string[],
-    otherTypes: [] as string[],
-    CONTENT_TYPE_COLORS: {} as Record<string, string>,
-    LEGEND_KEYS: [] as string[],
-    COLORS: [] as string[]
-  });
+    const { content: userContent } = useUserContent();
+  
+  // Use shared analytics hook
+  const analyticsData = useAnalytics(userContent);
+  
   const [facebookMetrics, setFacebookMetrics] = useState<{
     total_impressions: number;
     total_reactions: number;
   } | null>(null);
 
-  // Calculate analytics data exactly like GYBStudio
+  // Fetch Facebook metrics
   useEffect(() => {
-    const calculateAnalytics = () => {
-      // Color map for content type groups (exactly like GYBStudio)
-      const CONTENT_TYPE_COLORS: Record<string, string> = {
-        'Blogger': '#FF9900', // bright orange
-        'Medium': '#757575', // gray
-        'Substack': '#FFA500', // orange
-        'Spotify': '#1DB954', // green
-        'iTunes': '#FF69B4', // bright pink
-        'YouTube': '#FF0000', // red
-        'Instagram': '#E1306C', // deep pink
-        'Pinterest': '#FF0000', // red
-        'Facebook': '#1877F3', // blue
-        'Other': '#FFD700', // gold
-        'LinkedIn': '#235789' // gold (same as Other)
-      };
-
-      // Only show these keys in the legend (exactly like GYBStudio)
-      const LEGEND_KEYS = [
-        'Blogger', 'Medium', 'Substack', 'Spotify', 'iTunes', 'YouTube', 'Instagram', 'Pinterest', 'Facebook', 'LinkedIn','Other'
-      ];
-
-      // 1. Prepare grouped data exactly like GYBStudio
-      const blogTypes = ['Blogger', 'Substack', 'Medium'];
-      const audioTypes = ['Spotify', 'iTunes'];
-      const socialMediaTypes = ['Instagram', 'Pinterest', 'Facebook'];
-      const otherTypes = ['LinkedIn', 'Other'];
+       
+       // Pinterest
+       const pinterestCount = userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'pinterest')).length;
+       if (pinterestCount > 0) {
+         individualPlatformData.push({
+           name: 'Pinterest',
+           count: pinterestCount,
+           color: '#E60023',
+           views: userContent
+             .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'pinterest'))
+             .reduce((sum, item) => sum + (item.views ?? 1), 0),
+         });
+       }
+       
+       // Facebook
+       const facebookCount = userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'facebook')).length;
+       if (facebookCount > 0) {
+         individualPlatformData.push({
+           name: 'Facebook',
+           count: facebookCount,
+           color: '#1877F3',
+           views: userContent
+             .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'facebook'))
+             .reduce((sum, item) => sum + (item.views ?? 1), 0),
+         });
+       }
+       
+       // Blog
+       const blogCount = userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'blog')).length;
+       if (blogCount > 0) {
+         individualPlatformData.push({
+           name: 'Blog',
+           count: blogCount,
+           color: '#F4B400',
+           views: userContent
+             .filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'blog'))
+             .reduce((sum, item) => sum + (item.views ?? 1), 0),
+         });
+       }
+       
+       // LinkedIn
+       const linkedinCount = userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'linkedin')).length;
+       if (linkedinCount > 0) {
+         individualPlatformData.push({
+           name: 'LinkedIn',
+           count: linkedinCount,
+           color: '#0077B5',
+           views: userContent
+             .filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'linkedin'))
+             .reduce((sum, item) => sum + (item.views ?? 1), 0),
+         });
+       }
+       
+       // Other
+       const otherCount = userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'other')).length;
+       if (otherCount > 0) {
+         individualPlatformData.push({
+           name: 'Other',
+           count: otherCount,
+           color: '#9E9E9E',
+           views: userContent
+             .filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'other'))
+             .reduce((sum, item) => sum + (item.views ?? 1), 0),
+         });
+       }
       
-      type CategoryData = {
-        name: string;
-        Blogger?: number;
-        Substack?: number;
-        Medium?: number;
-        Spotify?: number;
-        iTunes?: number;
-        count?: number;
-        Instagram?: number;
-        Pinterest?: number;
-        Facebook?: number;
-        LinkedIn?: number;
-        Other?: number;
-        views?: number;
-        SubstackViews?: number;
-        MediumViews?: number;
-        iTunesViews?: number;
-        PinterestViews?: number;
-        FacebookViews?: number;
-        OtherViews?: number;
-      };
-      
-      const groupedContentData: CategoryData[] = [
-        {
-          name: 'Blogs',
-          Blogger: userContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'blogger').length,
-          Substack: userContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'substack').length,
-          Medium: userContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'medium').length,
-          views: userContent
-            .filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'blogger')
-            .reduce((sum, item) => sum + (item.views ?? 1), 0),
-          SubstackViews: userContent
-            .filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'substack')
-            .reduce((sum, item) => sum + (item.views ?? 1), 0),
-          MediumViews: userContent
-            .filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'medium')
-            .reduce((sum, item) => sum + (item.views ?? 1), 0),
-        },
-        {
-          name: 'Audio',
-          Spotify: userContent.filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'spotify')).length,
-          iTunes: userContent.filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'itunes')).length,
-          views: userContent
-            .filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'spotify'))
-            .reduce((sum, item) => sum + (item.views ?? 1), 0),
-          iTunesViews: userContent
-            .filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'itunes'))
-            .reduce((sum, item) => sum + (item.views ?? 1), 0),
-        },
-        {
-          name: 'YouTube',
-          count: userContent.filter(item => item.type === 'video' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'youtube')).length,
-          views: userContent
-            .filter(item => item.type === 'video' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'youtube'))
-            .reduce((sum, item) => sum + (item.views ?? 1), 0),
-        },
-        {
-          name: 'Social Media',
-          Instagram: userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'instagram')).length,
-          Pinterest: userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'pinterest')).length,
-          Facebook: userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'facebook')).length,
-          views: userContent
-            .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'instagram'))
-            .reduce((sum, item) => sum + (item.views ?? 1), 0),
-          PinterestViews: userContent
-            .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'pinterest'))
-            .reduce((sum, item) => sum + (item.views ?? 1), 0),
-          FacebookViews: userContent
-            .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'facebook'))
-            .reduce((sum, item) => sum + (item.views ?? 1), 0),
-        },
-        {
-          name: 'Other',
-          LinkedIn: userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'linkedin')).length,
-          Other: userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'other')).length,
-          views: userContent
-            .filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'linkedin'))
-            .reduce((sum, item) => sum + (item.views ?? 1), 0),
-          OtherViews: userContent
-            .filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'other'))
-            .reduce((sum, item) => sum + (item.views ?? 1), 0),
-        }
-      ].filter(category => {
-        // Filter out categories with no content (exactly like GYBStudio)
-        if (category.name === 'Blogs') {
-          return (category.Blogger || 0) > 0 || (category.Substack || 0) > 0 || (category.Medium || 0) > 0;
-        } else if (category.name === 'Audio') {
-          return (category.Spotify || 0) > 0 || (category.iTunes || 0) > 0;
-        } else if (category.name === 'YouTube') {
-          return (category.count || 0) > 0;
-        } else if (category.name === 'Social Media') {
-          return (category.Instagram || 0) > 0 || (category.Pinterest || 0) > 0 || (category.Facebook || 0) > 0;
-        } else if (category.name === 'Other') {
-          return (category.LinkedIn || 0) > 0 || (category.Other || 0) > 0;
-        }
-        return false;
-      });
+      const groupedContentData = individualPlatformData;
 
       // Platform distribution (exactly like GYBStudio)
       const platformCounts: Record<string, number> = {};
@@ -171,32 +108,29 @@ const HomePage: React.FC = () => {
           platformCounts[group] = (platformCounts[group] || 0) + 1;
         });
         
-        // Handle blogPlatform for written content
-        if (item.type === 'written' && item.blogPlatform) {
-          const group = groupPlatform(item.blogPlatform);
-          console.log('HomePage - BlogPlatform:', item.blogPlatform, 'Grouped as:', group);
-          platformCounts[group] = (platformCounts[group] || 0) + 1;
-        }
+
       });
 
       console.log('HomePage - Final platformCounts:', platformCounts);
 
       // Color map for platform groups (exactly like GYBStudio)
       const PLATFORM_GROUP_COLORS: Record<string, string> = {
-        'Blogs': '#3B82F6',
-        'Audio': '#F59E0B',
-        'Video': '#10B981',
-        'Social Media': '#E1306C',
+        'Audio': '#1DB954',
+        'Video': '#FF0000',
+        'Social Media': '#C13584',
         'YouTube': '#FF0000',
-        'Other': '#6B7280'
+        'Other': '#9E9E9E'
       };
 
+      // Calculate total platform count for percentage calculation
+      const totalPlatformCount = Object.values(platformCounts).reduce((sum, count) => sum + count, 0);
+      
       const platformData = Object.entries(platformCounts)
         .filter(([platform, count]) => count > 0) // Only show platforms with actual content
         .map(([platform, count]) => ({
           name: platform,
           value: count,
-          percentage: userContent.length > 0 ? (count / userContent.length) * 100 : 0,
+          percentage: totalPlatformCount > 0 ? (count / totalPlatformCount) * 100 : 0,
           color: PLATFORM_GROUP_COLORS[platform] || '#8884d8'
         }));
 
@@ -234,34 +168,9 @@ const HomePage: React.FC = () => {
     };
     
     fetchFacebookData();
-  }, [userContent]);
+  }, []);
 
-  // Helper functions
-  const groupContentType = (item: ContentItem): 'Blogs' | 'Audio' | 'Video' | 'Social Media' | 'Other' => {
-    if (item.type === 'written') return 'Blogs';
-    if (item.type === 'audio') return 'Audio';
-    if (item.type === 'video') return 'Video';
-    if (item.type === 'photo') {
-      if (item.platforms && item.platforms.some(p => ['Instagram', 'Pinterest', 'Facebook'].includes(p))) {
-        return 'Social Media';
-      }
-    }
-    if (item.platforms && item.platforms.some(p => ['LinkedIn', 'Newsletter', 'Other'].includes(p))) {
-      return 'Other';
-    }
-    return 'Other';
-  };
 
-  const groupPlatform = (platform: string): 'Blogs' | 'Audio' | 'Video' | 'Social Media' | 'YouTube' | 'Other' => {
-    const platformLower = platform.toLowerCase();
-    
-    if ([ 'instagram', 'pinterest', 'facebook' ].includes(platformLower)) return 'Social Media';
-    if ([ 'linkedin', 'other' ].includes(platformLower)) return 'Other';
-    if (platformLower === 'blog' || platformLower === 'blogger' || platformLower === 'substack' || platformLower === 'medium') return 'Blogs';
-    if (platformLower === 'spotify' || platformLower === 'itunes') return 'Audio';
-    if (platformLower === 'youtube') return 'YouTube';
-    return 'Other';
-  };
 
   const CustomBarTooltip = ({ active, payload, label }: { active: boolean; payload: any[]; label: string }) => {
     if (active && payload && payload.length) {
@@ -368,7 +277,9 @@ const HomePage: React.FC = () => {
               The Ultimate AI Hub for Content Creation, Tracking, and Monetization
             </div>
             <a
-              href="/dashboard"
+              href="https://app.gohighlevel.com/v2/preview/x9DVlz6KWMlmQxTtGbbh"
+              target="_blank"
+              rel="noopener noreferrer"
               className="self-center"
               style={{
                 marginTop: '0.5rem',
@@ -408,8 +319,7 @@ const HomePage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-8">
               {/* Content Type Distribution */}
               <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold mb-4 text-gray-900">Content Type Distribution</h3>
-                <ContentTypeBarChart
+                <ContentTypeDistribution
                   barData={analyticsData.barData}
                   userContent={userContent}
                   blogTypes={analyticsData.blogTypes}
@@ -419,16 +329,19 @@ const HomePage: React.FC = () => {
                   CONTENT_TYPE_COLORS={analyticsData.CONTENT_TYPE_COLORS}
                   LEGEND_KEYS={analyticsData.LEGEND_KEYS}
                   CustomBarTooltip={CustomBarTooltip}
+                  title="Content Type Distribution"
+                  className="p-0 bg-transparent shadow-none"
                 />
               </div>
 
               {/* Platform Distribution */}
               <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold mb-4 text-gray-900">Platform Distribution</h3>
-                <PlatformPieChart
+                <PlatformDistribution
                   platformData={analyticsData.platformData}
                   COLORS={analyticsData.COLORS}
                   renderCustomPieLabel={renderCustomPieLabel}
+                  title="Platform Distribution"
+                  className="p-0 bg-transparent shadow-none"
                 />
               </div>
             </div>

@@ -5,7 +5,8 @@ const TrialSection: React.FC = () => {
   const navigate = useNavigate();
 
   const handleGetStartedClick = () => {
-    navigate('/trial-signup');
+    // Redirect to GoHighLevel trial page
+    window.open('https://app.gohighlevel.com/v2/preview/x9DVlz6KWMlmQxTtGbbh', '_blank');
   };
 
   return (

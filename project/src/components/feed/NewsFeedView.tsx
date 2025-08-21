@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, MessageCircle, Repeat2, Share, Star, Bot, MoreHorizontal, Send, Bookmark, Eye, Link2, Twitter, Facebook, Linkedin, Mail } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, Share, Star, Bot, MoreHorizontal, Send, Bookmark, Eye, Link2, Twitter, Facebook, Mail } from 'lucide-react';
 import { UserProfile } from '../../types/user';
 import ForYouFeed from './tabs/ForYouFeed';
 import GroupsFeed from './tabs/GroupsFeed';

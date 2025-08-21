@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, AlertCircle, LogIn, Apple } from 'lucide-react';
+import { Mail, Lock, AlertCircle, LogIn, Apple, Facebook } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../lib/firebase';
@@ -10,7 +10,9 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFacebookLoading, setIsFacebookLoading] = useState(false);
   const navigate = useNavigate();
+  const { signInWithFacebook } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,12 +21,33 @@ const Login: React.FC = () => {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigate('/dashboard');
+      navigate('/home');
     } catch (err) {
       setError('Invalid email or password. Please try again.');
       console.error('Authentication error:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFacebookLogin = async () => {
+    setIsFacebookLoading(true);
+    setError(null);
+    
+    try {
+      const result = await signInWithFacebook();
+      
+      if (result.error) {
+        setError('Facebook authentication failed. Please try again.');
+        console.error('Facebook auth error:', result.error);
+      } else if (result.user) {
+        navigate('/home');
+      }
+    } catch (err) {
+      setError('Facebook authentication failed. Please try again.');
+      console.error('Facebook auth error:', err);
+    } finally {
+      setIsFacebookLoading(false);
     }
   };
 
@@ -43,6 +66,15 @@ const Login: React.FC = () => {
           <button className="w-full bg-black text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center mb-4">
             <Apple size={24} className="mr-2" />
             Continue with Apple
+          </button>
+          
+          <button 
+            onClick={handleFacebookLogin}
+            disabled={isFacebookLoading}
+            className="w-full bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center mb-4 transition-colors duration-200 disabled:opacity-50"
+          >
+            <Facebook size={24} className="mr-2" />
+            {isFacebookLoading ? 'Connecting...' : 'Continue with Facebook'}
           </button>
 
           <div className="flex items-center my-4">

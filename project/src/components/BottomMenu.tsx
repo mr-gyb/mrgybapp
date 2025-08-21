@@ -51,7 +51,7 @@ const BottomMenu: React.FC = () => {
       isCustomNav: false 
     },
     { 
-      path: '/dashboard', 
+      path: '/commerce',
       icon: LayoutDashboard, 
       label: 'Commerce',
       isCustomNav: false 
@@ -66,34 +66,41 @@ const BottomMenu: React.FC = () => {
 
   return (
     <nav className={`fixed bottom-0 left-0 right-0 bg-white dark:bg-navy-blue border-t border-gray-200 dark:border-gray-700 z-50 transition-colors duration-200`}>
-      <div className="flex justify-around items-center h-16">
+      <div className="flex justify-between items-center h-16 px-1">
         {menuItems.map((item, idx) => (
           item.isCustomNav ? (
             <button
-              key={item.path}
+              key={`${item.label}-${idx}`}
               onClick={item.onClick}
-              className={`flex flex-col items-center justify-center w-full h-full ${
-                location.pathname === item.path 
+              className={`flex flex-col items-center justify-center flex-1 h-full min-w-0 ${
+                (item.path === '/new-post' && location.pathname === '/gyb-studio') || location.pathname === item.path
                   ? 'text-navy-blue dark:text-gold' 
                   : 'text-gray-500 dark:text-gray-400'
               }`}
             >
-              {/* Use size=34 for CultureIcon, 26 for others */}
-              {item.label === 'Culture' ? <item.icon size={36} /> : <item.icon size={26} />}
-              <span className="text-xs mt-1">{item.label}</span>
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="flex items-center justify-center h-8 mb-1">
+                  <item.icon size={24} />
+                </div>
+                <span className="text-xs text-center leading-tight px-1 truncate">{item.label}</span>
+              </div>
             </button>
           ) : (
             <Link
-              key={item.path}
+              key={`${item.label}-${idx}`}
               to={item.path === '/new-post' ? '/gyb-studio' : item.path}
-              className={`flex flex-col items-center justify-center w-full h-full ${
-                location.pathname === item.path 
+              className={`flex flex-col items-center justify-center flex-1 h-full min-w-0 ${
+                (item.path === '/new-post' && location.pathname === '/gyb-studio') || location.pathname === item.path
                   ? 'text-navy-blue dark:text-gold' 
                   : 'text-gray-500 dark:text-gray-400'
               }`}
             >
-              <item.icon size={26} />
-              <span className="text-xs mt-1">{item.label}</span>
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="flex items-center justify-center h-8 mb-1">
+                  <item.icon size={24} />
+                </div>
+                <span className="text-xs text-center leading-tight px-1 truncate">{item.label}</span>
+              </div>
             </Link>
           )
         ))}

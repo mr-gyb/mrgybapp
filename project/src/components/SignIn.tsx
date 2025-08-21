@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, AlertCircle, LogIn, UserPlus, Apple } from 'lucide-react';
+import { Mail, Lock, AlertCircle, LogIn, UserPlus, Apple, Facebook } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../lib/firebase';
@@ -10,8 +10,10 @@ const SignIn: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFacebookLoading, setIsFacebookLoading] = useState(false);
   const [mode, setMode] = useState<'signup' | 'login'>('login');
   const navigate = useNavigate();
+  const { signInWithFacebook } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +23,7 @@ const SignIn: React.FC = () => {
     try {
       if (mode === 'login') {
         await signInWithEmailAndPassword(auth, email, password);
-        navigate('/dashboard');
+        navigate('/home');
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
         navigate('/onboarding', { state: { email, password } });
@@ -34,6 +36,27 @@ const SignIn: React.FC = () => {
       console.error('Authentication error:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFacebookAuth = async () => {
+    setIsFacebookLoading(true);
+    setError(null);
+    
+    try {
+      const result = await signInWithFacebook();
+      
+      if (result.error) {
+        setError('Facebook authentication failed. Please try again.');
+        console.error('Facebook auth error:', result.error);
+      } else if (result.user) {
+        navigate('/home');
+      }
+    } catch (err) {
+      setError('Facebook authentication failed. Please try again.');
+      console.error('Facebook auth error:', err);
+    } finally {
+      setIsFacebookLoading(false);
     }
   };
 
@@ -77,6 +100,15 @@ const SignIn: React.FC = () => {
           <button className="w-full bg-black text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center mb-4">
             <Apple size={24} className="mr-2" />
             Continue with Apple
+          </button>
+          
+          <button 
+            onClick={handleFacebookAuth}
+            disabled={isFacebookLoading}
+            className="w-full bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-full py-3 px-4 font-semibold flex items-center justify-center mb-4 transition-colors duration-200 disabled:opacity-50"
+          >
+            <Facebook size={24} className="mr-2" />
+            {isFacebookLoading ? 'Connecting...' : 'Continue with Facebook'}
           </button>
 
           <div className="flex items-center my-4">

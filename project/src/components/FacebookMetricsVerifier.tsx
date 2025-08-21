@@ -192,7 +192,7 @@ VITE_FACEBOOK_ACCESS_TOKEN=your_facebook_access_token`}
               <li>• Create a Facebook App in Facebook Developers Console</li>
               <li>• Get your Page ID from your Facebook Page settings</li>
               <li>• Generate a Page Access Token with required permissions</li>
-              <li>• Required permissions: pages_read_engagement, pages_show_list</li>
+              <li>• Required permissions: pages_read_engagement, pages_manage_posts</li>
             </ul>
           </div>
           

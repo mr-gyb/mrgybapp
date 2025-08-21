@@ -71,7 +71,7 @@ const UserOnboarding: React.FC = () => {
           country
         });
 
-        navigate('/dashboard');
+        navigate('/home');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during sign up');

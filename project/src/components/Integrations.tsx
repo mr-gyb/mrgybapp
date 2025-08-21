@@ -46,16 +46,11 @@ const integrations: IntegrationTile[] = [
     description: 'Connect your Instagram account to manage your posts and engage with your audience.',
     connectUrl: '#',
   },
+
   {
-    name: 'LinkedIn',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/LinkedIn_logo_initials.png/100px-LinkedIn_logo_initials.png',
-    description: 'Connect your LinkedIn account to manage your professional network and content.',
-    connectUrl: '#',
-  },
-  {
-    name: 'Twitter',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Logo_of_Twitter.svg/100px-Logo_of_Twitter.svg.png',
-    description: 'Connect your Twitter account to manage your tweets and engage with your followers.',
+    name: 'X',
+    logo: '/x-icon.svg',
+    description: 'Connect your X account to manage your posts and engage with your followers.',
     connectUrl: '#',
   },
   {
@@ -74,6 +69,12 @@ const integrations: IntegrationTile[] = [
     name: 'TikTok',
     logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a9/TikTok_logo.svg/100px-TikTok_logo.svg.png',
     description: 'Connect your TikTok account to manage your short-form video content and engage with your audience.',
+    connectUrl: '#',
+  },
+  {
+    name: 'YouTube',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/YouTube_full-color_icon_%282017%29.svg/100px-YouTube_full-color_icon_%282017%29.svg.png',
+    description: 'Connect your YouTube account to manage your videos, playlists, and channel analytics.',
     connectUrl: '#',
   },
   {

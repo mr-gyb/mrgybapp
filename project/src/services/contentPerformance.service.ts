@@ -1,7 +1,7 @@
 import { ContentItem } from '../types/content';
 import platformApiService, { PlatformViewData } from '../api/services/platform-apis.service';
 import { detectPlatform, getPlatformDisplayName } from '../utils/platformUtils';
-import { doc, updateDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, collection, query, where, getDocs, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 export interface PerformanceData {
@@ -40,6 +40,7 @@ export interface PerformanceUpdateResult {
 class ContentPerformanceService {
   private updateInterval: NodeJS.Timeout | null = null;
   private isTracking = false;
+  private contentListeners: Map<string, () => void> = new Map();
 
   /**
    * Start automatic performance tracking
@@ -56,6 +57,9 @@ class ContentPerformanceService {
 
     // Initial update
     this.updateAllContentPerformance();
+    
+    // Start listening for content changes
+    this.startContentChangeListener();
   }
 
   /**
@@ -67,6 +71,111 @@ class ContentPerformanceService {
       this.updateInterval = null;
     }
     this.isTracking = false;
+    
+    // Stop listening for content changes
+    this.stopContentChangeListener();
+  }
+
+  /**
+   * Start listening for content changes in Firestore
+   */
+  private startContentChangeListener(): void {
+    // Listen to all content changes for now - we'll filter by user in the hook
+    const unsubscribe = onSnapshot(collection(db, 'media_content'), (snapshot) => {
+      console.log('Content change detected:', snapshot.docChanges().length, 'changes');
+      
+      snapshot.docChanges().forEach((change) => {
+        console.log('Content change type:', change.type, 'for document:', change.doc.id);
+        
+        if (change.type === 'added' || change.type === 'modified') {
+          // New content added or existing content modified
+          const contentData = change.doc.data();
+          const contentItem: ContentItem = {
+            id: change.doc.id,
+            title: contentData.title || '',
+            description: contentData.description || '',
+            type: contentData.type || 'written',
+            status: contentData.status || 'pending',
+            createdAt: contentData.createdAt || new Date().toISOString(),
+            originalUrl: contentData.originalUrl,
+            thumbnail: contentData.thumbnail,
+            engagement: contentData.engagement,
+            views: contentData.views,
+            platforms: contentData.platforms || [],
+            generatedAssets: contentData.generatedAssets || []
+          };
+          
+          console.log('Updating performance for content:', contentItem.id, 'with platforms:', contentItem.platforms);
+          
+          // Update performance for this content item
+          this.updateContentPerformance(contentItem).then(result => {
+            console.log('Performance update result:', result);
+          }).catch(error => {
+            console.error('Error updating performance:', error);
+          });
+        } else if (change.type === 'removed') {
+          // Content removed - clean up performance data
+          console.log('Removing performance data for content:', change.doc.id);
+          this.removeContentPerformance(change.doc.id);
+        }
+      });
+    }, (error) => {
+      console.error('Error in content change listener:', error);
+    });
+
+    this.contentListeners.set('media_content', unsubscribe);
+  }
+
+  /**
+   * Stop listening for content changes
+   */
+  private stopContentChangeListener(): void {
+    this.contentListeners.forEach(unsubscribe => unsubscribe());
+    this.contentListeners.clear();
+  }
+
+  /**
+   * Remove performance data for deleted content
+   */
+  private async removeContentPerformance(contentId: string): Promise<void> {
+    try {
+      // Remove from content_performance collection
+      const performanceRef = doc(db, 'content_performance', contentId);
+      await updateDoc(performanceRef, {
+        deleted: true,
+        deletedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error removing content performance:', error);
+    }
+  }
+
+  /**
+   * Clean up all performance data for a user (when all content is deleted)
+   */
+  async cleanupAllUserPerformance(userId: string): Promise<void> {
+    try {
+      console.log(`Cleaning up all performance data for user: ${userId}`);
+      
+      // Get all performance documents for the user's content
+      const performanceQuery = query(
+        collection(db, 'content_performance'),
+        where('deleted', '==', true)
+      );
+      
+      const snapshot = await getDocs(performanceQuery);
+      const deletePromises = snapshot.docs.map(doc => 
+        deleteDoc(doc.ref).catch(error => {
+          console.warn(`Error deleting performance document ${doc.id}:`, error);
+          return null; // Continue with other deletions
+        })
+      );
+      
+      await Promise.all(deletePromises);
+      console.log(`Cleaned up ${snapshot.docs.length} performance documents for user: ${userId}`);
+    } catch (error) {
+      console.error('Error cleaning up user performance data:', error);
+    }
   }
 
   /**
@@ -198,15 +307,18 @@ class ContentPerformanceService {
       const summaries: ContentPerformanceSummary[] = [];
       snapshot.forEach(doc => {
         const data = doc.data();
-        summaries.push({
-          contentId: doc.id,
-          totalViews: data.totalViews || 0,
-          totalLikes: data.totalLikes || 0,
-          totalShares: data.totalShares || 0,
-          totalComments: data.totalComments || 0,
-          platformBreakdown: data.platformBreakdown || [],
-          lastUpdated: data.lastUpdated || new Date().toISOString()
-        });
+        // Skip deleted content
+        if (!data.deleted) {
+          summaries.push({
+            contentId: doc.id,
+            totalViews: data.totalViews || 0,
+            totalLikes: data.totalLikes || 0,
+            totalShares: data.totalShares || 0,
+            totalComments: data.totalComments || 0,
+            platformBreakdown: data.platformBreakdown || [],
+            lastUpdated: data.lastUpdated || new Date().toISOString()
+          });
+        }
       });
 
       return summaries;
@@ -226,24 +338,27 @@ class ContentPerformanceService {
     const totalShares = validData.reduce((sum, data) => sum + (data.shares || 0), 0);
     const totalComments = validData.reduce((sum, data) => sum + (data.comments || 0), 0);
 
-    await updateDoc(doc(db, 'content_performance', contentId), {
+    console.log(`Saving performance data for ${contentId}:`, { totalViews, totalLikes, totalShares, totalComments });
+
+    await setDoc(doc(db, 'content_performance', contentId), {
       platformData,
       totalViews,
       totalLikes,
       totalShares,
       totalComments,
       lastUpdated: new Date().toISOString()
-    });
+    }, { merge: true });
   }
 
   /**
    * Update content views in Firestore
    */
   private async updateContentViews(contentId: string, views: number): Promise<void> {
-    await updateDoc(doc(db, 'media_content', contentId), {
+    console.log(`Updating views for ${contentId}:`, views);
+    await setDoc(doc(db, 'media_content', contentId), {
       views,
       lastPerformanceUpdate: new Date().toISOString()
-    });
+    }, { merge: true });
   }
 
   /**

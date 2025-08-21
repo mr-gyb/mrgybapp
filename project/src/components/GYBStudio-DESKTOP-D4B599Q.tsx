@@ -6,7 +6,7 @@ import ContentList from './content/ContentList';
 import ContentSuggestions from './content/ContentSuggestions';
 import ContentCategorySelector from './content/ContentCategorySelector';
 import CategorySpecificUploader from './content/CategorySpecificUploader';
-import CreationInspirations from './content/CreationInspirations';
+import CreationInspirationsLazyWrapper from './content/CreationInspirationsLazyWrapper';
 import { ContentItem, ContentType } from '../types/content';
 import { useUserContent } from '../hooks/useUserContent';
 import { getDisplayContent } from '../utils/contentUtils';
@@ -14,8 +14,8 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { fetchYouTubeViewCounts } from '../utils/platformUtils';
 import { getFacebookMetrics } from '../api/services/facebook.service';
-import ContentTypeBarChart from "./analytics/ContentTypeBarChart";
-import PlatformPieChart from "./analytics/PlatformPieChart";
+import ContentTypeDistribution from "./analytics/ContentTypeDistribution";
+import PlatformDistribution from "./analytics/PlatformDistribution";
 
 interface PieLabelProps {
   cx: number;
@@ -67,6 +67,7 @@ const GYBStudio: React.FC = () => {
     addContent, 
     refreshContent,
     removeContent,
+    removeAllContent,
     contentStats
   } = useUserContent();
 
@@ -76,6 +77,8 @@ const GYBStudio: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
+  const [deleteSuccessMessage, setDeleteSuccessMessage] = useState('');
   const [viewingContent, setViewingContent] = useState<ContentItem | null>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [isLoadingView, setIsLoadingView] = useState(false);
@@ -191,11 +194,13 @@ const GYBStudio: React.FC = () => {
 
     const platformLower = platform.toLowerCase();
     
-    if ([ 'instagram', 'pinterest', 'facebook' ].includes(platformLower)) return 'Social Media';
+    if ([ 'instagram', 'pinterest', 'facebook', 'social' ].includes(platformLower)) return 'Social Media';
     if ([ 'linkedin', 'other' ].includes(platformLower)) return 'Other';
     if (platformLower === 'blog' || platformLower === 'blogger' || platformLower === 'substack' || platformLower === 'medium') return 'Blogs';
     if (platformLower === 'spotify' || platformLower === 'itunes') return 'Audio';
     if (platformLower === 'youtube') return 'YouTube';
+    if (platformLower === 'apple-podcasts') return 'Audio';
+    if (platformLower === 'tiktok') return 'Social Media';
     return 'Other';
   };
 
@@ -204,30 +209,31 @@ const GYBStudio: React.FC = () => {
     const totalContent = userContent.length;
     const realContent = userContent.filter((item: ContentItem) => !item.id.startsWith('default-'));
 
-    // Content type distribution (segmented by blogPlatform for written content)
+    // Content type distribution (based on platforms, not content type)
     const contentTypeDistribution: Record<string, number> = {};
     userContent.forEach((item: ContentItem) => {
-      let group: string;
-      if (item.type === 'written') {
-        group = item.blogPlatform || 'Blogs';
-      } else if (item.type === 'audio') {
-        group = 'Audio';
-      } else if (item.type === 'video') {
-        if (item.platforms && item.platforms.some((p: string) => p.toLowerCase() === 'youtube')) {
+      // Use platform-based grouping instead of content type
+      if (item.platforms && item.platforms.length > 0) {
+        // Group by the first platform (or use a more sophisticated grouping)
+        const firstPlatform = item.platforms[0];
+        const group = groupPlatform(firstPlatform);
+        contentTypeDistribution[group] = (contentTypeDistribution[group] || 0) + 1;
+      } else {
+        // Fallback to content type if no platforms
+        let group: string;
+        if (item.type === 'written') {
+          group = 'Blogs';
+        } else if (item.type === 'audio') {
+          group = 'Audio';
+        } else if (item.type === 'video') {
           group = 'YouTube';
-        } else {
-          group = 'Other';
-        }
-      } else if (item.type === 'photo') {
-        if (item.platforms && item.platforms.some((p: string) => ['instagram', 'pinterest', 'facebook'].includes(p.toLowerCase()))) {
+        } else if (item.type === 'photo') {
           group = 'Social Media';
         } else {
           group = 'Other';
         }
-      } else {
-        group = 'Other';
+        contentTypeDistribution[group] = (contentTypeDistribution[group] || 0) + 1;
       }
-      contentTypeDistribution[group] = (contentTypeDistribution[group] || 0) + 1;
     });
 
     // Platform distribution (grouped)
@@ -241,12 +247,7 @@ const GYBStudio: React.FC = () => {
         platformCounts[group] = (platformCounts[group] || 0) + 1;
       });
       
-      // Handle blogPlatform for written content
-      if (item.type === 'written' && item.blogPlatform) {
-        const group = groupPlatform(item.blogPlatform);
-        console.log('GYBStudio - BlogPlatform:', item.blogPlatform, 'Grouped as:', group);
-        platformCounts[group] = (platformCounts[group] || 0) + 1;
-      }
+      
     });
 
     console.log('GYBStudio - Final platformCounts:', platformCounts);
@@ -269,113 +270,155 @@ const GYBStudio: React.FC = () => {
 
   // Color map for platform groups
   const PLATFORM_GROUP_COLORS: Record<string, string> = {
-    'Blogs': '#3B82F6',
-    'Audio': '#F59E0B',
-    'Video': '#10B981',
-    'Social Media': '#E1306C',
+    'Audio': '#1DB954',
+    'Video': '#FF0000',
+    'Social Media': '#C13584',
     'YouTube': '#FF0000',
-    'Other': '#6B7280'
+    'Other': '#9E9E9E'
   };
 
   // Color map for content type groups (updated for legend)
   const CONTENT_TYPE_COLORS: Record<string, string> = {
-    'Blogger': '#FF9900', // bright orange
-    'Medium': '#757575', // gray
-    'Substack': '#FFA500', // orange
-    'Spotify': '#1DB954', // green
-    'iTunes': '#FF69B4', // bright pink
-    'YouTube': '#FF0000', // red
-    'Instagram': '#E1306C', // deep pink
-    'Pinterest': '#FF0000', // red
-    'Facebook': '#1877F3', // blue
-    'Other': '#FFD700', // gold
-    'LinkedIn': '#235789' // gold (same as Other)
+    'YouTube': '#FF0000',
+    'Instagram': '#C13584',
+    'Spotify': '#1DB954',
+    'Pinterest': '#E60023', 
+    'Other': '#9E9E9E',
+    'Facebook': '#1877F3',
   };
 
   // Only show these keys in the legend
   const LEGEND_KEYS = [
-    'Blogger', 'Medium', 'Substack', 'Spotify', 'iTunes', 'YouTube', 'Instagram', 'Pinterest', 'Facebook', 'LinkedIn','Other'
+    'YouTube', 'Instagram', 'Spotify', 'Pinterest', 'Other', 'Facebook'
   ];
 
-  // 1. Prepare grouped data
-  const blogTypes = ['Blogger', 'Substack', 'Medium'];
+  // 1. Prepare individual platform data
+  const blogTypes = ['Medium', 'WordPress', 'Substack'];
   const audioTypes = ['Spotify', 'iTunes'];
   const socialMediaTypes = ['Instagram', 'Pinterest', 'Facebook'];
   const otherTypes = ['LinkedIn', 'Other'];
-  const groupedContentData = [
-    {
-      name: 'Blogs',
-      Blogger: userContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'blogger').length,
-      Substack: userContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'substack').length,
-      Medium: userContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'medium').length,
-      views: userContent
-        .filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'blogger')
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-      SubstackViews: userContent
-        .filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'substack')
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-      MediumViews: userContent
-        .filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'medium')
-        .reduce((sum, item) => sum + (item.views ?? 1), 0),
-    },
-    {
-      name: 'Audio',
-      Spotify: userContent.filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'spotify')).length,
-      iTunes: userContent.filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'itunes')).length,
+  
+  // Create individual platform data instead of grouped data
+  const individualPlatformData: any[] = [];
+  
+  // Spotify
+  const spotifyCount = userContent.filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'spotify')).length;
+  if (spotifyCount > 0) {
+    individualPlatformData.push({
+      name: 'Spotify',
+      count: spotifyCount,
+      color: '#1DB954',
       views: userContent
         .filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'spotify'))
         .reduce((sum, item) => sum + (item.views ?? 1), 0),
-      iTunesViews: userContent
+    });
+  }
+  
+  // iTunes
+  const itunesCount = userContent.filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'itunes')).length;
+  if (itunesCount > 0) {
+    individualPlatformData.push({
+      name: 'iTunes',
+      count: itunesCount,
+      color: '#FF69B4',
+      views: userContent
         .filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'itunes'))
         .reduce((sum, item) => sum + (item.views ?? 1), 0),
-    },
-    {
+    });
+  }
+  
+  // YouTube
+  const youtubeCount = userContent.filter(item => item.type === 'video' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'youtube')).length;
+  if (youtubeCount > 0) {
+    individualPlatformData.push({
       name: 'YouTube',
-      count: userContent.filter(item => item.type === 'video' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'youtube')).length,
+      count: youtubeCount,
+      color: '#FF0000',
       views: userContent
         .filter(item => item.type === 'video' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'youtube'))
         .reduce((sum, item) => sum + (item.views ?? 1), 0),
-    },
-    {
-      name: 'Social Media',
-      Instagram: userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'instagram')).length,
-      Pinterest: userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'pinterest')).length,
-      Facebook: userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'facebook')).length,
+    });
+  }
+  
+  // Instagram
+  const instagramCount = userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'instagram')).length;
+  if (instagramCount > 0) {
+    individualPlatformData.push({
+      name: 'Instagram',
+      count: instagramCount,
+      color: '#C13584',
       views: userContent
         .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'instagram'))
         .reduce((sum, item) => sum + (item.views ?? 1), 0),
-      PinterestViews: userContent
+    });
+  }
+  
+  // Pinterest
+  const pinterestCount = userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'pinterest')).length;
+  if (pinterestCount > 0) {
+    individualPlatformData.push({
+      name: 'Pinterest',
+      count: pinterestCount,
+      color: '#E60023',
+      views: userContent
         .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'pinterest'))
         .reduce((sum, item) => sum + (item.views ?? 1), 0),
-      FacebookViews: userContent
+    });
+  }
+  
+  // Facebook
+  const facebookCount = userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'facebook')).length;
+  if (facebookCount > 0) {
+    individualPlatformData.push({
+      name: 'Facebook',
+      count: facebookCount,
+      color: '#1877F3',
+      views: userContent
         .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'facebook'))
         .reduce((sum, item) => sum + (item.views ?? 1), 0),
-    },
-    {
-      name: 'Other',
-      LinkedIn: userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'linkedin')).length,
-      Other: userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'other')).length,
+    });
+  }
+  
+  // Blog
+  const blogCount = userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'blog')).length;
+  if (blogCount > 0) {
+    individualPlatformData.push({
+      name: 'Blog',
+      count: blogCount,
+      color: '#F4B400',
+      views: userContent
+        .filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'blog'))
+        .reduce((sum, item) => sum + (item.views ?? 1), 0),
+    });
+  }
+  
+  // LinkedIn
+  const linkedinCount = userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'linkedin')).length;
+  if (linkedinCount > 0) {
+    individualPlatformData.push({
+      name: 'LinkedIn',
+      count: linkedinCount,
+      color: '#0077B5',
       views: userContent
         .filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'linkedin'))
         .reduce((sum, item) => sum + (item.views ?? 1), 0),
-      OtherViews: userContent
+    });
+  }
+  
+  // Other
+  const otherCount = userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'other')).length;
+  if (otherCount > 0) {
+    individualPlatformData.push({
+      name: 'Other',
+      count: otherCount,
+      color: '#9E9E9E',
+      views: userContent
         .filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'other'))
         .reduce((sum, item) => sum + (item.views ?? 1), 0),
-    }
-  ].filter(category => {
-    // Filter out categories with no content
-    if (category.name === 'Blogs') {
-      return (category as any).Blogger > 0 || (category as any).Substack > 0 || (category as any).Medium > 0;
-    } else if (category.name === 'Audio') {
-      return (category as any).Spotify > 0 || (category as any).iTunes > 0;
-    } else if (category.name === 'Social Media') {
-      return (category as any).Instagram > 0 || (category as any).Pinterest > 0 || (category as any).Facebook > 0;
-    } else if (category.name === 'Other') {
-      return (category as any).LinkedIn > 0 || (category as any).Other > 0;
-    } else {
-      return (category as any).count > 0;
-    }
-  });
+    });
+  }
+  
+  const groupedContentData = individualPlatformData;
 
   const platformData = Object.entries(analytics.platformCounts)
     .filter(([platform, count]) => count > 0) // Only show platforms with actual content
@@ -459,7 +502,7 @@ const GYBStudio: React.FC = () => {
     setSelectedCategory(null);
   };
 
-  const handleUploadComplete = (result: { id: string; url: string; type: string; category: any; platforms?: string[]; title?: string; blogPlatform?: string | null }) => {
+  const handleUploadComplete = (result: { id: string; url: string; type: string; category: any; platforms?: string[]; title?: string }) => {
     // Create a new ContentItem from the upload result
     const defaultPlatforms = result.category && result.category.platforms && result.category.platforms.length > 0
       ? result.category.platforms
@@ -494,7 +537,7 @@ const GYBStudio: React.FC = () => {
         }
       ],
       platforms: result.platforms && result.platforms.length > 0 ? result.platforms : defaultPlatforms,
-      blogPlatform: result.blogPlatform || null // Include the selected blog platform
+      
     };
 
     // Add to the content list
@@ -546,7 +589,7 @@ const GYBStudio: React.FC = () => {
     LinkedIn: '#0077B5',
     Spotify: '#1DB954',
     Blog: '#F4B400',
-    Medium: '#00AB6C',
+    
     'All Platforms': '#6C63FF',
     Twitter: '#1DA1F2',
     Facebook: '#1877F3',
@@ -556,18 +599,7 @@ const GYBStudio: React.FC = () => {
   const CustomBarTooltip = ({ active, payload, label }: { active: boolean; payload: any[]; label: string }) => {
     if (active && payload && payload.length) {
       const barData = payload[0].payload;
-      // For Blogs, show counts for Medium, Blogger, Substack, and total views
-      if (label === 'Blogs') {
-        return (
-          <div className="bg-white p-3 rounded shadow text-sm border border-gray-200">
-            <div className="font-semibold mb-1">{label}</div>
-            <div>Blogger content: {barData.Blogger ?? 0}</div>
-            <div>Substack content: {barData.Substack ?? 0}</div>
-            <div>Medium content: {barData.Medium ?? 0}</div>
-            <div>View count: {barData.views ?? 0}</div>
-          </div>
-        );
-      }
+
       // For Audio
       if (label === 'Audio') {
         return (
@@ -712,6 +744,49 @@ const GYBStudio: React.FC = () => {
     ? Math.max(10, Math.min(16, Math.floor(containerWidth / (numBarGroups * 2))))
     : 14;
 
+  // Force close all modals function
+  const closeAllModals = () => {
+    setShowCategorySelector(false);
+    setShowUploader(false);
+    setShowViewModal(false);
+    setShowSuccessMessage(false);
+    setShowDeleteSuccess(false);
+  };
+
+  // Custom delete handler with success notification
+  const handleContentDelete = async (contentId: string) => {
+    try {
+      await removeContent(contentId);
+      setDeleteSuccessMessage('Content deleted successfully!');
+      setShowDeleteSuccess(true);
+      
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => {
+        setShowDeleteSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Error deleting content:', error);
+      // Could add error notification here
+    }
+  };
+
+  // Custom delete all handler with success notification
+  const handleDeleteAllContent = async () => {
+    try {
+      await removeAllContent();
+      setDeleteSuccessMessage('All content deleted successfully!');
+      setShowDeleteSuccess(true);
+      
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => {
+        setShowDeleteSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Error deleting all content:', error);
+      // Could add error notification here
+    }
+  };
+
   return (
     <div className="bg-white min-h-screen text-navy-blue">
       <div className="container mx-auto px-4 py-6">
@@ -733,27 +808,31 @@ const GYBStudio: React.FC = () => {
           </div>
         </div>
 
-        {/* Success Notification */}
+        {/* Success Message */}
         {showSuccessMessage && (
-          <div className="fixed top-4 right-4 z-50 bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg max-w-sm">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-green-400" />
-              </div>
-              <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-green-800">
-                  {successMessage}
-                </p>
-              </div>
-              <div className="ml-4 flex-shrink-0">
-                <button
-                  onClick={() => setShowSuccessMessage(false)}
-                  className="inline-flex text-green-400 hover:text-green-600 focus:outline-none"
-                >
-                  <XIcon className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+          <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center">
+            <CheckCircle className="mr-2" size={20} />
+            {successMessage}
+            <button
+              onClick={() => setShowSuccessMessage(false)}
+              className="ml-4 text-white hover:text-green-100"
+            >
+              <XIcon size={20} />
+            </button>
+          </div>
+        )}
+
+        {/* Delete Success Message */}
+        {showDeleteSuccess && (
+          <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center">
+            <CheckCircle className="mr-2" size={20} />
+            {deleteSuccessMessage}
+            <button
+              onClick={() => setShowDeleteSuccess(false)}
+              className="ml-4 text-white hover:text-red-100"
+            >
+              <XIcon size={20} />
+            </button>
           </div>
         )}
 
@@ -781,7 +860,7 @@ const GYBStudio: React.FC = () => {
           {/* Content Type Distribution */}
           <div>
             <h2 className="text-2xl font-bold mb-4">Content Type Distribution</h2>
-            <ContentTypeBarChart
+            <ContentTypeDistribution
               barData={barData}
               userContent={userContent}
               blogTypes={blogTypes}
@@ -797,7 +876,7 @@ const GYBStudio: React.FC = () => {
           {/* Platform Distribution */}
           <div>
             <h2 className="text-2xl font-bold mb-4">Platform Distribution</h2>
-            <PlatformPieChart
+            <PlatformDistribution
               platformData={platformData}
               COLORS={COLORS}
               renderCustomPieLabel={renderCustomPieLabel}
@@ -828,7 +907,7 @@ const GYBStudio: React.FC = () => {
         </div>
 
         {/* Creation Inspirations */}
-        <CreationInspirations 
+        <CreationInspirationsLazyWrapper 
           limit={3} 
           showRefreshButton={true}
           onSuggestionsGenerated={handleSuggestionsGenerated}
@@ -855,7 +934,8 @@ const GYBStudio: React.FC = () => {
             onItemClick={handleContentClick}
             showDefaults={true}
             onUploadClick={handleUploadClick}
-            onDelete={removeContent}
+            onDelete={handleContentDelete}
+            onDeleteAll={handleDeleteAllContent}
             onView={handleViewContent}
           />
         </div>

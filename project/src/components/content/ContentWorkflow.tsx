@@ -2,7 +2,7 @@ import React from 'react';
 import { ContentItem } from '../../types/content';
 import AssetPreview from './AssetPreview';
 import PlatformSelector from './PlatformSelector';
-import { Facebook, Twitter, Instagram, Linkedin, Youtube } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Youtube } from 'lucide-react';
 
 interface ContentWorkflowProps {
   content: ContentItem;

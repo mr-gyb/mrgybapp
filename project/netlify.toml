@@ -1,3 +1,10 @@
+# Redirect root to login page
+[[redirects]]
+  from = "/"
+  to = "/login"
+  status = 302
+
+# SPA routing - all other routes go to index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"

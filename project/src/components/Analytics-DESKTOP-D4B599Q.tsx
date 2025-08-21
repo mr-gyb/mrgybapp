@@ -122,7 +122,7 @@ const Analytics: React.FC = () => {
     { name: 'Instagram', value: 45 },
     { name: 'YouTube', value: 30 },
     { name: 'Blog', value: 15 },
-    { name: 'Twitter', value: 10 },
+            { name: 'X (Twitter)', value: 10 },
   ];
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];

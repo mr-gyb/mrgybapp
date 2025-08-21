@@ -18,15 +18,15 @@ const EnterpriseCard: React.FC<EnterpriseCardProps> = ({ paymentType }) => {
       <div className="text-center mb-6">
         {paymentType === 'monthly' ? (
           <>
-            <div className="text-4xl font-bold text-gray-900">$300</div>
+            <div className="text-4xl font-bold text-gray-900">$500</div>
             <div className="text-lg text-gray-600">/month</div>
           </>
         ) : (
           <>
-            <div className="text-4xl font-bold text-gray-900">$3000</div>
+            <div className="text-4xl font-bold text-gray-900">$5000</div>
             <div className="text-lg text-gray-600">/year</div>
             <div className="text-base text-blue-600 mt-2">with last 2 months free</div>
-            <div className="text-sm text-gray-500">(saving $600)</div>
+            <div className="text-sm text-gray-500">(saving $1000)</div>
           </>
         )}
       </div>
