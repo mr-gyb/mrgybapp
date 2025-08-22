@@ -183,6 +183,7 @@ export const useSpotifyMonetization = () => {
     if (monetizationMetrics.length === 0) {
       return {
         totalFollowers: 0,
+        totalTracks: 0,
         totalGrowth: 0,
         averageGrowthPercentage: 0,
         totalEstimatedMonthlyRevenue: 0,
@@ -192,6 +193,7 @@ export const useSpotifyMonetization = () => {
     }
 
     const totalFollowers = monetizationMetrics.reduce((sum, m) => sum + m.currentFollowers, 0);
+    const totalTracks = playlists.reduce((sum, p) => sum + (p.tracks || 0), 0);
     const totalGrowth = monetizationMetrics.reduce((sum, m) => sum + m.followerGrowth, 0);
     const totalEstimatedMonthlyRevenue = monetizationMetrics.reduce((sum, m) => sum + m.estimatedMonthlyRevenue, 0);
     const totalEstimatedGrowthRevenue = monetizationMetrics.reduce((sum, m) => sum + m.estimatedGrowthRevenue, 0);
@@ -201,13 +203,14 @@ export const useSpotifyMonetization = () => {
 
     return {
       totalFollowers,
+      totalTracks,
       totalGrowth,
       averageGrowthPercentage: Math.round(averageGrowthPercentage * 100) / 100,
       totalEstimatedMonthlyRevenue: Math.round(totalEstimatedMonthlyRevenue * 100) / 100,
       totalEstimatedGrowthRevenue: Math.round(totalEstimatedGrowthRevenue * 100) / 100,
       averageMonetizationScore: Math.round(averageMonetizationScore * 10) / 10
     };
-  }, [monetizationMetrics]);
+  }, [monetizationMetrics, playlists]);
 
   // Load playlists on mount
   useEffect(() => {

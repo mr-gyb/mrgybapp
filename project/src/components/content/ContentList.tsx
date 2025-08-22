@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Play, Image as ImageIcon, Headphones, FileText, Clock, Check, X, Upload, Plus, Trash, Video, Music, File, Type, Eye, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Play, Image as ImageIcon, Headphones, FileText, Clock, Check, X, Upload, Plus, Trash, Video, Music, File, Type, Eye, AlertTriangle, Link as LinkIcon } from 'lucide-react';
 import { ContentItem, ContentType, DEFAULT_CONTENT_ITEMS } from '../../types/content';
+import { useLinkImageFetcher } from '../../hooks/useLinkImageFetcher';
 
 interface ContentListProps {
   items: ContentItem[];
@@ -47,6 +48,17 @@ const ContentList: React.FC<ContentListProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  
+  // Link image fetching hook
+  const {
+    linkImages,
+    isLoading: imageLoading,
+    errors: imageErrors,
+    fetchImagesForLinks,
+    hasImage,
+    getImage,
+    isImageLoading
+  } = useLinkImageFetcher();
 
   const filteredItems = items.filter(item => {
     if (selectedType === 'all') return true;
@@ -198,6 +210,18 @@ const ContentList: React.FC<ContentListProps> = ({
     setShowDeleteAllConfirm(false);
   };
 
+  // Automatically fetch images for content with URLs
+  useEffect(() => {
+    const urlsToFetch = filteredItems
+      .filter(item => item.originalUrl && !hasImage(item.originalUrl) && !isImageLoading(item.originalUrl))
+      .map(item => item.originalUrl!)
+      .filter(Boolean);
+    
+    if (urlsToFetch.length > 0) {
+      fetchImagesForLinks(urlsToFetch);
+    }
+  }, [filteredItems, hasImage, isImageLoading, fetchImagesForLinks]);
+
   const displayItems = items.length > 0 ? items : (showDefaults ? DEFAULT_CONTENT_ITEMS : []);
 
   if (displayItems.length === 0) {
@@ -311,6 +335,42 @@ const ContentList: React.FC<ContentListProps> = ({
                   alt={item.title}
                   className="w-full h-full object-cover"
                 />
+              ) : item.originalUrl && hasImage(item.originalUrl) ? (
+                <>
+                  {/* Display fetched link image */}
+                  <img
+                    src={getImage(item.originalUrl)?.imageUrl}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback to type icon if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallbackDiv = target.nextElementSibling as HTMLDivElement;
+                      if (fallbackDiv) fallbackDiv.style.display = 'flex';
+                    }}
+                  />
+                  {/* Fallback div (hidden by default) */}
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center" style={{ display: 'none' }}>
+                    {getTypeIcon(item.type)}
+                  </div>
+                </>
+              ) : item.originalUrl && isImageLoading(item.originalUrl) ? (
+                // Show loading state for link images
+                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy-blue mx-auto mb-2"></div>
+                    <p className="text-xs text-gray-500">Loading image...</p>
+                  </div>
+                </div>
+              ) : item.originalUrl ? (
+                // Show link icon for content with URLs but no images yet
+                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                  <div className="text-center">
+                    <LinkIcon size={32} className="text-gray-400 mx-auto mb-2" />
+                    <p className="text-xs text-gray-500">Link content</p>
+                  </div>
+                </div>
               ) : (
                 <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                   {getTypeIcon(item.type)}
@@ -356,6 +416,14 @@ const ContentList: React.FC<ContentListProps> = ({
               {item.isAISuggestion && (
                 <div className="absolute top-2 right-2 bg-purple-500 text-white text-xs px-2 py-1 rounded-full">
                   AI Suggestion
+                </div>
+              )}
+              
+              {/* Link Image Indicator */}
+              {item.originalUrl && hasImage(item.originalUrl) && (
+                <div className="absolute bottom-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                  <LinkIcon size={12} />
+                  Link
                 </div>
               )}
             </div>

@@ -5,6 +5,7 @@ import { SocialMediaPost } from '../../api/services/social-media.service';
 import { useUserContent } from '../../hooks/useUserContent';
 import { getCreationInspirationsOpenAI } from '../../services/content/analysis.service';
 import { useCreationInspirations, InspirationSuggestion } from '../../hooks/useCreationInspirations';
+import HighPerformingPosts from './HighPerformingPosts';
 
 interface CreationInspirationsProps {
   limit?: number;
@@ -377,6 +378,14 @@ const CreationInspirations: React.FC<CreationInspirationsProps> = ({
             </div>
           )}
 
+          {/* High-Performing Posts Section */}
+          <div className="mb-6">
+            <HighPerformingPosts 
+              showRefreshButton={true}
+              onRefresh={refreshNewSuggestions}
+            />
+          </div>
+
           {/* New Suggestions Grid */}
           <div className="space-y-6">
             {newSuggestions.slice(0, limit).map((suggestion, index) => (
@@ -580,6 +589,14 @@ const CreationInspirations: React.FC<CreationInspirationsProps> = ({
           <p className="text-xs text-gray-500">
             Personalized by AI based on your content strengths
           </p>
+        </div>
+
+        {/* High-Performing Posts Section */}
+        <div className="mt-6">
+          <HighPerformingPosts 
+            showRefreshButton={true}
+            onRefresh={handleRefresh}
+          />
         </div>
       </div>
     );

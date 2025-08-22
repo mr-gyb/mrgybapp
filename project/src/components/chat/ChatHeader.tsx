@@ -35,9 +35,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
     }
   }, [isEditing]);
 
-
-  const agents = ['Mr.GYB AI', 'Chris', 'Sherry', 'Charlotte', 'Jake', 'Rachel'];
-
+  const agents = ['Mr.GYB AI', 'CEO', 'COO', 'CHRO', 'CTO', 'CCMO'];
 
   const handleAgentChange = (newAgent: string) => {
     setSelectedAgent(newAgent);

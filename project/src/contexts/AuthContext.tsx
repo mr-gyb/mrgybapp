@@ -5,9 +5,6 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile } from '../types/user';
 import { storage } from '../utils/storage';
 
-import { getInitials } from '../services/profile.service';
-
-
 interface AuthContextType {
   user: User | null;
   userData: UserProfile | null;
@@ -18,7 +15,6 @@ interface AuthContextType {
   signInWithFacebook: () => Promise<{ user?: User; error?: any }>;
   logout: () => Promise<void>;
   updateUserData: (updates: Partial<UserProfile>) => Promise<void>;
-  checkAuthStatus: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,47 +24,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // check token for auto log out.
-  const checkTokenExpiration = async (currentUser: User) => {
-    try {
-      // Firebase Auth automatically updates the token but verify it
-      const token = await currentUser.getIdToken(true);
-      if (!token) {
-        throw new Error('Invalid token');
-      }
-      return true;
-    } catch (error) {
-      console.error('Token validation failed:', error);
-      await logout();
-      return false;
-    }
-  };
-
-  // Check auth status
-  const checkAuthStatus = async (): Promise<boolean> => {
-    if (!user) return false;
-    
-    try {
-      const isValid = await checkTokenExpiration(user);
-      return isValid;
-    } catch (error) {
-      console.error('Auth status check failed:', error);
-      return false;
-    }
-  };
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       
       if (currentUser) {
         try {
-          // verify the valid token
-          const isTokenValid = await checkTokenExpiration(currentUser);
-          if (!isTokenValid) {
-            return;
-          }
-
           const userDocRef = doc(db, 'profiles', currentUser.uid);
           const userDoc = await getDoc(userDocRef);
           
@@ -100,8 +61,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } catch (error) {
           console.error('Error fetching user data:', error);
-          // if error -> Log out
-          await logout();
         }
       } else {
         setUserData(null);
@@ -112,30 +71,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => unsubscribe();
   }, []);
-
-
-  // Check the status of token every 5 min
-  useEffect(() => {
-    if (!user) return;
-
-    const interval = setInterval(async () => {
-      const isValid = await checkAuthStatus();
-      if (!isValid) {
-        console.log('Token expired, logging out...');
-        await logout();
-      }
-    }, 5 * 60 * 1000); // 5 min
-
-    return () => clearInterval(interval);
-  }, [user]);
-
-  function getInitials(name?: string | null): string {
-    if (!name) return "U"; // fallback for unknown
-    const words = name.trim().split(" ");
-    if (words.length === 1) return words[0][0].toUpperCase();
-    return (words[0][0] + words[1][0]).toUpperCase();
-  }
-
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -206,14 +141,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-      setUserData(null);
-      // Clear all user-specific data from localStorage to prevent data leakage
-      storage.clear();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await signOut(auth);
+    setUserData(null);
+    // Clear all user-specific data from localStorage to prevent data leakage
+    storage.clear();
   };
 
   const updateUserData = async (updates: Partial<UserProfile>) => {
@@ -239,7 +170,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signInWithFacebook,
     logout,
     updateUserData,
-    checkAuthStatus,
   };
 
   if (isLoading) {

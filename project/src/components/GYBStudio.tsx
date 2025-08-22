@@ -7,8 +7,7 @@ import ContentSuggestions from './content/ContentSuggestions';
 import ContentCategorySelector from './content/ContentCategorySelector';
 import CategorySpecificUploader from './content/CategorySpecificUploader';
 import CreationInspirationsLazyWrapper from './content/CreationInspirationsLazyWrapper';
-import SpotifyMonetization from './monetization/SpotifyMonetization';
-import SpotifyDebugTest from './SpotifyDebugTest';
+
 import { ContentItem, ContentType } from '../types/content';
 import { useUserContent } from '../hooks/useUserContent';
 import { getDisplayContent } from '../utils/contentUtils';
@@ -21,6 +20,8 @@ import PlatformDistribution from "./analytics/PlatformDistribution";
 import { saveUserContent } from '../services/userContent.service';
 import { useAuth } from '../contexts/AuthContext';
 import { useAnalytics } from '../hooks/useAnalytics';
+import { useSpotifyMonetization } from '../hooks/useSpotifyMonetization';
+import spotifyService from '../api/services/spotify.service';
 
 interface PieLabelProps {
   cx: number;
@@ -77,6 +78,18 @@ const GYBStudio: React.FC = () => {
     contentStats
   } = useUserContent();
 
+  // Spotify monetization hook
+  const {
+    playlists,
+    monetizationMetrics,
+    aggregatedMetrics,
+    isLoading: isSpotifyLoading,
+    error: spotifyError,
+    loadTrackedPlaylists,
+    addPlaylist,
+    refreshFollowerData
+  } = useSpotifyMonetization();
+
   // State for content creation flow
   const [showCategorySelector, setShowCategorySelector] = useState(false);
   const [showUploader, setShowUploader] = useState(false);
@@ -97,6 +110,13 @@ const GYBStudio: React.FC = () => {
   const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(false);
   const [youtubeDebugInfo, setYoutubeDebugInfo] = useState<string>('');
   
+  // Load Spotify data when component mounts
+  useEffect(() => {
+    if (spotifyService.isAuthenticated()) {
+      loadTrackedPlaylists();
+    }
+  }, [loadTrackedPlaylists]);
+
   // Calculate YouTube views from user content
   const calculateYouTubeViews = () => {
     const youtubeContent = userContent.filter(item => 
@@ -334,9 +354,16 @@ const GYBStudio: React.FC = () => {
     // Platform-specific metrics
     const platformMetrics = {
       spotify: [
-        { name: 'Followers', value: 'Live Data', platform: 'spotify' },
-        { name: 'Track Count', value: 'Live Data', platform: 'spotify' },
-        { name: 'Playlist Name', value: 'Live Data', platform: 'spotify' },
+        { 
+          name: 'Followers', 
+          value: isSpotifyLoading ? 'Loading...' : aggregatedMetrics.totalFollowers.toLocaleString(), 
+          platform: 'spotify' 
+        },
+        { 
+          name: 'Track Count', 
+          value: isSpotifyLoading ? 'Loading...' : aggregatedMetrics.totalTracks.toLocaleString(), 
+          platform: 'spotify' 
+        },
       ],
       instagram: [
         { name: 'Sponsored Posts', value: '$120', platform: 'instagram' },
@@ -983,7 +1010,7 @@ const GYBStudio: React.FC = () => {
             className="bg-navy-blue text-white px-4 py-2 rounded-full flex items-center"
           >
             <Plus size={20} className="mr-2" />
-            Create Content
+            Upload Content
           </button>
           </div>
         </div>
@@ -1078,6 +1105,25 @@ const GYBStudio: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold">Monetization</h2>
             <div className="flex items-center space-x-3">
+              {/* Spotify Connection Status */}
+              {!spotifyService.isAuthenticated() ? (
+                <button
+                  onClick={() => spotifyService.initializeAuth()}
+                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
+                >
+                  🎵 Connect Spotify
+                </button>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <span className="text-green-600 text-sm">✅ Spotify Connected</span>
+                  <button
+                    onClick={() => spotifyService.logout()}
+                    className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition-colors"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              )}
               <label htmlFor="platform-filter" className="text-sm font-medium text-gray-700">
                 Filter by Platform:
               </label>
@@ -1143,101 +1189,122 @@ const GYBStudio: React.FC = () => {
             ))}
           </div>
           
-          {/* Platform Summary */}
-          {selectedPlatform !== 'all' && (
-            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-              <h3 className="text-lg font-semibold text-blue-800 mb-3 flex items-center">
-                <TrendingUp className="w-5 h-5 mr-2" />
-                {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)} Performance Summary
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {getFilteredMonetizationData().reduce((total, metric) => {
-                      const value = metric.value.replace(/[^0-9.]/g, '');
-                      return total + (parseFloat(value) || 0);
-                    }, 0).toFixed(0)}
+                        {/* Spotify Playlist Management */}
+              {spotifyService.isAuthenticated() && (
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800">Spotify Playlists</h3>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={refreshFollowerData}
+                        disabled={isSpotifyLoading}
+                        className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
+                      >
+                        {isSpotifyLoading ? '🔄 Refreshing...' : '🔄 Refresh Data'}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const testUrl = 'https://open.spotify.com/playlist/0xBR12jNDKZUOxYnH5ejnS?si=9ZZOJZoiSByJq3pm371-mg';
+                            const result = await spotifyService.testSpecificPlaylist(testUrl);
+                            if (result.success) {
+                              console.log('🎵 Test playlist data:', result.data);
+                              alert(`Test successful!\nName: ${result.data.name}\nFollowers: ${result.data.followers}\nTracks: ${result.data.tracks}`);
+                            } else {
+                              alert(`Test failed: ${result.error}`);
+                            }
+                          } catch (error) {
+                            alert(`Test error: ${error}`);
+                          }
+                        }}
+                        className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition-colors"
+                      >
+                        🧪 Test Playlist
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-sm text-blue-600">Total Value</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {getFilteredMonetizationData().length}
+                  
+                  {/* Add Playlist Input */}
+                  <div className="mb-4 p-3 bg-white rounded border border-gray-200">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        placeholder="Paste Spotify playlist URL here..."
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            const input = e.target as HTMLInputElement;
+                            if (input.value.trim()) {
+                              addPlaylist(input.value.trim());
+                              input.value = '';
+                            }
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={(e) => {
+                          const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                          if (input.value.trim()) {
+                            addPlaylist(input.value.trim());
+                            input.value = '';
+                          }
+                        }}
+                        className="px-4 py-2 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition-colors"
+                      >
+                        Add Playlist
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Example: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
+                    </p>
                   </div>
-                  <div className="text-sm text-green-600">Metrics Tracked</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {selectedPlatform === 'youtube' ? 'High' : 
-                     selectedPlatform === 'instagram' ? 'Medium' : 
-                     selectedPlatform === 'facebook' ? 'Medium' : 
-                     selectedPlatform === 'spotify' ? 'Low' : 
-                     selectedPlatform === 'pinterest' ? 'Medium' : 'Variable'}
-                  </div>
-                  <div className="text-sm text-purple-600">Revenue Potential</div>
-                </div>
-              </div>
               
-              {/* Platform-Specific Tips */}
-              <div className="mt-4 pt-4 border-t border-blue-200">
-                <h4 className="text-sm font-medium text-blue-700 mb-2">💡 {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)} Optimization Tips:</h4>
-                <div className="text-xs text-blue-600 space-y-1">
-                  {selectedPlatform === 'youtube' && (
-                    <>
-                      <div>• Focus on SEO-optimized titles and descriptions</div>
-                      <div>• Create engaging thumbnails to increase CTR</div>
-                      <div>• Maintain consistent upload schedule</div>
-                    </>
-                  )}
-                  {selectedPlatform === 'instagram' && (
-                    <>
-                      <div>• Use relevant hashtags for discoverability</div>
-                      <div>• Post during peak engagement hours</div>
-                      <div>• Engage with your audience through stories and reels</div>
-                    </>
-                  )}
-                  {selectedPlatform === 'facebook' && (
-                    <>
-                      <div>• Create shareable, community-focused content</div>
-                      <div>• Use Facebook Groups for community building</div>
-                      <div>• Leverage Facebook Ads for targeted reach</div>
-                    </>
-                  )}
-                  {selectedPlatform === 'spotify' && (
-                    <>
-                      <div>• Monitor follower growth trends</div>
-                      <div>• Track playlist performance</div>
-                      <div>• Analyze track engagement patterns</div>
-                    </>
-                  )}
-                  {selectedPlatform === 'pinterest' && (
-                    <>
-                      <div>• Create visually appealing pins</div>
-                      <div>• Use rich pins for better engagement</div>
-                      <div>• Optimize for Pinterest SEO</div>
-                    </>
-                  )}
-                  {selectedPlatform === 'others' && (
-                    <>
-                      <div>• Diversify across multiple platforms</div>
-                      <div>• Focus on email marketing and direct sales</div>
-                      <div>• Build personal brand and authority</div>
-                    </>
-                  )}
+              {spotifyError && (
+                <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
+                  {spotifyError}
                 </div>
-              </div>
+              )}
+              
+              {playlists.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {playlists.map((playlist) => (
+                    <div key={playlist.id} className="bg-white p-4 rounded-lg border border-gray-200">
+                      <h4 className="font-medium text-gray-800 mb-2">{playlist.name}</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Followers:</span>
+                          <span className="font-medium">{playlist.followers.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Tracks:</span>
+                          <span className="font-medium">{playlist.tracks}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Last Updated:</span>
+                          <span className="font-medium text-xs">
+                            {new Date(playlist.lastUpdated).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <a
+                        href={playlist.externalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-block text-green-600 hover:text-green-800 text-sm"
+                      >
+                        View on Spotify →
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500">
+                  <p className="mb-2">No playlists tracked yet</p>
+                  <p className="text-sm">Connect your Spotify account and add playlists to start tracking followers and track counts</p>
+                </div>
+              )}
             </div>
           )}
-          
-          {/* Spotify Debug Test Component */}
-          <div className="mt-6 mb-6">
-            <SpotifyDebugTest />
-          </div>
-          
-          {/* Spotify Monetization Component */}
-          <div className="mt-6">
-            <SpotifyMonetization />
-          </div>
         </div>
 
         {/* Creation Inspirations */}

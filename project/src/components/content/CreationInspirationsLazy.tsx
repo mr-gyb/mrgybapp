@@ -4,6 +4,7 @@ import { useSocialMediaContent } from '../../hooks/useSocialMediaContent';
 import { SocialMediaPost } from '../../api/services/social-media.service';
 import { useUserContent } from '../../hooks/useUserContent';
 import { getCreationInspirationsOpenAI } from '../../services/content/analysis.service';
+import HighPerformingPosts from './HighPerformingPosts';
 
 interface CreationInspirationsLazyProps {
   limit?: number;
@@ -563,6 +564,14 @@ Format each suggestion as:
             </div>
           </div>
         )}
+
+        {/* High-Performing Posts Section */}
+        <div className="mb-6">
+          <HighPerformingPosts 
+            showRefreshButton={true}
+            onRefresh={handleRefresh}
+          />
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {aiSuggestions.map((suggestion, index) => (
@@ -669,6 +678,14 @@ Format each suggestion as:
             </button>
           )}
         </div>
+      </div>
+
+      {/* High-Performing Posts Section */}
+      <div className="mb-6">
+        <HighPerformingPosts 
+          showRefreshButton={true}
+          onRefresh={handleRefresh}
+        />
       </div>
       
       {isPostsLoading ? (

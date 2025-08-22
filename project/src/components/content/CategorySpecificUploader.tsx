@@ -9,6 +9,8 @@ import { db } from '../../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
 import TitleSuggestionModal from './TitleSuggestionModal';
+import { validateContentUpload } from '../../utils/validation';
+import contentTypeMappingService from '../../services/contentTypeMapping.service';
 
 interface ContentCategory {
   id: string;
@@ -23,7 +25,19 @@ interface ContentCategory {
 interface CategorySpecificUploaderProps {
   category: ContentCategory;
   onClose: () => void;
-  onUpload: (result: { id: string; url: string; type: string; category: ContentCategory; platforms: string[]; formats: string[]; linkType?: string; title?: string }) => void;
+  onUpload: (result: { 
+    id: string; 
+    url: string; 
+    type: string; 
+    category: ContentCategory; 
+    platforms: string[]; 
+    formats: string[]; 
+    linkType?: string; 
+    title?: string;
+    contentType?: string;
+    platformCategory?: string;
+    analyticsLabel?: string;
+  }) => void;
 }
 
 const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
@@ -159,6 +173,28 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
     e.preventDefault();
     if (!contentUrl.trim() || !user || !urlTitle.trim()) return;
 
+    // Validate platform selection before proceeding
+    const validation = validateContentUpload({
+      platforms: selectedPlatforms,
+      category,
+      contentUrl: contentUrl.trim(),
+      title: urlTitle.trim()
+    });
+
+    if (!validation.isValid) {
+      setError(validation.errorMessage || 'Please select one platform before continuing.');
+      return;
+    }
+
+    // Get content type mapping for the selected platform
+    const selectedPlatform = selectedPlatforms[0]; // Since we only allow one platform
+    const contentTypeMapping = contentTypeMappingService.getContentTypeMapping(selectedPlatform);
+    
+    if (!contentTypeMapping) {
+      setError(`Invalid platform: ${selectedPlatform}`);
+      return;
+    }
+
     setIsUploading(true);
     setError(null);
 
@@ -175,7 +211,10 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
         platforms: selectedPlatforms,
         formats: [], // No formats for URL uploads
         linkType: automaticLinkType, // Use automatically determined link type
-        title: urlTitle // Pass the entered title
+        title: urlTitle, // Pass the entered title
+        contentType: contentTypeMapping.contentType,
+        platformCategory: contentTypeMapping.platformCategory,
+        analyticsLabel: contentTypeMapping.analyticsLabel
       });
       setContentUrl('');
       setUrlTitle('');
@@ -193,13 +232,37 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
       setError('Missing user or file');
       return;
     }
+
+    // Validate platform selection before proceeding
+    const validation = validateContentUpload({
+      platforms: selectedPlatforms,
+      category,
+      file: selectedFile
+    });
+
+    if (!validation.isValid) {
+      setError(validation.errorMessage || 'Please select one platform before continuing.');
+      return;
+    }
+    
+    // Get content type mapping for the selected platform
+    const selectedPlatform = selectedPlatforms[0]; // Since we only allow one platform
+    const contentTypeMapping = contentTypeMappingService.getContentTypeMapping(selectedPlatform);
+    
+    if (!contentTypeMapping) {
+      setError(`Invalid platform: ${selectedPlatform}`);
+      return;
+    }
     
     // Store upload data and show title modal
     setPendingUploadData({
       file: selectedFile,
       category,
       platforms: selectedPlatforms,
-      formats: [] // No formats for file uploads
+      formats: [], // No formats for file uploads
+      contentType: contentTypeMapping.contentType,
+      platformCategory: contentTypeMapping.platformCategory,
+      analyticsLabel: contentTypeMapping.analyticsLabel
     });
     setShowTitleModal(true);
   };
@@ -225,7 +288,10 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
         category: pendingUploadData.category,
         platforms: pendingUploadData.platforms,
         formats: pendingUploadData.formats,
-        title: title // Include the selected title
+        title: title, // Include the selected title
+        contentType: pendingUploadData.contentType,
+        platformCategory: pendingUploadData.platformCategory,
+        analyticsLabel: pendingUploadData.analyticsLabel
       };
 
       console.log('Upload result:', uploadResult);
@@ -237,7 +303,10 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
         platforms: selectedPlatforms,
         formats: pendingUploadData.formats, // Pass the formats from pendingUploadData
         linkType: getLinkTypeFromUrl(uploadResult.url, category.id), // Use automatic link type detection
-        title: urlTitle // Pass the entered title
+        title: title, // Pass the selected title
+        contentType: uploadResult.contentType,
+        platformCategory: uploadResult.platformCategory,
+        analyticsLabel: uploadResult.analyticsLabel
       });
 
       // Save to database with title
@@ -295,11 +364,14 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
   };
 
   const togglePlatform = (platform: string) => {
-    setSelectedPlatforms((prev) =>
-      prev.includes(platform)
-        ? prev.filter((p) => p !== platform)
-        : [...prev, platform]
-    );
+    setSelectedPlatforms((prev) => {
+      // If the platform is already selected, deselect it
+      if (prev.includes(platform)) {
+        return prev.filter((p) => p !== platform);
+      }
+      // If a different platform is selected, replace it with the new one
+      return [platform];
+    });
   };
 
   return (
@@ -369,11 +441,20 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
                 <p className="mb-2">Selected file: <span className="font-semibold">{selectedFile.name}</span></p>
                 <button
                   onClick={handleUpload}
-                  className="bg-navy-blue text-white px-6 py-2 rounded-full"
-                  disabled={isUploading}
+                  className={`px-6 py-2 rounded-full transition-colors ${
+                    selectedPlatforms.length > 0
+                      ? 'bg-navy-blue text-white hover:bg-opacity-90'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  disabled={isUploading || selectedPlatforms.length === 0}
                 >
                   {isUploading ? 'Uploading...' : 'Upload'}
                 </button>
+                {selectedPlatforms.length === 0 && (
+                  <p className="text-sm text-amber-600 mt-2">
+                    ⚠️ Please select one platform to enable upload
+                  </p>
+                )}
               </div>
             )}
           </>
@@ -416,8 +497,12 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
               </div>
               <button
                 type="submit"
-                className="w-full bg-navy-blue text-white px-6 py-3 rounded-lg hover:bg-opacity-90 transition-colors flex items-center justify-center"
-                disabled={isUploading || !contentUrl.trim() || !urlTitle.trim()}
+                className={`w-full px-6 py-3 rounded-lg transition-colors flex items-center justify-center ${
+                  selectedPlatforms.length > 0
+                    ? 'bg-navy-blue text-white hover:bg-opacity-90'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+                disabled={isUploading || !contentUrl.trim() || !urlTitle.trim() || selectedPlatforms.length === 0}
               >
                 <Link size={20} className="mr-2" />
                 {isUploading ? 'Processing...' : 'Analyze Content'}
@@ -446,22 +531,52 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
         <div className="bg-gray-50 p-4 rounded-lg">
           <h4 className="font-semibold mb-2 text-navy-blue">About {category.name}</h4>
           <p className="text-gray-600 text-sm mb-3">{category.description}</p>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {category.id === 'audio' ? (
-              <>
-                <button
-                  type="button"
-                  className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${selectedPlatforms.includes('Spotify') ? 'bg-navy-blue text-white border-navy-blue' : 'bg-green-100 text-green-800 border-green-200'}`}
-                  onClick={() => togglePlatform('Spotify')}
-                >
-                  Spotify
-                </button>
-              </>
-            ) : category.id === 'video' ? (
-              // Only show YouTube and Video as platform chips for video uploads
-              category.platforms
-                .filter((platform) => ['YouTube', 'Video'].includes(platform))
-                .map((platform) => (
+          
+          {/* Platform Selection Section */}
+          <div className="mb-4">
+            <h5 className="font-semibold mb-2 text-navy-blue">Select Platform *</h5>
+            <p className="text-sm text-gray-600 mb-3">
+              Choose one platform where you want to publish this content
+            </p>
+            
+            {/* Platform Selection Error */}
+            {selectedPlatforms.length === 0 && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 rounded-md mb-3 text-sm">
+                ⚠️ Please select one platform before continuing
+              </div>
+            )}
+            
+            <div className="flex flex-wrap gap-2 mb-4">
+              {category.id === 'audio' ? (
+                <>
+                  <button
+                    type="button"
+                    className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${selectedPlatforms.includes('Spotify') ? 'bg-navy-blue text-white border-navy-blue' : 'bg-green-100 text-green-800 border-green-200'}`}
+                    onClick={() => togglePlatform('Spotify')}
+                  >
+                    Spotify
+                  </button>
+                </>
+              ) : category.id === 'video' ? (
+                // Only show YouTube and Video as platform chips for video uploads
+                category.platforms
+                  .filter((platform) => ['YouTube', 'Video'].includes(platform))
+                  .map((platform) => (
+                    <button
+                      key={platform}
+                      type="button"
+                      className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${
+                        selectedPlatforms.includes(platform)
+                          ? 'bg-navy-blue text-white border-navy-blue'
+                          : 'bg-white text-navy-blue border-gray-200 hover:bg-gray-100'
+                      }`}
+                      onClick={() => togglePlatform(platform)}
+                    >
+                      {platform}
+                    </button>
+                  ))
+              ) : (
+                category.platforms.map((platform) => (
                   <button
                     key={platform}
                     type="button"
@@ -475,23 +590,19 @@ const CategorySpecificUploader: React.FC<CategorySpecificUploaderProps> = ({
                     {platform}
                   </button>
                 ))
-            ) : (
-              category.platforms.map((platform) => (
-                <button
-                  key={platform}
-                  type="button"
-                  className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${
-                    selectedPlatforms.includes(platform)
-                      ? 'bg-navy-blue text-white border-navy-blue'
-                      : 'bg-white text-navy-blue border-gray-200 hover:bg-gray-100'
-                  }`}
-                  onClick={() => togglePlatform(platform)}
-                >
-                  {platform}
-                </button>
-              ))
-            )}
+              )}
+            </div>
+            
+            {/* Platform Selection Status */}
+            <div className="text-sm text-gray-600">
+              {selectedPlatforms.length > 0 ? (
+                <span className="text-green-600">✅ {selectedPlatforms.length} platform selected</span>
+              ) : (
+                <span className="text-amber-600">⚠️ No platform selected</span>
+              )}
+            </div>
           </div>
+          
           <div>
             <h5 className="font-semibold mb-1 text-navy-blue">Content Examples</h5>
             <ul className="list-disc list-inside text-gray-600 text-sm">

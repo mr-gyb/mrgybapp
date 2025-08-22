@@ -52,7 +52,7 @@ const Commerce: React.FC = () => {
     { color: '#0088FE', label: 'Instagram' },
     { color: '#00C49F', label: 'YouTube Videos' },
     { color: '#FFBB28', label: 'Blog Posts' },
-    { color: '#FF8042', label: 'Twitter' },
+    { color: '#FF8042', label: 'X (Twitter)' },
     { color: '#FF6699', label: 'Audio Content' },
     { color: '#A0522D', label: 'Other' },
   ];

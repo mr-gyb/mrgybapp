@@ -21,7 +21,7 @@ const Login: React.FC = () => {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigate('/dashboard');
+      navigate('/home');
     } catch (err) {
       setError('Invalid email or password. Please try again.');
       console.error('Authentication error:', err);
@@ -41,7 +41,7 @@ const Login: React.FC = () => {
         setError('Facebook authentication failed. Please try again.');
         console.error('Facebook auth error:', result.error);
       } else if (result.user) {
-        navigate('/dashboard');
+        navigate('/home');
       }
     } catch (err) {
       setError('Facebook authentication failed. Please try again.');

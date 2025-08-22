@@ -1,0 +1,40 @@
+# Facebook Integration Environment Variables
+# Copy this file to .env and fill in your actual values
+
+# Facebook App Configuration
+VITE_FACEBOOK_APP_ID=your_facebook_app_id_here
+VITE_FACEBOOK_APP_SECRET=your_facebook_app_secret_here
+
+# Facebook OAuth Redirect URI
+# This should match what you configured in your Facebook App settings
+# For local development, use: http://localhost:3002/facebook-callback
+# For production, use your actual domain: https://yourdomain.com/facebook-callback
+
+# Other existing variables (keep these if you have them)
+VITE_OPENAI_API_KEY=your_openai_api_key_here
+VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id_here
+VITE_SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
+VITE_SPOTIFY_REDIRECT_URI=http://localhost:3002/callback
+
+# Facebook App Setup Instructions:
+# 1. Go to https://developers.facebook.com/
+# 2. Create a new app or use existing one
+# 3. Add Facebook Login product to your app
+# 4. Configure OAuth redirect URIs:
+#    - http://localhost:3002/facebook-callback (for development)
+#    - https://yourdomain.com/facebook-callback (for production)
+# 5. Copy App ID and App Secret to the variables above
+# 6. Ensure your app is in "Live" mode (not development mode)
+# 7. Add required permissions in App Review if needed
+
+# Required Facebook App Permissions:
+# - email
+# - public_profile
+# - pages_manage_posts
+# - pages_read_engagement
+# - pages_show_list
+# - publish_to_groups
+# - user_posts
+
+# Note: Some permissions may require App Review approval from Facebook
+# for production use. Development mode allows testing with limited users.

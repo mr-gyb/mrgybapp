@@ -9,9 +9,9 @@ export const useAuthRedirect = () => {
 
   useEffect(() => {
     if (!isLoading) {
-      // If user is authenticated and trying to access login/signin pages, redirect to dashboard
+      // If user is authenticated and trying to access login/signin pages, redirect to home
       if (isAuthenticated && (location.pathname === '/login' || location.pathname === '/signin')) {
-        navigate('/dashboard', { replace: true });
+        navigate('/home', { replace: true });
       }
       
       // If user is not authenticated and trying to access protected routes, redirect to login

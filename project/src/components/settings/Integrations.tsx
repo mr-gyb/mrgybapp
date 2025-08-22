@@ -42,9 +42,9 @@ const integrations: IntegrationTile[] = [
   },
 
   {
-    name: 'Twitter',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Logo_of_Twitter.svg/100px-Logo_of_Twitter.svg.png',
-    description: 'Connect your Twitter account to manage your tweets and engage with your followers.',
+    name: 'X (Twitter)',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/X_logo_2023.svg/100px-X_logo_2023.svg.png',
+    description: 'Connect your X (formerly Twitter) account to manage your posts and engage with your followers.',
     connectUrl: '#',
   },
   {
