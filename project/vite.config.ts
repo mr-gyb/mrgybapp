@@ -14,7 +14,6 @@ export default defineConfig({
         manualChunks: {
           // Vendor chunks - separate large libraries
           'react-vendor': ['react', 'react-dom'],
-          'firebase-vendor': ['firebase'],
           'ui-vendor': ['recharts', 'react-beautiful-dnd', 'react-dropzone'],
           'media-vendor': ['react-player', 'wavesurfer.js'],
           'utils-vendor': ['axios', 'openai', 'zod', 'uuid'],
@@ -44,10 +43,21 @@ export default defineConfig({
     include: [
       'react',
       'react-dom',
-      'firebase',
       'recharts',
       'axios',
       'openai',
     ],
+    exclude: ['firebase'], // Exclude Firebase from optimization to avoid build issues
+  },
+  // Add resolve configuration for Firebase
+  resolve: {
+    alias: {
+      // Ensure Firebase modules are properly resolved
+      'firebase/app': 'firebase/app',
+      'firebase/auth': 'firebase/auth',
+      'firebase/firestore': 'firebase/firestore',
+      'firebase/storage': 'firebase/storage',
+      'firebase/analytics': 'firebase/analytics',
+    },
   },
 });
