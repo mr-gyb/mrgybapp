@@ -413,6 +413,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
       console.log('Enter key pressed, preventing default and sending message');
       event.preventDefault();
       handleSendMessage1();
+      // reset the text area 
+      setInput('')
     }
   };
 

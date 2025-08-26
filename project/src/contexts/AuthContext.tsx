@@ -3,7 +3,10 @@ import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEma
 import { auth, db, facebookProvider } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile } from '../types/user';
+
 import { storage } from '../utils/storage';
+
+import { getInitials } from '../services/profile.service';
 
 interface AuthContextType {
   user: User | null;
@@ -15,6 +18,7 @@ interface AuthContextType {
   signInWithFacebook: () => Promise<{ user?: User; error?: any }>;
   logout: () => Promise<void>;
   updateUserData: (updates: Partial<UserProfile>) => Promise<void>;
+  checkAuthStatus: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,12 +28,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // check token for auto log out.
+  const checkTokenExpiration = async (currentUser: User) => {
+    try {
+      // Firebase Auth automatically updates the token but verify it
+      const token = await currentUser.getIdToken(true);
+      if (!token) {
+        throw new Error('Invalid token');
+      }
+      return true;
+    } catch (error) {
+      console.error('Token validation failed:', error);
+      await logout();
+      return false;
+    }
+  };
+
+  // Check auth status
+  const checkAuthStatus = async (): Promise<boolean> => {
+    if (!user) return false;
+    
+    try {
+      const isValid = await checkTokenExpiration(user);
+      return isValid;
+    } catch (error) {
+      console.error('Auth status check failed:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       
       if (currentUser) {
         try {
+          // verify the valid token
+          const isTokenValid = await checkTokenExpiration(currentUser);
+          if (!isTokenValid) {
+            return;
+          }
+
           const userDocRef = doc(db, 'profiles', currentUser.uid);
           const userDoc = await getDoc(userDocRef);
           
@@ -50,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               rating: 4.5,
               following: 0,
               followers: 0,
-              profile_image_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80',
+              profile_image_url: getInitials(currentUser.displayName),
               cover_image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
@@ -61,6 +100,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } catch (error) {
           console.error('Error fetching user data:', error);
+          // if error -> Log out
+          await logout();
         }
       } else {
         setUserData(null);
@@ -71,6 +112,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => unsubscribe();
   }, []);
+
+  // Check the status of token every 5 min
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(async () => {
+      const isValid = await checkAuthStatus();
+      if (!isValid) {
+        console.log('Token expired, logging out...');
+        await logout();
+      }
+    }, 5 * 60 * 1000); // 5 min
+
+    return () => clearInterval(interval);
+  }, [user]);
+
+  function getInitials(name?: string | null): string {
+    if (!name) return "U"; // fallback for unknown
+    const words = name.trim().split(" ");
+    if (words.length === 1) return words[0][0].toUpperCase();
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -141,10 +204,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await signOut(auth);
-    setUserData(null);
-    // Clear all user-specific data from localStorage to prevent data leakage
-    storage.clear();
+    try {
+      await signOut(auth);
+      setUserData(null);
+      // Clear all user-specific data from localStorage to prevent data leakage
+      storage.clear();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const updateUserData = async (updates: Partial<UserProfile>) => {
@@ -170,6 +237,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signInWithFacebook,
     logout,
     updateUserData,
+    checkAuthStatus,
   };
 
   if (isLoading) {

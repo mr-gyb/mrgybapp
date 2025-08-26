@@ -11,6 +11,12 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useChat } from '../../contexts/ChatContext';
 
+// For finding a corresponding chatId for user.
+import { query, collection, where, getDocs } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { useAuth } from '../../contexts/AuthContext';
+
+
 interface HomeFilterProps {
   onFilterChange: (filters: { agentType: string[] }) => void;
 }
@@ -23,11 +29,11 @@ const HomeFilter: React.FC<HomeFilterProps> = ({ onFilterChange }) => {
 
   const aiTeamMembers = [
     { id: 'mrgyb', name: 'Mr.GYB AI', icon: Bot },
-    { id: 'ceo', name: 'CEO', icon: Users },
-    { id: 'coo', name: 'COO', icon: Users },
-    { id: 'chro', name: 'CHRO', icon: Users },
-    { id: 'cto', name: 'CTO', icon: Users },
-    { id: 'cmo', name: 'CMO', icon: Users },
+    { id: 'chris', name: 'Chris', icon: Users },
+    { id: 'sherry', name: 'Sherry', icon: Users },
+    { id: 'charlotte', name: 'Charlotte', icon: Users },
+    { id: 'jake', name: 'Jake', icon: Users },
+    { id: 'rachel', name: 'Rachel', icon: Users },
   ];
 
   const handleAgentToggle = (agentName: string) => {
@@ -51,6 +57,13 @@ const HomeFilter: React.FC<HomeFilterProps> = ({ onFilterChange }) => {
       navigate(`/chat/${newChatId}`);
     }
   }
+
+
+
+  const handleNavigateToTeamChat = async() => {
+    navigate(`/gyb-team-chat`);
+  }
+
 
   return (
     <div className="fixed bottom-32 right-4 z-50">
@@ -100,7 +113,7 @@ const HomeFilter: React.FC<HomeFilterProps> = ({ onFilterChange }) => {
               Dream Team
             </button>
             <button
-              onClick={() => handleNavigate('/gyb-team-chat')}
+              onClick={handleNavigateToTeamChat}
               className="w-full flex items-center p-2 text-left hover:bg-gray-50 rounded"
             >
               <MessagesSquare size={20} className="mr-2 text-navy-blue" />

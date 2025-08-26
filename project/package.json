@@ -24,11 +24,11 @@
     "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^18.3.1",
     "react-dropzone": "^14.2.3",
-    "react-markdown": "^9.0.1",
+    "react-markdown": "^9.1.0",
     "react-player": "^2.14.1",
     "react-router-dom": "^6.27.0",
     "recharts": "^2.13.0",
-    "remark-gfm": "^4.0.0",
+    "remark-gfm": "^4.0.1",
     "uuid": "^9.0.1",
     "wavesurfer.js": "^7.7.3",
     "zod": "^3.22.4"
