@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import ContentTypeBarChart from './analytics/ContentTypeBarChart';
-import PlatformPieChart from './analytics/PlatformPieChart';
+import ContentTypeDistribution from './analytics/ContentTypeDistribution';
+import PlatformDistribution from './analytics/PlatformDistribution';
 import { useUserContent } from '../hooks/useUserContent';
 import { ContentItem } from '../types/content';
 import { getFacebookMetrics } from '../api/services/facebook.service';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 // Google Fonts import for Space Mono and Roboto Mono
 const fontLinks = [
@@ -17,6 +18,7 @@ const fontLinks = [
 
 const HomePage: React.FC = () => {
   const { content: userContent } = useUserContent();
+<<<<<<< HEAD
   
   // Ensure userContent is always an array
   const safeUserContent = Array.isArray(userContent) ? userContent : [];
@@ -32,13 +34,19 @@ const HomePage: React.FC = () => {
     LEGEND_KEYS: [] as string[],
     COLORS: [] as string[]
   });
+=======
+>>>>>>> main
   const [facebookMetrics, setFacebookMetrics] = useState<{
     total_impressions: number;
     total_reactions: number;
   } | null>(null);
 
-  // Calculate analytics data exactly like GYBStudio
+  // Use shared analytics hook
+  const analyticsData = useAnalytics(userContent);
+  
+  // Fetch Facebook metrics
   useEffect(() => {
+<<<<<<< HEAD
     const calculateAnalytics = () => {
       // Color map for content type groups (exactly like GYBStudio)
       const CONTENT_TYPE_COLORS: Record<string, string> = {
@@ -222,6 +230,8 @@ const HomePage: React.FC = () => {
     calculateAnalytics();
     
     // Fetch Facebook metrics
+=======
+>>>>>>> main
     const fetchFacebookData = async () => {
       try {
         const metrics = await getFacebookMetrics();
@@ -238,34 +248,7 @@ const HomePage: React.FC = () => {
     };
     
     fetchFacebookData();
-  }, [userContent]);
-
-  // Helper functions
-  const groupContentType = (item: ContentItem): 'Blogs' | 'Audio' | 'Video' | 'Social Media' | 'Other' => {
-    if (item.type === 'written') return 'Blogs';
-    if (item.type === 'audio') return 'Audio';
-    if (item.type === 'video') return 'Video';
-    if (item.type === 'photo') {
-      if (item.platforms && item.platforms.some(p => ['Instagram', 'Pinterest', 'Facebook'].includes(p))) {
-        return 'Social Media';
-      }
-    }
-    if (item.platforms && item.platforms.some(p => ['LinkedIn', 'Newsletter', 'Other'].includes(p))) {
-      return 'Other';
-    }
-    return 'Other';
-  };
-
-  const groupPlatform = (platform: string): 'Blogs' | 'Audio' | 'Video' | 'Social Media' | 'YouTube' | 'Other' => {
-    const platformLower = platform.toLowerCase();
-    
-    if ([ 'instagram', 'pinterest', 'facebook' ].includes(platformLower)) return 'Social Media';
-    if ([ 'linkedin', 'other' ].includes(platformLower)) return 'Other';
-    if (platformLower === 'blog' || platformLower === 'blogger' || platformLower === 'substack' || platformLower === 'medium') return 'Blogs';
-    if (platformLower === 'spotify' || platformLower === 'itunes') return 'Audio';
-    if (platformLower === 'youtube') return 'YouTube';
-    return 'Other';
-  };
+  }, []);
 
   const CustomBarTooltip = ({ active, payload, label }: { active: boolean; payload: any[]; label: string }) => {
     if (active && payload && payload.length) {
@@ -328,10 +311,14 @@ const HomePage: React.FC = () => {
       </text>
     );
   };
+
   return (
-    <>
+    <div className="min-h-screen bg-gray-50">
+      {/* Font Links */}
       {fontLinks}
-      <div
+
+      {/* Hero Section */}
+      <div 
         className="min-h-screen w-full flex items-center justify-center"
         style={{
           background: 'linear-gradient(90deg, #3B4371 0%, #b29958 100%)',
@@ -372,7 +359,9 @@ const HomePage: React.FC = () => {
               The Ultimate AI Hub for Content Creation, Tracking, and Monetization
             </div>
             <a
-              href="/dashboard"
+              href="https://app.gohighlevel.com/v2/preview/x9DVlz6KWMlmQxTtGbbh"
+              target="_blank"
+              rel="noopener noreferrer"
               className="self-center"
               style={{
                 marginTop: '0.5rem',
@@ -395,6 +384,8 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
+
+
       {/* Analytics Section */}
       {safeUserContent.length > 0 && (
         <div className="bg-white py-16">
@@ -412,8 +403,7 @@ const HomePage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-8">
               {/* Content Type Distribution */}
               <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold mb-4 text-gray-900">Content Type Distribution</h3>
-                <ContentTypeBarChart
+                <ContentTypeDistribution
                   barData={analyticsData.barData}
                   userContent={safeUserContent}
                   blogTypes={analyticsData.blogTypes}
@@ -423,16 +413,19 @@ const HomePage: React.FC = () => {
                   CONTENT_TYPE_COLORS={analyticsData.CONTENT_TYPE_COLORS}
                   LEGEND_KEYS={analyticsData.LEGEND_KEYS}
                   CustomBarTooltip={CustomBarTooltip}
+                  title="Content Type Distribution"
+                  className="p-0 bg-transparent shadow-none"
                 />
               </div>
 
               {/* Platform Distribution */}
               <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold mb-4 text-gray-900">Platform Distribution</h3>
-                <PlatformPieChart
+                <PlatformDistribution
                   platformData={analyticsData.platformData}
                   COLORS={analyticsData.COLORS}
                   renderCustomPieLabel={renderCustomPieLabel}
+                  title="Platform Distribution"
+                  className="p-0 bg-transparent shadow-none"
                 />
               </div>
             </div>
@@ -441,16 +434,17 @@ const HomePage: React.FC = () => {
             <div className="text-center">
               <a
                 href="/gyb-studio"
-                className="inline-block bg-gray-900 text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
-                style={{ fontFamily: 'Roboto Mono, monospace' }}
+                className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
-                View Full Analytics →
+                View Full Analytics Dashboard
               </a>
             </div>
           </div>
         </div>
       )}
-    </>
+
+
+    </div>
   );
 };
 

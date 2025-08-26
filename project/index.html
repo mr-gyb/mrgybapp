@@ -5,6 +5,28 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GYB AI</title>
+    
+    <!-- Facebook SDK -->
+    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+    <script>
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId: '', // Will be set from environment variable
+          cookie: true,
+          xfbml: true,
+          version: 'v18.0'
+        });
+        
+        // Auto-detect app ID from environment
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          // Development mode - you can set a default app ID here
+          console.log('Facebook SDK initialized in development mode');
+        } else {
+          // Production mode
+          console.log('Facebook SDK initialized in production mode');
+        }
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>

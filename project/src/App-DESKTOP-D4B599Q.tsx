@@ -72,7 +72,7 @@ const getPageTitle = (pathname: string) => {
       return 'Home';
     case '/homepage':
       return 'Home';
-    case '/dashboard':
+    case '/Commerce':
       return 'Commerce';
     case '/new-chat':
       return 'Culture';

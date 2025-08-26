@@ -1,3 +1,10 @@
+# Redirect root to login page
+[[redirects]]
+  from = "/"
+  to = "/login"
+  status = 302
+
+# SPA routing - all other routes go to index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -6,3 +13,19 @@
 [build]
   command = "npm run build"
   publish = "dist"
+
+[build.environment]
+  # Prevent native dependency build issues
+  NODE_OPTIONS = "--max-old-space-size=4096"
+  # Skip problematic neon extension
+  NETLIFY_USE_YARN = "false"
+  # Use npm with specific flags
+  NPM_FLAGS = "--no-audit --no-fund"
+
+# Custom domain configuration
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"

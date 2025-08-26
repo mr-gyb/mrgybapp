@@ -1,23 +1,36 @@
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, RefreshCw, ExternalLink, Instagram, Twitter, Youtube } from 'lucide-react';
+import { TrendingUp, RefreshCw, ExternalLink, Instagram, Twitter, Youtube, Sparkles } from 'lucide-react';
 import { useSocialMediaContent } from '../../hooks/useSocialMediaContent';
 import { SocialMediaPost } from '../../api/services/social-media.service';
 import { useUserContent } from '../../hooks/useUserContent';
 import { getCreationInspirationsOpenAI } from '../../services/content/analysis.service';
+import { useCreationInspirations, InspirationSuggestion } from '../../hooks/useCreationInspirations';
+import HighPerformingPosts from './HighPerformingPosts';
 
 interface CreationInspirationsProps {
   limit?: number;
   showRefreshButton?: boolean;
-  onSuggestionsGenerated?: (suggestions: { title: string; explanation: string; url: string; image: string }[]) => void;
+  onSuggestionsGenerated?: (suggestions: { title: string; explanation: string; url: string; image: string }[] | InspirationSuggestion[]) => void;
+  useNewSystem?: boolean; // Toggle between old and new system
 }
 
 const CreationInspirations: React.FC<CreationInspirationsProps> = ({ 
   limit = 3, 
   showRefreshButton = true,
-  onSuggestionsGenerated
+  onSuggestionsGenerated,
+  useNewSystem = true // Default to new system
 }) => {
   const { posts, isLoading: isPostsLoading, error: postsError, refreshPosts } = useSocialMediaContent(limit * 2); // fetch more for filtering
   const { content: userContent } = useUserContent();
+
+  // New Creation Inspirations system
+  const { 
+    suggestions: newSuggestions, 
+    isLoading: isNewLoading, 
+    error: newError, 
+    contentHubData, 
+    refreshSuggestions: refreshNewSuggestions 
+  } = useCreationInspirations();
 
   // --- OpenAI suggestions integration ---
   const [aiSuggestions, setAiSuggestions] = useState<{ title: string; explanation: string; url: string; image: string }[] | null>(null);
@@ -100,16 +113,28 @@ const CreationInspirations: React.FC<CreationInspirationsProps> = ({
 
   // Refresh handler for button
   const handleRefresh = () => {
-    setAiSuggestions(null);
-    setRefreshKey(k => k + 1);
-    fetchSuggestions();
-    refreshPosts(); // Also refresh trending posts
+    if (useNewSystem) {
+      refreshNewSuggestions();
+    } else {
+      setAiSuggestions(null);
+      setRefreshKey(k => k + 1);
+      fetchSuggestions();
+      refreshPosts();
+    }
   };
 
+  // Notify parent component when new suggestions are generated
   useEffect(() => {
-    fetchSuggestions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userContent, refreshKey]);
+    if (useNewSystem && newSuggestions.length > 0 && onSuggestionsGenerated) {
+      onSuggestionsGenerated(newSuggestions);
+    }
+  }, [newSuggestions, onSuggestionsGenerated, useNewSystem]);
+
+  useEffect(() => {
+    if (!useNewSystem) {
+      fetchSuggestions();
+    }
+  }, [userContent, refreshKey, useNewSystem]);
 
   // Grouping logic for content types
   const groupContentType = (item: any) => {
@@ -121,7 +146,7 @@ const CreationInspirations: React.FC<CreationInspirationsProps> = ({
         return 'Social Media';
       }
     }
-    if (item.platforms && item.platforms.some((p: any) => ['LinkedIn', 'Newsletter', 'Other'].includes(p))) {
+            if (item.platforms && item.platforms.some((p: any) => ['Newsletter', 'Other'].includes(p))) {
       return 'Other';
     }
     return 'Other';
@@ -138,7 +163,7 @@ const CreationInspirations: React.FC<CreationInspirationsProps> = ({
   // Map social media post platform/type to our groups
   const mapPostToGroup = (post: any) => {
     if (post.platform === 'instagram' || post.platform === 'facebook' || post.platform === 'pinterest') return 'Social Media';
-    if (post.platform === 'twitter' || post.platform === 'linkedin' || post.platform === 'newsletter') return 'Other';
+            if (post.platform === 'twitter' || post.platform === 'newsletter') return 'Other';
     if (post.platform === 'spotify' || post.platform === 'soundcloud') return 'Audio';
     if (post.platform === 'blog' || post.platform === 'medium') return 'Blogs';
     if (post.platform === 'youtube') return 'Video';
@@ -203,6 +228,253 @@ const CreationInspirations: React.FC<CreationInspirationsProps> = ({
     if (diffInDays === 1) return '1 day ago';
     return `${diffInDays} days ago`;
   };
+
+  // NEW SYSTEM: Show new Creation Inspirations
+  if (useNewSystem) {
+    if (isNewLoading) {
+      return (
+        <div className="bg-white p-6 rounded-lg shadow mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <Sparkles className="text-blue-600" size={24} />
+              <h2 className="text-2xl font-bold text-gray-900">Creation Inspirations</h2>
+            </div>
+            {showRefreshButton && (
+              <button
+                disabled
+                className="text-gray-400 cursor-not-allowed"
+                title="Loading..."
+              >
+                <RefreshCw size={20} className="animate-spin" />
+              </button>
+            )}
+          </div>
+          
+          <div className="space-y-6">
+            {[...Array(limit)].map((_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-6">
+                  <div className="w-full md:w-48 h-32 md:h-32 bg-gray-200 rounded-xl"></div>
+                  <div className="flex-1 space-y-3">
+                    <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    <div className="flex space-x-2">
+                      <div className="h-6 bg-gray-200 rounded w-20"></div>
+                      <div className="h-6 bg-gray-200 rounded w-24"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (newError) {
+      return (
+        <div className="bg-white p-6 rounded-lg shadow mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <Sparkles className="text-blue-600" size={24} />
+              <h2 className="text-2xl font-bold text-gray-900">Creation Inspirations</h2>
+            </div>
+            {showRefreshButton && (
+              <button
+                onClick={refreshNewSuggestions}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+                title="Refresh inspirations"
+              >
+                <RefreshCw size={20} />
+              </button>
+            )}
+          </div>
+          
+          <div className="text-center py-8">
+            <div className="text-red-500 mb-4">
+              <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to load inspirations</h3>
+            <p className="text-gray-500 mb-4">{newError}</p>
+            <button
+              onClick={refreshNewSuggestions}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Show new suggestions
+    if (newSuggestions && newSuggestions.length > 0) {
+      return (
+        <div className="bg-white p-6 rounded-lg shadow mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <Sparkles className="text-blue-600" size={24} />
+              <h2 className="text-2xl font-bold text-gray-900">Creation Inspirations</h2>
+              {contentHubData && (
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <TrendingUp size={16} />
+                  <span>Based on your {contentHubData.userActivity.dominantType} content</span>
+                </div>
+              )}
+            </div>
+            {showRefreshButton && (
+              <button
+                onClick={refreshNewSuggestions}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+                title="Refresh inspirations"
+              >
+                <RefreshCw size={20} />
+              </button>
+            )}
+          </div>
+
+          {/* Content Hub Data Summary */}
+          {contentHubData && (
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <div className="text-blue-600 font-medium">Content Types</div>
+                  <div className="text-gray-700">
+                    {Object.entries(contentHubData.contentTypes)
+                      .sort(([,a], [,b]) => b - a)
+                      .slice(0, 3)
+                      .map(([type, count]) => `${type}: ${count}`)
+                      .join(', ')}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-blue-600 font-medium">Top Platforms</div>
+                  <div className="text-gray-700">
+                    {Object.entries(contentHubData.platformDistribution)
+                      .sort(([,a], [,b]) => b - a)
+                      .slice(0, 3)
+                      .map(([platform, count]) => `${platform}: ${count}`)
+                      .join(', ')}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-blue-600 font-medium">Recent Activity</div>
+                  <div className="text-gray-700">{contentHubData.userActivity.recentUploads} uploads (7 days)</div>
+                </div>
+                <div>
+                  <div className="text-blue-600 font-medium">Engagement</div>
+                  <div className={`text-gray-700 capitalize ${
+                    contentHubData.userActivity.engagementTrend === 'increasing' ? 'text-green-600' :
+                    contentHubData.userActivity.engagementTrend === 'decreasing' ? 'text-red-600' : 'text-gray-600'
+                  }`}>
+                    {contentHubData.userActivity.engagementTrend}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* High-Performing Posts Section */}
+          <div className="mb-6">
+            <HighPerformingPosts 
+              showRefreshButton={true}
+              onRefresh={refreshNewSuggestions}
+            />
+          </div>
+
+          {/* New Suggestions Grid */}
+          <div className="space-y-6">
+            {newSuggestions.slice(0, limit).map((suggestion, index) => (
+              <div 
+                key={suggestion.id}
+                className="group cursor-pointer transition-all duration-200 rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 p-6 hover:shadow-lg"
+                onClick={() => window.open(suggestion.url, '_blank')}
+              >
+                <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-6">
+                  {/* Thumbnail */}
+                  <div className="relative flex-shrink-0 w-full md:w-48 h-32 md:h-32 rounded-xl overflow-hidden bg-blue-200">
+                    <img 
+                      src={suggestion.thumbnail} 
+                      alt={suggestion.title}
+                      className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-200"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=400&h=400&fit=crop';
+                      }}
+                    />
+                    
+                    {/* Platform badge */}
+                    <div className="absolute top-3 left-3 bg-white rounded-full p-2 shadow-md">
+                      <span className="text-sm font-medium text-gray-700">{suggestion.platform}</span>
+                    </div>
+
+                    {/* Fallback indicator */}
+                    {suggestion.isFallback && (
+                      <div className="absolute top-3 right-3 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
+                        Fallback
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                        {suggestion.title}
+                      </h3>
+                      
+                      <p className="text-gray-700 mb-4 line-clamp-3">
+                        {suggestion.description}
+                      </p>
+
+                      {/* Relevance explanation */}
+                      <div className="mb-4 p-3 bg-blue-100 rounded-lg">
+                        <div className="text-sm text-blue-800">
+                          <span className="font-medium">Why this is relevant:</span> {suggestion.relevance}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3 text-sm text-gray-600">
+                        <span className="font-medium">{suggestion.creator}</span>
+                        <span>•</span>
+                        <span className="capitalize">{suggestion.platform}</span>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500">View</span>
+                        <ExternalLink size={16} className="text-gray-400 group-hover:text-blue-600 transition-colors" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div className="mt-6 text-center">
+            <p className="text-xs text-gray-500">
+              AI-powered suggestions based on your content analysis • Updates automatically
+            </p>
+            {contentHubData && (
+              <p className="text-xs text-gray-400 mt-1">
+                Analyzed {contentHubData.userActivity.totalContent} content pieces • 
+                {Object.keys(contentHubData.platformDistribution).length} platforms • 
+                {Object.keys(contentHubData.contentTypes).length} content types
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+  }
 
   // If loading AI suggestions
   if (isLoading) {
@@ -317,6 +589,14 @@ const CreationInspirations: React.FC<CreationInspirationsProps> = ({
           <p className="text-xs text-gray-500">
             Personalized by AI based on your content strengths
           </p>
+        </div>
+
+        {/* High-Performing Posts Section */}
+        <div className="mt-6">
+          <HighPerformingPosts 
+            showRefreshButton={true}
+            onRefresh={handleRefresh}
+          />
         </div>
       </div>
     );

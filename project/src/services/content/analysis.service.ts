@@ -316,6 +316,123 @@ Each suggestion should be tailored to their actual content patterns and preferen
  * @returns Promise<string> Suggestions as raw text (for parsing)
  */
 export const getCreationInspirationsOpenAI = async (userContent: ContentItem[], withLinks?: boolean): Promise<string> => {
-  // Use the enhanced analysis function
-  return await analyzeUserContentAndSuggest(userContent);
+  try {
+    if (!userContent || userContent.length === 0) {
+      return 'No user content available for analysis.';
+    }
+
+    // Analyze user content patterns
+    const contentAnalysis = analyzeContentDistribution(userContent);
+    const contentThemes = analyzeContentThemes(userContent);
+    
+    // Create enhanced analysis prompt
+    const prompt = createEnhancedAnalysisPrompt(contentAnalysis, contentThemes, userContent);
+    
+    console.log('Sending enhanced analysis prompt to OpenAI:', prompt);
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert content strategist and social media consultant. 
+          Analyze the user's content patterns and provide 3 diverse, actionable content suggestions.
+          Each suggestion should come from a different platform and be tailored to their specific content strategy.
+          Focus on practical, implementable ideas that leverage their strengths and address growth opportunities.`
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 1500,
+      temperature: 0.7,
+      timeout: 30000
+    });
+
+    const suggestions = response.choices[0]?.message?.content || 'No suggestions generated.';
+    console.log('OpenAI response received:', suggestions);
+    
+    return suggestions;
+  } catch (error) {
+    console.error('Error in getCreationInspirationsOpenAI:', error);
+    
+    if (error instanceof Error && error.message.includes('timeout')) {
+      return 'timeout';
+    }
+    
+    throw new Error(`Failed to generate content suggestions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
+/**
+ * Create enhanced analysis prompt for diverse content suggestions
+ */
+const createEnhancedAnalysisPrompt = (contentAnalysis: any, contentThemes: any, userContent: ContentItem[]) => {
+  const recentContent = userContent.slice(-5).map(item => 
+    `- ${item.title || 'Untitled'}: ${item.description || 'No description'} (Type: ${item.type}, Platforms: ${item.platforms?.join(', ') || 'None'})`
+  ).join('\n');
+
+  // Analyze platform diversity
+  const platformCounts = contentAnalysis.platformCounts || {};
+  const usedPlatforms = Object.keys(platformCounts);
+  const allPlatforms = ['youtube', 'instagram', 'spotify', 'pinterest', 'facebook', 'tiktok', 'twitter'];
+  const missingPlatforms = allPlatforms.filter(platform => 
+    !usedPlatforms.some(used => used.toLowerCase().includes(platform))
+  );
+
+  // Analyze content performance patterns
+  const engagementData = userContent
+    .filter(item => item.engagement)
+    .map(item => item.engagement!);
+  
+  const avgEngagement = engagementData.length > 0 
+    ? engagementData.reduce((sum, val) => sum + val, 0) / engagementData.length 
+    : 0;
+
+  return `CONTENT CREATOR ANALYSIS:
+
+Content Distribution:
+${Object.entries(contentAnalysis.typeCounts || {}).map(([type, count]) => `- ${type}: ${count} items`).join('\n')}
+
+Platform Usage:
+${Object.entries(platformCounts).map(([platform, count]) => `- ${platform}: ${count} items`).join('\n')}
+
+Content Themes:
+${contentThemes.themes.join(', ')}
+
+Top Keywords:
+${contentThemes.keywords.join(', ')}
+
+Performance Insights:
+- Average Engagement: ${avgEngagement.toFixed(0)}
+- Content Types: ${Object.keys(contentAnalysis.typeCounts || {}).join(', ')}
+- Platform Strengths: ${usedPlatforms.join(', ')}
+- Growth Opportunities: ${missingPlatforms.slice(0, 3).join(', ')}
+
+Recent Content:
+${recentContent}
+
+Based on this analysis, generate 3 diverse content suggestions that:
+
+1. Come from DIFFERENT platforms (ensure platform diversity)
+2. Build upon their existing content strengths
+3. Address identified content gaps and opportunities
+4. Match their current engagement level and audience
+5. Provide specific, actionable content ideas
+
+Format each suggestion exactly as follows:
+
+**Title**: [Creative, engaging title]
+**Platform**: [Specific platform name - YouTube, Instagram, Spotify, Pinterest, Facebook, TikTok]
+**Content Type**: [Video/Image/Audio/Text]
+**Explanation**: [Why this suggestion is relevant and how it fits their strategy]
+**Estimated Engagement**: [Number based on their current performance]
+**Difficulty**: [Easy/Medium/Hard]
+**Time to Create**: [Estimated time - e.g., "30 minutes", "2-3 hours", "1 week"]
+**Tags**: [3-5 relevant hashtags or keywords, comma-separated]
+**Image**: [Relevant stock image URL from Unsplash]
+**URL**: [Example or inspiration URL]
+
+Ensure each suggestion is practical, relevant, and tailored to their specific content patterns.`;
 };

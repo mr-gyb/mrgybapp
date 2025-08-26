@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Play, Image as ImageIcon, Headphones, FileText, Clock, Check, X, Upload, Plus, Trash, Video, Music, File, Type, Eye } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Play, Image as ImageIcon, Headphones, FileText, Clock, Check, X, Upload, Plus, Trash, Video, Music, File, Type, Eye, AlertTriangle, Link as LinkIcon } from 'lucide-react';
 import { ContentItem, ContentType, DEFAULT_CONTENT_ITEMS } from '../../types/content';
+import { useLinkImageFetcher } from '../../hooks/useLinkImageFetcher';
 
 interface ContentListProps {
   items: ContentItem[];
@@ -8,6 +9,7 @@ interface ContentListProps {
   showDefaults?: boolean;
   onUploadClick?: () => void;
   onDelete?: (id: string) => void;
+  onDeleteAll?: () => void;
   onView?: (item: ContentItem) => void;
 }
 
@@ -21,7 +23,7 @@ const CONTENT_TYPE_OPTIONS = [
 ];
 
 const SOCIAL_PLATFORMS = ['instagram', 'facebook', 'pinterest', 'tiktok', 'twitter'];
-const NETWORKING_PLATFORMS = ['linkedin', 'other'];
+const NETWORKING_PLATFORMS = ['other'];
 
 const PLATFORM_ICONS: Record<string, React.ReactNode> = {
   facebook: <img src="/facebook-icon.svg" alt="Facebook" className="inline w-4 h-4 mr-1 align-text-bottom" />,
@@ -37,9 +39,26 @@ const ContentList: React.FC<ContentListProps> = ({
   showDefaults = true,
   onUploadClick,
   onDelete,
+  onDeleteAll,
   onView
 }) => {
   const [selectedType, setSelectedType] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  
+  // Link image fetching hook
+  const {
+    linkImages,
+    isLoading: imageLoading,
+    errors: imageErrors,
+    fetchImagesForLinks,
+    hasImage,
+    getImage,
+    isImageLoading
+  } = useLinkImageFetcher();
 
   const filteredItems = items.filter(item => {
     if (selectedType === 'all') return true;
@@ -146,6 +165,63 @@ const ContentList: React.FC<ContentListProps> = ({
     return !item.id.startsWith('default-');
   };
 
+  const handleDeleteClick = (e: React.MouseEvent, contentId: string) => {
+    e.stopPropagation();
+    setDeleteConfirmId(contentId);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmId || !onDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await onDelete(deleteConfirmId);
+      setDeleteConfirmId(null);
+    } catch (error) {
+      console.error('Error deleting content:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmId(null);
+  };
+
+  const handleDeleteAllClick = () => {
+    setShowDeleteAllConfirm(true);
+  };
+
+  const handleConfirmDeleteAll = async () => {
+    if (!onDeleteAll) return;
+    
+    setIsDeletingAll(true);
+    try {
+      await onDeleteAll();
+      setShowDeleteAllConfirm(false);
+    } catch (error) {
+      console.error('Error deleting all content:', error);
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
+  const handleCancelDeleteAll = () => {
+    setShowDeleteAllConfirm(false);
+  };
+
+  // Automatically fetch images for content with URLs
+  useEffect(() => {
+    const urlsToFetch = filteredItems
+      .filter(item => item.originalUrl && !hasImage(item.originalUrl) && !isImageLoading(item.originalUrl))
+      .map(item => item.originalUrl!)
+      .filter(Boolean);
+    
+    if (urlsToFetch.length > 0) {
+      fetchImagesForLinks(urlsToFetch);
+    }
+  }, [filteredItems, hasImage, isImageLoading, fetchImagesForLinks]);
+
   const displayItems = items.length > 0 ? items : (showDefaults ? DEFAULT_CONTENT_ITEMS : []);
 
   if (displayItems.length === 0) {
@@ -172,18 +248,33 @@ const ContentList: React.FC<ContentListProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="mb-4 flex items-center">
-        <label htmlFor="content-type-filter" className="mr-2 font-medium text-navy-blue">Filter by type:</label>
-        <select
-          id="content-type-filter"
-          className="border border-gray-300 rounded px-3 py-1"
-          value={selectedType}
-          onChange={e => setSelectedType(e.target.value)}
-        >
-          {CONTENT_TYPE_OPTIONS.map(option => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center">
+          <label htmlFor="content-type-filter" className="mr-2 font-medium text-navy-blue">Filter by type:</label>
+          <select
+            id="content-type-filter"
+            className="border border-gray-300 rounded px-3 py-1"
+            value={selectedType}
+            onChange={e => setSelectedType(e.target.value)}
+          >
+            {CONTENT_TYPE_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+        
+        {/* Delete All Button */}
+        {onDeleteAll && items.filter(item => !item.id.startsWith('default-')).length > 0 && (
+          <button
+            onClick={handleDeleteAllClick}
+            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors flex items-center text-sm"
+            title="Delete all uploaded content"
+          >
+            <Trash size={16} className="mr-2" />
+            Delete All Content
+          </button>
+        )}
+        
       </div>
       {items.length === 0 && showDefaults && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -244,6 +335,42 @@ const ContentList: React.FC<ContentListProps> = ({
                   alt={item.title}
                   className="w-full h-full object-cover"
                 />
+              ) : item.originalUrl && hasImage(item.originalUrl) ? (
+                <>
+                  {/* Display fetched link image */}
+                  <img
+                    src={getImage(item.originalUrl)?.imageUrl}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback to type icon if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallbackDiv = target.nextElementSibling as HTMLDivElement;
+                      if (fallbackDiv) fallbackDiv.style.display = 'flex';
+                    }}
+                  />
+                  {/* Fallback div (hidden by default) */}
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center" style={{ display: 'none' }}>
+                    {getTypeIcon(item.type)}
+                  </div>
+                </>
+              ) : item.originalUrl && isImageLoading(item.originalUrl) ? (
+                // Show loading state for link images
+                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy-blue mx-auto mb-2"></div>
+                    <p className="text-xs text-gray-500">Loading image...</p>
+                  </div>
+                </div>
+              ) : item.originalUrl ? (
+                // Show link icon for content with URLs but no images yet
+                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                  <div className="text-center">
+                    <LinkIcon size={32} className="text-gray-400 mx-auto mb-2" />
+                    <p className="text-xs text-gray-500">Link content</p>
+                  </div>
+                </div>
               ) : (
                 <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                   {getTypeIcon(item.type)}
@@ -258,7 +385,7 @@ const ContentList: React.FC<ContentListProps> = ({
                     {item.platforms.map(platform => {
                       const key = platform.toLowerCase();
                       // For blog content, show the selected blog platform instead of "Blog"
-                      const displayPlatform = item.type === 'written' && item.blogPlatform ? item.blogPlatform : platform;
+                      const displayPlatform = platform;
                       const displayKey = displayPlatform.toLowerCase();
                       return (
                         <span key={platform} className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-2xs font-medium border border-gray-300 flex items-center">
@@ -291,6 +418,14 @@ const ContentList: React.FC<ContentListProps> = ({
                   AI Suggestion
                 </div>
               )}
+              
+              {/* Link Image Indicator */}
+              {item.originalUrl && hasImage(item.originalUrl) && (
+                <div className="absolute bottom-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                  <LinkIcon size={12} />
+                  Link
+                </div>
+              )}
             </div>
             <div className="p-4">
               <div className="flex items-center justify-between mb-2">
@@ -320,7 +455,7 @@ const ContentList: React.FC<ContentListProps> = ({
                     {onDelete && isUserContent(item) && (
                       <button
                         className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-50 transition-colors"
-                        onClick={e => { e.stopPropagation(); onDelete(item.id); }}
+                        onClick={e => handleDeleteClick(e, item.id)}
                         title="Delete"
                       >
                         <Trash size={18} />
@@ -333,6 +468,103 @@ const ContentList: React.FC<ContentListProps> = ({
           </div>
         ))}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="text-red-500 mr-3" size={24} />
+              <h3 className="text-lg font-semibold text-gray-900">Delete Content</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this content? This action cannot be undone and will permanently remove the content from your hub.
+            </p>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 flex items-center"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Permanently'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Confirmation Modal */}
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="text-red-500 mr-3" size={24} />
+              <h3 className="text-lg font-semibold text-gray-900">Delete All Content</h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-600 mb-3">
+                <strong>Warning:</strong> This action will permanently delete ALL your uploaded content from the content hub.
+              </p>
+              <p className="text-gray-600 mb-3">
+                This includes:
+              </p>
+              <ul className="text-gray-600 list-disc list-inside space-y-1">
+                <li>All uploaded videos, images, and documents</li>
+                <li>All performance data and analytics</li>
+                <li>All generated assets and analysis</li>
+                <li>All platform-specific data</li>
+              </ul>
+              <p className="text-red-600 font-medium mt-3">
+                This action cannot be undone and will permanently remove all your content!
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCancelDeleteAll}
+                disabled={isDeletingAll}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteAll}
+                disabled={isDeletingAll}
+                className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 flex items-center"
+              >
+                {isDeletingAll ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting All...
+                  </>
+                ) : (
+                  <>
+                    <Trash size={16} className="mr-2" />
+                    Delete All Content
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
