@@ -133,17 +133,38 @@ const Chat: React.FC = () => {
     console.log("handlesendmessage");
     console.log("image type is ", typeof content);
     if (isProcessing || !chatId) return;
+    console.log("Setting isProcessing to true");
     setIsProcessing(true);
+
+    // Add a timeout to ensure isProcessing is reset even if operations hang
+    const timeoutId = setTimeout(() => {
+      console.log("Timeout reached, forcing isProcessing to false");
+      setIsProcessing(false);
+    }, 10000); // 10 second timeout
 
     try {
       // Add user message
+<<<<<<< HEAD
       if (typeof content === "object") {
         if (Array.isArray(content)) {
           await addImage(chatId, content, "user", user?.uid);
+=======
+      if(typeof content === 'object'){
+        if(Array.isArray(content)){
+          console.log("Adding image message");
+          await addImage(chatId, content, 'user', user?.uid);
+          console.log("Image message added successfully");
+>>>>>>> main
         }
       } else {
         console.log("selectedAgent is ", selectedAgent);
+<<<<<<< HEAD
         await addMessage(chatId, content, "user", user?.uid, selectedAgent);
+=======
+        console.log("Adding text message:", content);
+        await addMessage(chatId, content, 'user', user?.uid, selectedAgent);
+        console.log("Text message added successfully");
+>>>>>>> main
       }
       /* Update local state immediately
       setCurrentChat((prev) => ({
@@ -198,6 +219,8 @@ const Chat: React.FC = () => {
       console.error("Error sending message:", error);
       // Optionally show error to user
     } finally {
+      clearTimeout(timeoutId);
+      console.log("Finally block executed, setting isProcessing to false");
       setIsProcessing(false);
     }
   };
@@ -459,10 +482,24 @@ const Chat: React.FC = () => {
               {/* For AI typing */}
               {isProcessingAI && (
                 <div className="flex justify-start">
+<<<<<<< HEAD
                   <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
                     <p className="text-sm sm:text-base italic">
                       Thinking for a better answer...
                     </p>
+=======
+                  <div className="flex items-start space-x-2">
+                    <img
+                      src={getAIProfileImage(selectedAgent || 'Mr.GYB AI')}
+                      alt="Profile"
+                      className="w-8 h-8 rounded-full flex-shrink-0"
+                    />
+                    <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
+                      <p className="text-sm sm:text-base italic">
+                        {selectedAgent || 'Mr.GYB AI'} is looking to assist you with a better solution…
+                      </p>
+                    </div>
+>>>>>>> main
                   </div>
                 </div>
               )}
@@ -490,6 +527,16 @@ const Chat: React.FC = () => {
         isProcessing={isProcessing}
         videoAvatar={videoAvatar}
         setVideoAvatar={setVideoAvatar}
+        onMessageSent={() => {
+          console.log("Message sent callback triggered");
+          // Force isProcessing to false to ensure input can be cleared
+          setIsProcessing(false);
+        }}
+        onInputClear={() => {
+          console.log("Input clear callback triggered");
+          // Force isProcessing to false to ensure input can be cleared
+          setIsProcessing(false);
+        }}
       />
 
       <HomeFilter onFilterChange={() => {}} />

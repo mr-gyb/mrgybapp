@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+
 interface EarningsOverview {
   today: number;
   thisWeek: number;
@@ -55,6 +56,8 @@ const Earnings: React.FC = () => {
             </div>
           </div>
         </div>
+
+
 
         <h2 className="text-2xl font-bold mb-4">Recent Projects</h2>
         <div className="space-y-4">

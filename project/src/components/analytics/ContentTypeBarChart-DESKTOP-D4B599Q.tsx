@@ -111,12 +111,7 @@ const ContentTypeBarChart: React.FC<ContentTypeBarChartProps> = ({
                 label={(props) => {
                   const { x, y, width } = props;
                   let views = 0;
-                  if (type === 'Blogger') {
-                    views = userContent.filter((item: any) => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'blogger').reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
-                  } else if (type === 'Substack') {
-                    views = userContent.filter((item: any) => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'substack').reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
-                  } else if (type === 'Medium') {
-                    views = userContent.filter((item: any) => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'medium').reduce((sum: number, item: any) => sum + (item.views ?? 1), 0);
+                  
                   }
                   return (
                     <text x={x + width / 2} y={y - 16} textAnchor="middle" fill="#222" fontSize={11} fontWeight={500}>

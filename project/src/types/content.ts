@@ -18,7 +18,7 @@ export interface ContentItem {
     content: string;
   }>;
   platforms?: string[];
-  blogPlatform?: string | null; // Optional blog platform for blog content
+
   isAISuggestion?: boolean; // Flag for AI-generated suggestions
   suggestionData?: any; // Additional data for AI suggestions
 }

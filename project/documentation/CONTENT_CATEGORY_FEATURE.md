@@ -41,7 +41,7 @@ A specialized upload component that:
 - **Examples**: Podcast episodes, Voice notes, Music, Interviews
 
 ### 4. Document Content
-- **Platforms**: Blog, Medium, LinkedIn, Newsletter, Social Media
+- **Platforms**: Blog, LinkedIn, Newsletter, Social Media
 - **Formats**: PDF, DOC, DOCX, TXT, RTF
 - **Examples**: Blog posts, Articles, Reports, Whitepapers, Scripts
 

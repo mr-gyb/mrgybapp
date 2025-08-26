@@ -197,7 +197,7 @@ curl -X GET \
 To access page insights and post metrics, your Facebook App needs these permissions:
 
 1. **pages_read_engagement** - Read page insights and engagement data
-2. **pages_show_list** - Access to page information
+2. **pages_manage_posts** - Post to pages and manage page content
 3. **pages_read_user_content** - Read user-generated content on the page
 
 ## Rate Limits

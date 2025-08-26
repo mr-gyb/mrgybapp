@@ -5,7 +5,8 @@ const TrialSection: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleGetStartedClick = () => {
-    setIsModalOpen(true);
+    // Redirect to GoHighLevel trial page
+    window.open('https://app.gohighlevel.com/v2/preview/x9DVlz6KWMlmQxTtGbbh', '_blank');
   };
 
   const handleCloseModal = () => {
