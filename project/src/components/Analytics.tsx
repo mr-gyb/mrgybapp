@@ -21,20 +21,24 @@ const Analytics: React.FC = () => {
   const [youtubeDetails, setYoutubeDetails] = useState<Array<{ id: string; title: string; viewCount: number }>>([]);
   const [loading, setLoading] = useState(false);
   const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
+  
+  // Ensure userContent is always an array
+  const safeUserContent = Array.isArray(userContent) ? userContent : [];
+  
   useEffect(() => {
     console.log('Loaded YOUTUBE_API_KEY:', YOUTUBE_API_KEY);
   }, []);
 
   // Extract YouTube video IDs and titles from user content
   const getYouTubeVideoInfo = useCallback(() => {
-    return userContent
+    return safeUserContent
       .filter((item: any) => item.type === 'video' && item.platforms?.some((p: string) => p.toLowerCase() === 'youtube') && item.originalUrl)
       .map((item: any) => ({
         id: extractYouTubeVideoId(item.originalUrl!),
         title: item.title || item.originalUrl || 'Untitled',
       }))
       .filter((info: { id: string | null; title: string }) => !!info.id);
-  }, [userContent]);
+  }, [safeUserContent]);
 
   // Fetch YouTube view counts and sum them, store details
   const fetchAndSetYouTubeViews = useCallback(async () => {
@@ -101,8 +105,8 @@ const Analytics: React.FC = () => {
   const data = [
     {
       name: 'YouTube',
-      count: userContent.filter(item => item.type === 'video' && item.platforms?.some(p => p.toLowerCase() === 'youtube')).length,
-      views: userContent
+      count: safeUserContent.filter(item => item.type === 'video' && item.platforms?.some(p => p.toLowerCase() === 'youtube')).length,
+      views: safeUserContent
         .filter(item => item.type === 'video' && item.platforms?.some(p => p.toLowerCase() === 'youtube'))
         .reduce((sum, item) => sum + (item.views ?? 1), 0),
     },

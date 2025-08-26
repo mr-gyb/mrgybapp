@@ -17,7 +17,11 @@ const fontLinks = [
 
 const HomePage: React.FC = () => {
   const { content: userContent } = useUserContent();
-          const [analyticsData, setAnalyticsData] = useState({
+  
+  // Ensure userContent is always an array
+  const safeUserContent = Array.isArray(userContent) ? userContent : [];
+  
+  const [analyticsData, setAnalyticsData] = useState({
     barData: [] as any[],
     platformData: [] as Array<{name: string; value: number; percentage: number; color: string}>,
     blogTypes: [] as string[],
@@ -87,60 +91,60 @@ const HomePage: React.FC = () => {
       const groupedContentData: CategoryData[] = [
         {
           name: 'Blogs',
-          Blogger: userContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'blogger').length,
-          Substack: userContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'substack').length,
-          Medium: userContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'medium').length,
-          views: userContent
+          Blogger: safeUserContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'blogger').length,
+          Substack: safeUserContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'substack').length,
+          Medium: safeUserContent.filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'medium').length,
+          views: safeUserContent
             .filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'blogger')
             .reduce((sum, item) => sum + (item.views ?? 1), 0),
-          SubstackViews: userContent
+          SubstackViews: safeUserContent
             .filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'substack')
             .reduce((sum, item) => sum + (item.views ?? 1), 0),
-          MediumViews: userContent
+          MediumViews: safeUserContent
             .filter(item => item.type === 'written' && item.blogPlatform && item.blogPlatform.toLowerCase() === 'medium')
             .reduce((sum, item) => sum + (item.views ?? 1), 0),
         },
         {
           name: 'Audio',
-          Spotify: userContent.filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'spotify')).length,
-          iTunes: userContent.filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'itunes')).length,
-          views: userContent
+          Spotify: safeUserContent.filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'spotify')).length,
+          iTunes: safeUserContent.filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'itunes')).length,
+          views: safeUserContent
             .filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'spotify'))
             .reduce((sum, item) => sum + (item.views ?? 1), 0),
-          iTunesViews: userContent
+          iTunesViews: safeUserContent
             .filter(item => item.type === 'audio' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'itunes'))
             .reduce((sum, item) => sum + (item.views ?? 1), 0),
         },
         {
           name: 'YouTube',
-          count: userContent.filter(item => item.type === 'video' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'youtube')).length,
-          views: userContent
+          count: safeUserContent.filter(item => item.type === 'video' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'youtube')).length,
+          views: safeUserContent
             .filter(item => item.type === 'video' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'youtube'))
             .reduce((sum, item) => sum + (item.views ?? 1), 0),
         },
         {
           name: 'Social Media',
-          Instagram: userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'instagram')).length,
-          Pinterest: userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'pinterest')).length,
-          Facebook: userContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'facebook')).length,
-          views: userContent
+          Instagram: safeUserContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'instagram')).length,
+          Pinterest: safeUserContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'pinterest')).length,
+          Facebook: safeUserContent.filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'facebook')).length,
+          views: safeUserContent
             .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'instagram'))
             .reduce((sum, item) => sum + (item.views ?? 1), 0),
-          PinterestViews: userContent
+          PinterestViews: safeUserContent
             .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'pinterest'))
             .reduce((sum, item) => sum + (item.views ?? 1), 0),
-          FacebookViews: userContent
+          FacebookViews: safeUserContent
             .filter(item => item.type === 'photo' && item.platforms && item.platforms.some(p => p.toLowerCase() === 'facebook'))
             .reduce((sum, item) => sum + (item.views ?? 1), 0),
         },
         {
           name: 'Other',
-          LinkedIn: userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'linkedin')).length,
-          Other: userContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'other')).length,
-          views: userContent
+          LinkedIn: safeUserContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'linkedin')).length,
+          Other: safeUserContent.filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'other')).length,
+          views: safeUserContent
             .filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'linkedin'))
             .reduce((sum, item) => sum + (item.views ?? 1), 0),
-          OtherViews: userContent
+          OtherViews: safeUserContent
             .filter(item => item.platforms && item.platforms.some(p => p.toLowerCase() === 'other'))
             .reduce((sum, item) => sum + (item.views ?? 1), 0),
         }
@@ -162,7 +166,7 @@ const HomePage: React.FC = () => {
 
       // Platform distribution (exactly like GYBStudio)
       const platformCounts: Record<string, number> = {};
-      userContent.forEach((item: ContentItem) => {
+      safeUserContent.forEach((item: ContentItem) => {
         console.log('HomePage - Processing content item:', item.title, 'Platforms:', item.platforms);
         // Handle platforms array
         (item.platforms || []).forEach((platform: string) => {
@@ -196,7 +200,7 @@ const HomePage: React.FC = () => {
         .map(([platform, count]) => ({
           name: platform,
           value: count,
-          percentage: userContent.length > 0 ? (count / userContent.length) * 100 : 0,
+          percentage: safeUserContent.length > 0 ? (count / safeUserContent.length) * 100 : 0,
           color: PLATFORM_GROUP_COLORS[platform] || '#8884d8'
         }));
 
@@ -392,7 +396,7 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* Analytics Section */}
-      {userContent.length > 0 && (
+      {safeUserContent.length > 0 && (
         <div className="bg-white py-16">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-12">
@@ -411,7 +415,7 @@ const HomePage: React.FC = () => {
                 <h3 className="text-xl font-bold mb-4 text-gray-900">Content Type Distribution</h3>
                 <ContentTypeBarChart
                   barData={analyticsData.barData}
-                  userContent={userContent}
+                  userContent={safeUserContent}
                   blogTypes={analyticsData.blogTypes}
                   audioTypes={analyticsData.audioTypes}
                   socialMediaTypes={analyticsData.socialMediaTypes}
