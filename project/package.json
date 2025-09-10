@@ -12,7 +12,11 @@
     "test:https": "node scripts/test-https.js",
     "build": "tsc && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "spotify:token": "node scripts/generate-spotify-token.js",
+    "spotify:manager": "node scripts/spotify-token-manager.js",
+    "setup:env": "node scripts/setup-env.js",
+    "setup:spotify": "node scripts/setup-spotify-api.js"
   },
   "dependencies": {
     "axios": "^1.6.7",

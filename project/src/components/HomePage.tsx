@@ -18,24 +18,8 @@ const fontLinks = [
 
 const HomePage: React.FC = () => {
   const { content: userContent } = useUserContent();
-<<<<<<< HEAD
-  
   // Ensure userContent is always an array
   const safeUserContent = Array.isArray(userContent) ? userContent : [];
-  
-  const [analyticsData, setAnalyticsData] = useState({
-    barData: [] as any[],
-    platformData: [] as Array<{name: string; value: number; percentage: number; color: string}>,
-    blogTypes: [] as string[],
-    audioTypes: [] as string[],
-    socialMediaTypes: [] as string[],
-    otherTypes: [] as string[],
-    CONTENT_TYPE_COLORS: {} as Record<string, string>,
-    LEGEND_KEYS: [] as string[],
-    COLORS: [] as string[]
-  });
-=======
->>>>>>> main
   const [facebookMetrics, setFacebookMetrics] = useState<{
     total_impressions: number;
     total_reactions: number;
@@ -46,7 +30,6 @@ const HomePage: React.FC = () => {
   
   // Fetch Facebook metrics
   useEffect(() => {
-<<<<<<< HEAD
     const calculateAnalytics = () => {
       // Color map for content type groups (exactly like GYBStudio)
       const CONTENT_TYPE_COLORS: Record<string, string> = {
@@ -227,11 +210,7 @@ const HomePage: React.FC = () => {
         });
     };
 
-    calculateAnalytics();
-    
     // Fetch Facebook metrics
-=======
->>>>>>> main
     const fetchFacebookData = async () => {
       try {
         const metrics = await getFacebookMetrics();

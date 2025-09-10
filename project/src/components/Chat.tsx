@@ -29,19 +29,23 @@ const Chat: React.FC = () => {
     createNewChat,
     selectedAgent,
     setSelectedAgent,
-    setIsProcessingAI,
   } = useChat();
+  
   const [isLoading, setIsLoading] = useState(true);
-  // const [currentChat, setCurrentChat] = useState<any>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [videoAvatar, setVideoAvatar] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const currentChat = chats.find((c) => c.id === chatId);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [videoAvatar, setVideoAvatar] = useState(false);
+  
+  // Debug logging
+  console.log('Chat component - selectedAgent:', selectedAgent);
+  console.log('Chat component - currentChat:', currentChat);
 
 
   
@@ -51,7 +55,6 @@ const Chat: React.FC = () => {
         setIsLoading(true);
         const chatData = await getChat(chatId);
         if (chatData) {
-          //setCurrentChat(chatData);
           setEditedTitle(chatData.title);
           const lastAiMessage = chatData.messages?.find(
             (m) => m.role === "assistant"
@@ -104,23 +107,12 @@ const Chat: React.FC = () => {
     }
   }, []);
 
-    // For storing the state of the page change, ai agent change
+  // For storing the state of the page change, ai agent change
   useEffect(() => {
     return () => {
-      setIsProcessingAI(false);
+      setIsProcessing(false);
     };
   }, [chatId]);
-
-  // For those you first enters into the culture tab.
-  useEffect(() => {
-    if (currentChat?.messages?.length === 0){
-      const greetAI = async() => {
-        const greetingMessage = `Hello! I'm Mr.GYB AI. How can I help you today?`
-        await addMessage(currentChat.id, greetingMessage, 'assistant', undefined, 'Mr.GYB AI');
-      }
-      greetAI();
-    };
-  }, []);
 
 
   const scrollToBottom = () => {
@@ -132,7 +124,9 @@ const Chat: React.FC = () => {
   ) => {
     console.log("handlesendmessage");
     console.log("image type is ", typeof content);
+    
     if (isProcessing || !chatId) return;
+    
     console.log("Setting isProcessing to true");
     setIsProcessing(true);
 
@@ -144,77 +138,18 @@ const Chat: React.FC = () => {
 
     try {
       // Add user message
-<<<<<<< HEAD
-      if (typeof content === "object") {
+      if (typeof content === 'object') {
         if (Array.isArray(content)) {
-          await addImage(chatId, content, "user", user?.uid);
-=======
-      if(typeof content === 'object'){
-        if(Array.isArray(content)){
           console.log("Adding image message");
           await addImage(chatId, content, 'user', user?.uid);
           console.log("Image message added successfully");
->>>>>>> main
         }
       } else {
         console.log("selectedAgent is ", selectedAgent);
-<<<<<<< HEAD
-        await addMessage(chatId, content, "user", user?.uid, selectedAgent);
-=======
         console.log("Adding text message:", content);
         await addMessage(chatId, content, 'user', user?.uid, selectedAgent);
         console.log("Text message added successfully");
->>>>>>> main
       }
-      /* Update local state immediately
-      setCurrentChat((prev) => ({
-        ...prev,
-        messages: [
-          ...(prev.messages || []),
-          {
-            id: Date.now().toString(),
-            chatId,
-            content: messageContent,
-            role: 'user',
-            createdAt: new Date().toISOString(),
-          },
-        ],
-      }));
-
-      
-      setTimeout(async () => {
-        //Simulate AI response
-        const aiResponse = `This is a response from ${
-          selectedAgent || 'AI Assistant'
-        } to your message: "${messageContent}"`;
-        await addMessage(
-          chatId,
-          aiResponse,
-          'assistant',
-          undefined,
-          selectedAgent
-        );
-        
-
-        /* Update local state with AI response
-        setCurrentChat((prev) => ({
-          ...prev,
-          messages: [
-            ...(prev.messages || []),
-            {
-              id: (Date.now() + 1).toString(),
-              chatId,
-              content: aiResponse,
-              role: 'assistant',
-              aiAgent: selectedAgent,
-              createdAt: new Date().toISOString(),
-            },
-          ],
-        }));
-
-        // Scroll to bottom
-        scrollToBottom();
-      }, 1000);*/
     } catch (error) {
       console.error("Error sending message:", error);
       // Optionally show error to user
@@ -229,13 +164,12 @@ const Chat: React.FC = () => {
     if (chatId && editedTitle.trim()) {
       const success = await updateChatTitle(chatId, editedTitle.trim());
       if (success) {
-        //setCurrentChat((prev) => ({ ...prev, title: editedTitle.trim() }));
         setIsEditingTitle(false);
       }
     }
   };
 
-  // for new chat button
+  // For new chat button
   const handleNewChat = async () => {
     const newChatId = await newchatButton();
     if (newChatId) {
@@ -243,10 +177,10 @@ const Chat: React.FC = () => {
     }
   };
 
-  // for agent change - create new chat with selected agent
+  // For agent change - create new chat with selected agent
   const handleAgentChange = async (newAgent: string) => {
     if (newAgent === selectedAgent) return; // No change needed
-    console.log(newAgent)
+    console.log(newAgent);
 
     try {
       // First, check if there's an existing chat with this agent
@@ -311,18 +245,35 @@ const Chat: React.FC = () => {
   };
 
   // Function to get AI profile image based on selected agent
-  // add the features to get the image of the corresponding user and ai
   const getAIProfileImage = (agentName: string) => {
-    let agentNewName = agentName.toLowerCase();
-    if (agentNewName === "mr.gyb ai") {
+    console.log('getAIProfileImage called with:', agentName);
+    
+    // For now, let's directly return the Firebase Storage URL to test
+    const firebaseUrl = "https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58";
+    console.log('Using Firebase URL directly:', firebaseUrl);
+    return firebaseUrl;
+    
+    // Original logic (commented out for testing)
+    /*
+    let agentNewName = agentName.toLowerCase().trim();
+    
+    // Handle various forms of Mr.GYB AI name
+    if (agentNewName === "mr.gyb ai" || agentNewName === "mr gyb ai" || agentNewName === "mrgyb ai") {
       agentNewName = "mr-gyb-ai";
     }
+    
+    console.log('Looking for AI user with id:', agentNewName);
+    console.log('Available AI users:', Object.keys(AI_USERS));
+    
     const aiUser = Object.values(AI_USERS).find((ai) => ai.id === agentNewName);
     if (aiUser) {
+      console.log('AI User found:', aiUser.name, 'Image URL:', aiUser.profile_image_url);
       return aiUser.profile_image_url;
     }
+    console.log('AI User not found for:', agentName, 'fallback to default');
     // Fallback to default AI profile image
-    return "/ai-profile.png";
+    return "/gyb-logo.svg";
+    */
   };
 
   if (isLoading) {
@@ -377,10 +328,11 @@ const Chat: React.FC = () => {
           // Not JSON, continue with normal rendering
         }
       }
+      
       if (message.fileType && message.fileName) {
         return (
-          <div className="space-y-2 ">
-            <div className="flex items-center space-x-2 ">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
               <FileText size={20} />
               <span>{message.fileName}</span>
             </div>
@@ -429,12 +381,12 @@ const Chat: React.FC = () => {
       {/* Scrollable Chat Content */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-hidden mt-20 mb-24 px-4 relative "
+        className="flex-1 overflow-hidden mt-20 mb-24 px-4 relative"
       >
         {videoAvatar ? (
           <AIVideoAvatar />
         ) : (
-          <div className="w-full ">
+          <div className="w-full">
             <div className="space-y-4">
               {currentChat.messages?.map((message: any, index: number) => (
                 <div
@@ -451,26 +403,30 @@ const Chat: React.FC = () => {
                       </div>
                       {userData?.profile_image_url.startsWith('http') ? (
                         <img
-                        src={
-                          userData?.profile_image_url
-                        }
+                        src={userData?.profile_image_url}
                         alt="Profile"
                         className="w-8 h-8 rounded-full flex-shrink-0"
                       />
                       ) : (
-                        <div className = "w-8 h-8 flex-shrink-0 items-center justify-center text-2xl font-bold object-cover pb-1">
+                        <div className="w-8 h-8 flex-shrink-0 items-center justify-center text-2xl font-bold object-cover pb-1">
                           {userData?.profile_image_url}
                         </div>
                       )}
-                      
                     </div>
                   ) : (
                     // AI message: profile image on left side
                     <div className="flex items-start space-x-2">
                       <img
                         src={getAIProfileImage(selectedAgent || "Mr.GYB AI")}
-                        alt="Profile"
+                        alt="Mr.GYB AI Profile"
                         className="w-8 h-8 rounded-full flex-shrink-0"
+                        onError={(e) => {
+                          console.error('Failed to load AI profile image:', e.currentTarget.src);
+                          e.currentTarget.src = "/gyb-logo.svg";
+                        }}
+                        onLoad={() => {
+                          console.log('AI profile image loaded successfully');
+                        }}
                       />
                       <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
                         {renderMessageContent(message)}
@@ -479,30 +435,32 @@ const Chat: React.FC = () => {
                   )}
                 </div>
               ))}
+              
               {/* For AI typing */}
               {isProcessingAI && (
                 <div className="flex justify-start">
-<<<<<<< HEAD
-                  <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
-                    <p className="text-sm sm:text-base italic">
-                      Thinking for a better answer...
-                    </p>
-=======
                   <div className="flex items-start space-x-2">
                     <img
                       src={getAIProfileImage(selectedAgent || 'Mr.GYB AI')}
-                      alt="Profile"
+                      alt="Mr.GYB AI Profile"
                       className="w-8 h-8 rounded-full flex-shrink-0"
+                      onError={(e) => {
+                        console.error('Failed to load AI profile image (typing):', e.currentTarget.src);
+                        e.currentTarget.src = "/gyb-logo.svg";
+                      }}
+                      onLoad={() => {
+                        console.log('AI profile image loaded successfully (typing)');
+                      }}
                     />
                     <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
                       <p className="text-sm sm:text-base italic">
                         {selectedAgent || 'Mr.GYB AI'} is looking to assist you with a better solution…
                       </p>
                     </div>
->>>>>>> main
                   </div>
                 </div>
               )}
+              
               <div ref={messagesEndRef} />
             </div>
           </div>
@@ -521,7 +479,6 @@ const Chat: React.FC = () => {
       </div>
 
       {/* Fixed Message Input */}
-
       <MessageInput
         onSendMessage={handleSendMessage}
         isProcessing={isProcessing}

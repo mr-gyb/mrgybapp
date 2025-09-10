@@ -84,7 +84,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages }) => {
   };
 
   return (
-    <div className="flex-grow overflow-y-auto p-4 space-y-4 mb-16 border border-green-500">
+    <div className="flex-grow overflow-y-auto p-4 space-y-4 mb-16">
       {messages.map((message, index) => (
         <div
           key={index}
@@ -92,6 +92,15 @@ const MessageList: React.FC<MessageListProps> = ({ messages }) => {
             message.role === 'user' ? 'justify-end' : 'justify-start'
           }` }
         >
+          {message.role === 'assistant' && (
+            <div className="flex-shrink-0 mr-3 mt-1">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58"
+                alt="Mr.GYB AI"
+                className="w-8 h-8 rounded-full object-cover"
+              />
+            </div>
+          )}
           <div
             className={` max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 ${
               message.role === 'user'

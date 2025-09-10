@@ -1,10 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { X, User, Settings, LogOut, Video, Bookmark, Palette, Moon, Sun } from 'lucide-react';
+import { X, User, Settings, LogOut, Video, Bookmark, Palette, Moon, Sun, Map } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useChat } from "../contexts/ChatContext";
-
 
 interface SideMenuProps {
   isOpen: boolean;
@@ -20,7 +19,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
   const { logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const {setSelectedAgent} = useChat();
+  const { setSelectedAgent } = useChat();
 
   if (!isAuthenticated) return null;
   
@@ -104,6 +103,14 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
             >
               <Settings size={20} className="mr-2" />
               Settings
+            </Link>
+            <Link
+              to="/roadmap"
+              className="flex items-center py-2 hover:text-gold transition-colors"
+              onClick={onClose}
+            >
+              <Map size={20} className="mr-2" />
+              Roadmap
             </Link>
             <button
               onClick={() => {
