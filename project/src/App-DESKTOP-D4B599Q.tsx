@@ -67,20 +67,54 @@ import FulfilmentPlan from './components/templates/FulfilmentPlan';
 import MediaPlan from './components/templates/MediaPlan';
 
 const getPageTitle = (pathname: string) => {
+  // Check if pathname matches chat route pattern (/chat/:chatId)
+  if (pathname.startsWith('/chat/')) {
+    return 'Culture';
+  }
+  
+  // Check if pathname matches content-related routes
+  if (pathname.startsWith('/gyb-studio/') || 
+      pathname === '/upload' || 
+      pathname === '/gyb-media') {
+    return 'Content';
+  }
+  
+  // Check if pathname matches community-related routes
+  if (pathname.startsWith('/user-profile/') || 
+      pathname === '/gyb-team-chat') {
+    return 'Community';
+  }
+  
   switch (pathname) {
     case '/':
       return 'Home';
     case '/homepage':
       return 'Home';
-    case '/Commerce':
+    case '/dashboard':
+      return 'Commerce';
+    case '/commerce':
+      return 'Commerce';
+    case '/work-history':
+      return 'Commerce';
+    case '/invites':
+      return 'Commerce';
+    case '/reviews':
+      return 'Commerce';
+    case '/rewards':
+      return 'Commerce';
+    case '/payments':
+      return 'Commerce';
+    case '/earnings':
       return 'Commerce';
     case '/new-chat':
       return 'Culture';
     case '/chat-history':
-      return 'Chat History';
+      return 'Culture';
     case '/dream-team':
-      return 'Dream Team';
+      return 'Community';
     case '/gyb-live-network':
+      return 'Community';
+    case '/profile':
       return 'Community';
     case '/settings':
       return 'Settings';
@@ -101,7 +135,7 @@ const App: React.FC = () => {
   const { isDarkMode } = useTheme();
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className={`flex flex-col min-h-screen ${isDarkMode ? 'dark bg-navy-blue text-white' : 'bg-white text-navy-blue'}`}>
         <Header getPageTitle={getPageTitle} />
         <main className="flex-grow mt-16 mb-16">

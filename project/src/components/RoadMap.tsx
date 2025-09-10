@@ -401,11 +401,15 @@ const RoadMap: React.FC = () => {
                         : isWaitingToStart
                         ? 'bg-blue-100 border-4 border-blue-300 shadow-lg' // Light blue for waiting phase
                         : progress === 100 
-                        ? 'bg-gold' 
+                        ? 'text-white' 
                         : progress > 0 
-                        ? 'bg-gold/20 border-2 border-gold' 
+                        ? 'text-white border-2' 
                         : 'bg-gray-300 border-2 border-gray-300'
-                    }`}>
+                    }`}
+                    style={{
+                      backgroundColor: progress === 100 || progress > 0 ? '#11335d' : undefined,
+                      borderColor: progress > 0 && progress < 100 ? '#11335d' : undefined
+                    }}>
                       {progress === 100 ? (
                         <Check size={iconSize} className="text-white" />
                       ) : isCurrentPhase ? (
