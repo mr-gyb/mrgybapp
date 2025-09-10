@@ -53,12 +53,6 @@ const BottomMenu: React.FC = () => {
       icon: LayoutDashboard, 
       label: 'Commerce',
       isCustomNav: false 
-    },
-    { 
-      path: '/road-map', 
-      icon: Map, 
-      label: 'Roadmap',
-      isCustomNav: false 
     }
   ];
 
@@ -86,9 +80,9 @@ const BottomMenu: React.FC = () => {
           ) : (
             <Link
               key={`${item.label}-${idx}`}
-              to={item.path === '/new-post' ? '/gyb-studio' : item.path}
+              to={item.path === '/new-post' ? '/gyb-studio-welcome' : item.path}
               className={`flex flex-col items-center justify-center flex-1 h-full min-w-0 ${
-                (item.path === '/new-post' && location.pathname === '/gyb-studio') || location.pathname === item.path
+                (item.path === '/new-post' && (location.pathname === '/gyb-studio' || location.pathname === '/gyb-studio-welcome')) || location.pathname === item.path
                   ? 'text-navy-blue dark:text-gold' 
                   : 'text-gray-500 dark:text-gray-400'
               }`}

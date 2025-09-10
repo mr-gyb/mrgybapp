@@ -21,6 +21,7 @@ import { saveUserContent } from '../services/userContent.service';
 import { useAuth } from '../contexts/AuthContext';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useSpotifyMonetization } from '../hooks/useSpotifyMonetization';
+import { useYouTubeMonetization } from '../hooks/useYouTubeMonetization';
 import spotifyService from '../api/services/spotify.service';
 
 interface PieLabelProps {
@@ -89,6 +90,15 @@ const GYBStudio: React.FC = () => {
     addPlaylist,
     refreshFollowerData
   } = useSpotifyMonetization();
+
+  // YouTube monetization hook
+  const {
+    youtubeData,
+    isLoading: isYouTubeLoading,
+    error: youTubeError,
+    lastUpdated: youTubeLastUpdated,
+    refreshData: refreshYouTubeDataFromHook
+  } = useYouTubeMonetization(userContent);
 
   // State for content creation flow
   const [showCategorySelector, setShowCategorySelector] = useState(false);
@@ -390,12 +400,36 @@ const GYBStudio: React.FC = () => {
         { name: 'Shopping Clicks', value: '89', platform: 'pinterest' },
       ],
       youtube: [
-        { name: 'Ad Revenue', value: '$234', platform: 'youtube' },
-        { name: 'Channel Views', value: '45.2K', platform: 'youtube' },
-        { name: 'Subscriber Growth', value: '+18%', platform: 'youtube' },
-        { name: 'Watch Time', value: '2.3K hrs', platform: 'youtube' },
-        { name: 'Sponsorship Deals', value: '$450', platform: 'youtube' },
-        { name: 'Merch Sales', value: '$89', platform: 'youtube' },
+        { 
+          name: 'Total Videos', 
+          value: youtubeData?.totalVideos?.toString() || '0', 
+          platform: 'youtube' 
+        },
+        { 
+          name: 'Total Views', 
+          value: youtubeData?.totalViews?.toLocaleString() || '0', 
+          platform: 'youtube' 
+        },
+        { 
+          name: 'Total Likes', 
+          value: youtubeData?.totalLikes?.toLocaleString() || '0', 
+          platform: 'youtube' 
+        },
+        { 
+          name: 'Total Comments', 
+          value: youtubeData?.totalComments?.toLocaleString() || '0', 
+          platform: 'youtube' 
+        },
+        { 
+          name: 'Total Duration', 
+          value: youtubeData?.totalDuration ? formatDurationForDisplay(youtubeData.totalDuration) : '0:00', 
+          platform: 'youtube' 
+        },
+        { 
+          name: 'Avg Subscribers', 
+          value: youtubeData?.averageSubscriberCount?.toLocaleString() || '0', 
+          platform: 'youtube' 
+        },
       ],
       others: [
         { name: 'Cross-Platform', value: '$78', platform: 'others' },
@@ -421,6 +455,22 @@ const GYBStudio: React.FC = () => {
     setShowViewModal(false);
     setShowSuccessMessage(false);
     setShowDeleteSuccess(false);
+  };
+
+  // Format ISO 8601 duration for display
+  const formatDurationForDisplay = (duration: string): string => {
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return '0:00';
+    
+    const hours = parseInt(match[1] || '0');
+    const minutes = parseInt(match[2] || '0');
+    const seconds = parseInt(match[3] || '0');
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
   };
 
   // Custom delete handler with success notification
@@ -653,8 +703,7 @@ const GYBStudio: React.FC = () => {
   ];
 
   const handleContentClick = (item: ContentItem) => {
-    // Handle content item click - could open editor or show details
-    console.log('Content clicked:', item);
+    // Handle content item click - could open editor or show details    console.log('Content clicked:', item);
     
     // If it's an AI suggestion, show it in the view modal
     if (item.isAISuggestion) {
@@ -1305,6 +1354,7 @@ const GYBStudio: React.FC = () => {
               )}
             </div>
           )}
+          
         </div>
 
         {/* Creation Inspirations */}

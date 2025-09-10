@@ -6,6 +6,10 @@ export interface PlatformViewData {
   likes?: number;
   shares?: number;
   comments?: number;
+  duration?: string;
+  subscriberCount?: number;
+  followers?: number;
+  trackCount?: number;
   lastUpdated: string;
   error?: string;
 }
@@ -25,11 +29,32 @@ export interface ApiResponse {
   rateLimitRemaining?: number;
 }
 
+export interface YouTubeVideoData {
+  videoId: string;
+  title: string;
+  views: number;
+  likes: number;
+  comments: number;
+  duration: string;
+  subscriberCount: number;
+  lastUpdated: string;
+}
+
+export interface YouTubeAggregatedData {
+  totalVideos: number;
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  totalDuration: string;
+  averageSubscriberCount: number;
+  lastUpdated: string;
+}
+
 /**
  * Platform API Service
  * Handles real API integrations for content performance tracking
  */
-class PlatformApiService {
+export class PlatformApiService {
   private configs: Map<string, PlatformConfig> = new Map();
 
   constructor() {
@@ -184,7 +209,7 @@ class PlatformApiService {
   }
 
   /**
-   * YouTube Data API v3
+   * YouTube Data API v3 - Enhanced to fetch comprehensive video data
    */
   async fetchYouTubeViews(contentItem: ContentItem): Promise<ApiResponse> {
     console.log('fetchYouTubeViews called with content item:', contentItem);
@@ -208,7 +233,8 @@ class PlatformApiService {
     }
 
     console.log('Making YouTube API request for video ID:', videoId);
-    const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoId}&key=${config.apiKey}`;
+    // Enhanced API call to fetch statistics, contentDetails, and snippet
+    const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=${videoId}&key=${config.apiKey}`;
     console.log('API URL (key hidden):', apiUrl.replace(config.apiKey, '***API_KEY_HIDDEN***'));
 
     try {
@@ -233,8 +259,31 @@ class PlatformApiService {
         };
       }
 
-      const stats = data.items[0].statistics;
+      const video = data.items[0];
+      const stats = video.statistics;
+      const contentDetails = video.contentDetails;
+      const snippet = video.snippet;
+      
       console.log('YouTube video statistics:', stats);
+      console.log('YouTube video content details:', contentDetails);
+      console.log('YouTube video snippet:', snippet);
+      
+      // Fetch channel statistics to get subscriber count
+      let subscriberCount = 0;
+      if (snippet?.channelId) {
+        try {
+          const channelApiUrl = `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${snippet.channelId}&key=${config.apiKey}`;
+          const channelResponse = await fetch(channelApiUrl);
+          if (channelResponse.ok) {
+            const channelData = await channelResponse.json();
+            if (channelData.items && channelData.items.length > 0) {
+              subscriberCount = parseInt(channelData.items[0].statistics?.subscriberCount || '0');
+            }
+          }
+        } catch (channelError) {
+          console.warn('Could not fetch channel statistics:', channelError);
+        }
+      }
       
       const result = {
         success: true,
@@ -243,12 +292,14 @@ class PlatformApiService {
           views: parseInt(stats.viewCount || '0'),
           likes: parseInt(stats.likeCount || '0'),
           comments: parseInt(stats.commentCount || '0'),
+          duration: contentDetails?.duration || 'PT0S',
+          subscriberCount: subscriberCount,
           lastUpdated: new Date().toISOString()
         },
         rateLimitRemaining: parseInt(response.headers.get('X-RateLimit-Remaining') || '0')
       };
       
-      console.log('Returning YouTube API result:', result);
+      console.log('Returning enhanced YouTube API result:', result);
       return result;
     } catch (error) {
       console.error('Error in fetchYouTubeViews:', error);
@@ -257,6 +308,118 @@ class PlatformApiService {
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
+  }
+
+  /**
+   * Fetch and aggregate YouTube data for multiple videos
+   */
+  async fetchYouTubeAggregatedData(contentItems: ContentItem[]): Promise<YouTubeAggregatedData> {
+    console.log('Fetching aggregated YouTube data for', contentItems.length, 'videos');
+    
+    const youtubeVideos = contentItems.filter(item => 
+      item.platforms?.some(p => p.toLowerCase() === 'youtube') &&
+      item.originalUrl
+    );
+
+    if (youtubeVideos.length === 0) {
+      return {
+        totalVideos: 0,
+        totalViews: 0,
+        totalLikes: 0,
+        totalComments: 0,
+        totalDuration: 'PT0S',
+        averageSubscriberCount: 0,
+        lastUpdated: new Date().toISOString()
+      };
+    }
+
+    const videoData: YouTubeVideoData[] = [];
+    let totalViews = 0;
+    let totalLikes = 0;
+    let totalComments = 0;
+    let totalDurationSeconds = 0;
+    let totalSubscriberCount = 0;
+    let validVideos = 0;
+
+    for (const video of youtubeVideos) {
+      try {
+        const result = await this.fetchYouTubeViews(video);
+        if (result.success && result.data) {
+          const data = result.data;
+          videoData.push({
+            videoId: this.extractPlatformId(video.originalUrl || '', 'youtube') || '',
+            title: video.title || 'Unknown Title',
+            views: data.views || 0,
+            likes: data.likes || 0,
+            comments: data.comments || 0,
+            duration: data.duration || 'PT0S',
+            subscriberCount: data.subscriberCount || 0,
+            lastUpdated: data.lastUpdated
+          });
+
+          totalViews += data.views || 0;
+          totalLikes += data.likes || 0;
+          totalComments += data.comments || 0;
+          
+          // Convert ISO 8601 duration to seconds for aggregation
+          const durationSeconds = this.parseDurationToSeconds(data.duration || 'PT0S');
+          totalDurationSeconds += durationSeconds;
+          
+          if (data.subscriberCount && data.subscriberCount > 0) {
+            totalSubscriberCount += data.subscriberCount;
+            validVideos++;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching data for video:', video.originalUrl, error);
+      }
+    }
+
+    const averageSubscriberCount = validVideos > 0 ? Math.round(totalSubscriberCount / validVideos) : 0;
+    const totalDuration = this.formatSecondsToDuration(totalDurationSeconds);
+
+    const aggregatedData: YouTubeAggregatedData = {
+      totalVideos: youtubeVideos.length,
+      totalViews,
+      totalLikes,
+      totalComments,
+      totalDuration,
+      averageSubscriberCount,
+      lastUpdated: new Date().toISOString()
+    };
+
+    console.log('YouTube aggregated data:', aggregatedData);
+    return aggregatedData;
+  }
+
+  /**
+   * Parse ISO 8601 duration to seconds
+   */
+  private parseDurationToSeconds(duration: string): number {
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return 0;
+    
+    const hours = parseInt(match[1] || '0');
+    const minutes = parseInt(match[2] || '0');
+    const seconds = parseInt(match[3] || '0');
+    
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+
+  /**
+   * Format seconds to ISO 8601 duration
+   */
+  private formatSecondsToDuration(totalSeconds: number): string {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    let duration = 'PT';
+    if (hours > 0) duration += `${hours}H`;
+    if (minutes > 0) duration += `${minutes}M`;
+    if (seconds > 0) duration += `${seconds}S`;
+    
+    return duration;
   }
 
   /**
@@ -506,6 +669,66 @@ class PlatformApiService {
           views: 0, // Spotify doesn't provide play counts via public API
           likes: 0, // No like count in public API
           comments: 0, // No comment count in public API
+          lastUpdated: new Date().toISOString()
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Fetch Spotify playlist data including followers and track count
+   */
+  async fetchSpotifyPlaylistData(contentItem: ContentItem): Promise<ApiResponse> {
+    const config = this.configs.get('spotify');
+    if (!config?.accessToken) {
+      return {
+        success: false,
+        error: 'Spotify access token not configured'
+      };
+    }
+
+    const url = contentItem.originalUrl || '';
+    const playlistMatch = url.match(/spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
+    
+    if (!playlistMatch) {
+      return {
+        success: false,
+        error: 'Could not extract Spotify playlist ID from URL'
+      };
+    }
+
+    const playlistId = playlistMatch[1];
+
+    try {
+      const response = await fetch(
+        `https://api.spotify.com/v1/playlists/${playlistId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${config.accessToken}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      return {
+        success: true,
+        data: {
+          platform: 'spotify',
+          views: 0, // Playlist views are not directly available via the public API
+          likes: 0, // Playlist likes are not directly available via the public API
+          comments: 0, // Playlist comments are not directly available via the public API
+          followers: data.followers?.total || 0,
+          trackCount: data.tracks?.total || 0,
           lastUpdated: new Date().toISOString()
         }
       };

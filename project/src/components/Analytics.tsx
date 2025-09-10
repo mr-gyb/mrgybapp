@@ -111,25 +111,14 @@ const Analytics: React.FC = () => {
 
   // Extract YouTube video IDs and titles from user content
   const getYouTubeVideoInfo = useCallback(() => {
-<<<<<<< HEAD
     return safeUserContent
-=======
-    // Combine userContent and sampleContent for testing
-    const allContent = [...userContent, ...sampleContent];
-    
-    return allContent
->>>>>>> main
       .filter((item: any) => item.type === 'video' && item.platforms?.some((p: string) => p.toLowerCase() === 'youtube') && item.originalUrl)
       .map((item: any) => ({
         id: extractYouTubeVideoId(item.originalUrl!),
         title: item.title || item.originalUrl || 'Untitled',
       }))
       .filter((info: { id: string | null; title: string }) => !!info.id);
-<<<<<<< HEAD
   }, [safeUserContent]);
-=======
-  }, [userContent, sampleContent]);
->>>>>>> main
 
   // Fetch YouTube view counts and sum them, store details
   const fetchAndSetYouTubeViews = useCallback(async () => {
@@ -227,15 +216,10 @@ const Analytics: React.FC = () => {
   const data = [
     {
       name: 'YouTube',
-<<<<<<< HEAD
       count: safeUserContent.filter(item => item.type === 'video' && item.platforms?.some(p => p.toLowerCase() === 'youtube')).length,
       views: safeUserContent
         .filter(item => item.type === 'video' && item.platforms?.some(p => p.toLowerCase() === 'youtube'))
         .reduce((sum, item) => sum + (item.views ?? 1), 0),
-=======
-      count: [...userContent, ...sampleContent].filter(item => item.type === 'video' && item.platforms?.some((p: string) => p.toLowerCase() === 'youtube')).length,
-      views: youtubeViews, // Use the actual fetched YouTube views instead of fallback
->>>>>>> main
     },
     // Add other bars as needed, using real counts if possible
   ];

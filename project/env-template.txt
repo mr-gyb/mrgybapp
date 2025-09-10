@@ -14,3 +14,6 @@ VITE_FACEBOOK_APP_SECRET=your_facebook_app_secret
 VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id_here
 VITE_SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
 VITE_SPOTIFY_REDIRECT_URI=http://localhost:3002/callback
+
+# YouTube API Configuration
+VITE_YOUTUBE_API_KEY=your_youtube_api_key_here

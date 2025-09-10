@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, MessageSquare, Send, Mic, Camera, Paperclip, Image as ImageIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useChat } from '../contexts/ChatContext';
@@ -100,10 +100,10 @@ const DreamTeam: React.FC = () => {
 
   const handleStartChat = async (newAgent: string) => {
     try {
-      // check if there is an existing chat
-      // chats have several chat room objects.
+      // Check if there is an existing chat
+      // Chats have several chat room objects.
       // .find() => return the first room that satisfy the requirement.
-      // if there are a message that have role == assistant and aiAgent == selectedAgent
+      // If there are a message that have role == assistant and aiAgent == selectedAgent
       // Then return true otherwise return false to indicate whether there are existing chat.
       const existingChat = chats.find((chat) => {
         return (
@@ -116,8 +116,8 @@ const DreamTeam: React.FC = () => {
       });
 
       if (existingChat) {
-        navigate(`/chat/${existingChat.id}`)
-      } else{
+        navigate(`/chat/${existingChat.id}`);
+      } else {
         const newChatId = await createNewChat();
 
         if (newChatId) {
@@ -130,12 +130,12 @@ const DreamTeam: React.FC = () => {
             undefined,
             newAgent
           );
-          navigate(`/chat/${newChatId}`)
-          setSelectedAgent(newAgent)
+          navigate(`/chat/${newChatId}`);
+          setSelectedAgent(newAgent);
         }
       }
-    } catch (error){
-      console.error("Error Handling going to the agent chat", error)
+    } catch (error) {
+      console.error("Error Handling going to the agent chat", error);
     }
   };
 
@@ -198,7 +198,7 @@ const DreamTeam: React.FC = () => {
           </div>
         )}
       </div>
-      <div ref = {screenEndRef} />
+      <div ref={screenEndRef} />
     </div>
   );
 };
