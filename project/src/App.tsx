@@ -79,13 +79,45 @@ const getPageTitle = (pathname: string): string => {
   const titleMap: { [key: string]: string } = {
     '/': 'Home',
     '/home': 'Home',
-    '/dashboard': 'Dashboard',
     '/analytics': 'Analytics',
-    '/gyb-studio': 'GYB Studio',
     '/roadmap': 'RoadMap',
-    '/profile': 'Profile',
-    '/settings': 'Settings'
+    '/settings': 'Settings',
+    '/new-chat': 'Culture',
+    '/chat-history': 'Culture',
+    '/new-post': 'Content',
+    '/upload': 'Content',
+    '/gyb-media': 'Content',
+    '/gyb-studio': 'Content',
+    '/gyb-studio-welcome': 'Content',
+    '/gyb-live-network': 'Community',
+    '/dream-team': 'Community',
+    '/gyb-team-chat': 'Community',
+    '/profile': 'Community',
+    '/dashboard': 'Commerce',
+    '/commerce': 'Commerce',
+    '/work-history': 'Commerce',
+    '/invites': 'Commerce',
+    '/reviews': 'Commerce',
+    '/rewards': 'Commerce',
+    '/payments': 'Commerce',
+    '/earnings': 'Commerce'
   };
+  
+  // Check if pathname matches chat route pattern (/chat/:chatId)
+  if (pathname.startsWith('/chat/')) {
+    return 'Culture';
+  }
+  
+  // Check if pathname matches gyb-studio create route pattern
+  if (pathname.startsWith('/gyb-studio/')) {
+    return 'Content';
+  }
+  
+  // Check if pathname matches user-profile route pattern
+  if (pathname.startsWith('/user-profile/')) {
+    return 'Community';
+  }
+  
   return titleMap[pathname] || 'GYB Studio';
 };
 
@@ -93,7 +125,7 @@ const App: React.FC = () => {
   const { isDarkMode } = useTheme();
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className={`flex flex-col min-h-screen ${isDarkMode ? 'dark bg-navy-blue text-white' : 'bg-white text-navy-blue'}`}>
         <Header getPageTitle={getPageTitle} />
         <main className="flex-grow mt-16 mb-16">
