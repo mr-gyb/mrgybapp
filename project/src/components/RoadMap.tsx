@@ -313,9 +313,17 @@ const RoadMap: React.FC = () => {
       }
     });
     
-    // If Development is completed, Foundation is also completed (logical dependency)
+    // Check if all phases are completed
+    const foundationProgress = getPhaseProgress('foundation');
     const developmentProgress = getPhaseProgress('development');
+    const growthProgress = getPhaseProgress('growth');
     
+    // If all phases are completed, return 100%
+    if (foundationProgress === 100 && developmentProgress === 100 && growthProgress === 100) {
+      return 100;
+    }
+    
+    // If Development is completed, Foundation is also completed (logical dependency)
     if (developmentProgress === 100) {
       return 75; // Development completed = 75% progress (Foundation + Development)
     }
