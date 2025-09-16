@@ -1,5 +1,6 @@
-import React, { useState, startTransition } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, startTransition } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { saveAssessmentCompletion, getAssessmentCompletion, type AssessmentAnswers as ApiAssessmentAnswers } from '../lib/firebase/assessment';
 
 interface AssessmentAnswers {
   legallyRegistered: string;
@@ -15,7 +16,7 @@ interface AssessmentAnswers {
 }
 
 const Assessment: React.FC = () => {
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<AssessmentAnswers>({
     legallyRegistered: '',
@@ -29,6 +30,78 @@ const Assessment: React.FC = () => {
     multipleRegions: '',
     scalingProcesses: ''
   });
+
+  // Check if user has already completed the assessment
+  useEffect(() => {
+    const checkExistingCompletion = async () => {
+      console.log('=== CHECKING ASSESSMENT COMPLETION FROM DATABASE ===');
+      console.log('User:', user?.uid);
+      
+      if (!user) {
+        console.log('No user found, allowing assessment to proceed');
+        return;
+      }
+
+      try {
+        // Check database for assessment completion
+        const assessmentCompletion = await getAssessmentCompletion(user.uid);
+        
+        if (assessmentCompletion) {
+          console.log('User has already completed assessment:', assessmentCompletion);
+          
+          // Redirect immediately to roadmap with appropriate parameters based on completed phases
+          if (assessmentCompletion.foundationCompleted && assessmentCompletion.developmentCompleted) {
+            console.log('Redirecting to roadmap with development completed');
+            window.location.href = 'http://localhost:3002/roadmap?developmentCompleted=true';
+          } else if (assessmentCompletion.foundationCompleted) {
+            console.log('Redirecting to roadmap with foundation completed');
+            window.location.href = 'http://localhost:3002/roadmap?foundationCompleted=true';
+          } else {
+            console.log('Redirecting to roadmap normally');
+            window.location.href = 'http://localhost:3002/roadmap';
+          }
+          return;
+        }
+        
+        console.log('No assessment completion found in database, allowing assessment to proceed');
+      } catch (error) {
+        console.error('Error checking assessment completion:', error);
+        // On error, allow assessment to proceed
+      }
+    };
+
+    // Check immediately when user is available
+    if (user) {
+      checkExistingCompletion();
+    }
+  }, [user]);
+
+  // Also check on component mount for immediate redirect
+  useEffect(() => {
+    const immediateCheck = async () => {
+      if (user) {
+        try {
+          const assessmentCompletion = await getAssessmentCompletion(user.uid);
+          if (assessmentCompletion) {
+            console.log('Immediate check: User has completed assessment, redirecting');
+            if (assessmentCompletion.foundationCompleted && assessmentCompletion.developmentCompleted) {
+              window.location.href = 'http://localhost:3002/roadmap?developmentCompleted=true';
+            } else if (assessmentCompletion.foundationCompleted) {
+              window.location.href = 'http://localhost:3002/roadmap?foundationCompleted=true';
+            } else {
+              window.location.href = 'http://localhost:3002/roadmap';
+            }
+          }
+        } catch (error) {
+          console.error('Error in immediate check:', error);
+        }
+      }
+    };
+
+    // Run immediate check
+    immediateCheck();
+  }, []); // Run only once on mount
+
 
   const questions = [
     {
@@ -125,6 +198,7 @@ const Assessment: React.FC = () => {
       });
     }
   };
+
 
   const calculateBusinessStage = () => {
     // Foundation discriminators (strong indicators that override everything)
@@ -223,20 +297,40 @@ const Assessment: React.FC = () => {
           </p>
           
           <button
-            onClick={() => startTransition(() => {
-              // For Development phase, redirect to roadmap with foundation phase completed
-              if (businessStage === 'Development') {
-                window.location.href = 'http://localhost:3002/roadmap?foundationCompleted=true';
-              } 
-              // For Growth phase, redirect to roadmap with development phase completed
-              else if (businessStage === 'Growth') {
-                window.location.href = 'http://localhost:3002/roadmap?developmentCompleted=true';
-              } 
-              // For Foundation phase, redirect normally
-              else {
-                window.location.href = 'http://localhost:3002/roadmap';
+            onClick={async () => {
+              console.log('=== ASSESSMENT COMPLETION BUTTON CLICKED ===');
+              console.log('User:', user);
+              console.log('Business Stage:', businessStage);
+              console.log('Answers:', answers);
+              
+              // Save assessment completion to database
+              if (user) {
+                try {
+                  await saveAssessmentCompletion(user.uid, businessStage, answers as ApiAssessmentAnswers);
+                  console.log('Successfully saved assessment completion to database for user:', user.uid);
+                } catch (error) {
+                  console.error('Error saving assessment completion to database:', error);
+                  // Still proceed with redirect even if save fails
+                }
+              } else {
+                console.log('No user found, cannot save assessment state');
               }
-            })}
+
+              startTransition(() => {
+                // For Development phase, redirect to roadmap with foundation phase completed
+                if (businessStage === 'Development') {
+                  window.location.href = 'http://localhost:3002/roadmap?foundationCompleted=true';
+                } 
+                // For Growth phase, redirect to roadmap with development phase completed
+                else if (businessStage === 'Growth') {
+                  window.location.href = 'http://localhost:3002/roadmap?developmentCompleted=true';
+                } 
+                // For Foundation phase, redirect normally
+                else {
+                  window.location.href = 'http://localhost:3002/roadmap';
+                }
+              });
+            }}
             style={{
               backgroundColor: '#e3c472',
               color: '#11335d',

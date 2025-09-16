@@ -1,9 +1,13 @@
 import React, { useState, useEffect, startTransition, useCallback } from 'react';
 import { ChevronLeft, Flag, Target, Clock, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { getAssessmentCompletion } from '../lib/firebase/assessment';
+import { saveRoadmapProgress, getRoadmapProgress, updateMilestoneProgress, initializeRoadmapProgress } from '../lib/firebase/roadmapProgress';
 import type { RoadmapPhase } from '../lib/firebase/roadmap';
 
 const RoadMap: React.FC = () => {
+  const { user } = useAuth();
 
   // Default 4Cs Journey phases if no data exists
   const defaultPhases: RoadmapPhase[] = [
@@ -68,47 +72,121 @@ const RoadMap: React.FC = () => {
   const [phases, setPhases] = useState<RoadmapPhase[]>(defaultPhases);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for phase completion from URL parameters and localStorage
+
+
+  // Load roadmap progress from database
   useEffect(() => {
-    const processURLParameters = () => {
+    const loadRoadmapProgress = async () => {
+      if (!user) {
+        console.log('No user found, using default phases');
+        setPhases(defaultPhases);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        console.log('Loading roadmap progress from database for user:', user.uid);
+        
+        // Try to load existing progress from database
+        const savedProgress = await getRoadmapProgress(user.uid);
+        
+        if (savedProgress) {
+          console.log('Found saved roadmap progress:', savedProgress);
+          setPhases(savedProgress.phases);
+        } else {
+          console.log('No saved progress found, initializing with default phases');
+          // Initialize with default phases and save to database
+          await initializeRoadmapProgress(user.uid, defaultPhases);
+          setPhases(defaultPhases);
+        }
+      } catch (error) {
+        console.error('Error loading roadmap progress:', error);
+        // Fallback to default phases
+        setPhases(defaultPhases);
+      }
+      
+      setIsLoading(false);
+    };
+
+    loadRoadmapProgress();
+  }, [user]);
+
+  // Handle URL parameters and assessment completion
+  useEffect(() => {
+    const processURLParameters = async () => {
+      if (!user) return;
+
       const urlParams = new URLSearchParams(window.location.search);
       const foundationCompleted = urlParams.get('foundationCompleted');
       const developmentCompleted = urlParams.get('developmentCompleted');
       
       console.log('URL Parameters:', { foundationCompleted, developmentCompleted });
       
-      // Check localStorage for saved assessment state
-      const savedAssessmentState = localStorage.getItem('roadmapAssessmentState');
-      let savedState = null;
-      
-      if (savedAssessmentState) {
-        try {
-          savedState = JSON.parse(savedAssessmentState);
-          console.log('Saved assessment state:', savedState);
-        } catch (e) {
-          console.error('Error parsing saved assessment state:', e);
-        }
-      }
-      
       // Process URL parameters and update phases accordingly
       if (foundationCompleted === 'true' || developmentCompleted === 'true') {
-        const assessmentState = {
-          foundationCompleted: foundationCompleted === 'true',
-          developmentCompleted: developmentCompleted === 'true',
-          timestamp: new Date().toISOString()
-        };
-        
-        // Save to localStorage
-        localStorage.setItem('roadmapAssessmentState', JSON.stringify(assessmentState));
-        
-        startTransition(() => {
-          setPhases(prevPhases => {
-            const updatedPhases = prevPhases.map(phase => {
+        try {
+          // Get current progress from database
+          const currentProgress = await getRoadmapProgress(user.uid);
+          const currentPhases = currentProgress?.phases || defaultPhases;
+          
+          const updatedPhases = currentPhases.map(phase => {
+            let shouldComplete = false;
+            
+            if (foundationCompleted === 'true' && phase.id === 'foundation') {
+              shouldComplete = true;
+            } else if (developmentCompleted === 'true' && (phase.id === 'foundation' || phase.id === 'development')) {
+              shouldComplete = true;
+            }
+            
+            if (shouldComplete) {
+              return {
+                ...phase,
+                milestones: phase.milestones.map(milestone => ({
+                  ...milestone,
+                  completed: true,
+                  completed_at: new Date().toISOString()
+                }))
+              };
+            }
+            
+            return phase;
+          });
+          
+          console.log('Updated phases from URL parameters:', updatedPhases);
+          
+          // Calculate overall progress
+          const totalMilestones = updatedPhases.reduce((total, phase) => total + phase.milestones.length, 0);
+          const completedMilestones = updatedPhases.reduce((total, phase) => 
+            total + phase.milestones.filter(milestone => milestone.completed).length, 0
+          );
+          const overallProgress = totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0;
+          
+          // Save to database
+          await saveRoadmapProgress(user.uid, updatedPhases, overallProgress);
+          
+          // Update local state
+          setPhases(updatedPhases);
+        } catch (error) {
+          console.error('Error processing URL parameters:', error);
+        }
+      } else {
+        // Check for assessment completion from database
+        try {
+          const assessmentCompletion = await getAssessmentCompletion(user.uid);
+          
+          if (assessmentCompletion) {
+            console.log('Using assessment completion from database');
+            
+            // Get current progress from database
+            const currentProgress = await getRoadmapProgress(user.uid);
+            const currentPhases = currentProgress?.phases || defaultPhases;
+            
+            const updatedPhases = currentPhases.map(phase => {
               let shouldComplete = false;
               
-              if (foundationCompleted === 'true' && phase.id === 'foundation') {
+              if (assessmentCompletion.foundationCompleted && phase.id === 'foundation') {
                 shouldComplete = true;
-              } else if (developmentCompleted === 'true' && (phase.id === 'foundation' || phase.id === 'development')) {
+              } else if (assessmentCompletion.developmentCompleted && (phase.id === 'foundation' || phase.id === 'development')) {
                 shouldComplete = true;
               }
               
@@ -126,83 +204,90 @@ const RoadMap: React.FC = () => {
               return phase;
             });
             
-            console.log('Updated phases:', updatedPhases);
-            return updatedPhases;
-          });
-        });
-      } else if (savedState) {
-        // Use saved state if no URL parameters
-        console.log('Using saved assessment state');
-        startTransition(() => {
-          setPhases(prevPhases => {
-            const updatedPhases = prevPhases.map(phase => {
-              let shouldComplete = false;
-              
-              if (savedState.foundationCompleted && phase.id === 'foundation') {
-                shouldComplete = true;
-              } else if (savedState.developmentCompleted && (phase.id === 'foundation' || phase.id === 'development')) {
-                shouldComplete = true;
-              }
-              
-              if (shouldComplete) {
-                return {
-                  ...phase,
-                  milestones: phase.milestones.map(milestone => ({
-                    ...milestone,
-                    completed: true,
-                    completed_at: new Date().toISOString()
-                  }))
-                };
-              }
-              
-              return phase;
-            });
+            // Calculate overall progress
+            const totalMilestones = updatedPhases.reduce((total, phase) => total + phase.milestones.length, 0);
+            const completedMilestones = updatedPhases.reduce((total, phase) => 
+              total + phase.milestones.filter(milestone => milestone.completed).length, 0
+            );
+            const overallProgress = totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0;
             
-            console.log('Updated phases from saved state:', updatedPhases);
-            return updatedPhases;
-          });
-        });
+            // Save to database
+            await saveRoadmapProgress(user.uid, updatedPhases, overallProgress);
+            
+            // Update local state
+            setPhases(updatedPhases);
+          }
+        } catch (error) {
+          console.error('Error processing assessment completion:', error);
+        }
       }
-      
-      // Set loading to false after processing URL parameters
-      setIsLoading(false);
     };
-    
-    // Process immediately
-    processURLParameters();
-    
-    // Also listen for URL changes (in case of browser back/forward)
-    const handleURLChange = () => {
-      processURLParameters();
-    };
-    
-    window.addEventListener('popstate', handleURLChange);
-    
-    return () => {
-      window.removeEventListener('popstate', handleURLChange);
-    };
-  }, []); // Empty dependency array ensures this runs only once on mount
 
-  const handleMilestoneToggle = useCallback((phaseId: string, milestoneId: string, completed: boolean) => {
+    if (user) {
+      processURLParameters();
+    }
+  }, [user]);
+
+  const handleMilestoneToggle = useCallback(async (phaseId: string, milestoneId: string, completed: boolean) => {
     console.log('Toggling milestone:', milestoneId, 'from', completed, 'to', !completed);
     
-    startTransition(() => {
-      setPhases(prevPhases => 
-        prevPhases.map(phase => 
-          phase.id === phaseId 
-            ? {
-                ...phase,
-                milestones: phase.milestones.map(milestone =>
-                  milestone.id === milestoneId
-                    ? { ...milestone, completed: !completed }
-                    : milestone
-                )
-              }
-            : phase
-        )
-      );
-    });
-  }, []);
+    if (!user) {
+      console.log('No user found, cannot save milestone progress');
+      return;
+    }
+
+    try {
+      // Update milestone in database
+      await updateMilestoneProgress(user.uid, phaseId, milestoneId, !completed);
+      
+      // Update local state
+      startTransition(() => {
+        setPhases(prevPhases => {
+          const updatedPhases = prevPhases.map(phase => 
+            phase.id === phaseId 
+              ? {
+                  ...phase,
+                  milestones: phase.milestones.map(milestone =>
+                    milestone.id === milestoneId
+                      ? { 
+                          ...milestone, 
+                          completed: !completed,
+                          completed_at: !completed ? new Date().toISOString() : undefined
+                        }
+                      : milestone
+                  )
+                }
+              : phase
+          );
+          
+          return updatedPhases;
+        });
+      });
+      
+      console.log('Milestone progress updated successfully');
+    } catch (error) {
+      console.error('Error updating milestone progress:', error);
+      // Still update local state even if database save fails
+      startTransition(() => {
+        setPhases(prevPhases => {
+          const updatedPhases = prevPhases.map(phase => 
+            phase.id === phaseId 
+              ? {
+                  ...phase,
+                  milestones: phase.milestones.map(milestone =>
+                    milestone.id === milestoneId
+                      ? { ...milestone, completed: !completed }
+                      : milestone
+                  )
+                }
+              : phase
+          );
+          
+          return updatedPhases;
+        });
+      });
+    }
+  }, [user]);
 
   const getPhaseProgress = (phaseId: string) => {
     const phase = phases.find((p) => p.id === phaseId);
@@ -213,9 +298,6 @@ const RoadMap: React.FC = () => {
       100
     );
   };
-
-  // Always show all phases
-  const visiblePhases = phases;
 
   // Determine the current phase (the phase that is in progress)
   const getCurrentPhase = () => {
@@ -251,7 +333,6 @@ const RoadMap: React.FC = () => {
     return 'growth';
   };
 
-  const currentPhase = getCurrentPhase();
 
   // Determine if a phase is waiting to start (next phase after a completed one)
   const isPhaseWaitingToStart = (phaseId: string) => {
@@ -331,6 +412,11 @@ const RoadMap: React.FC = () => {
     return Math.round(totalProgress);
   };
 
+  // Calculate all values before any conditional returns
+  const overallProgress = getOverallProgress();
+  const currentPhaseValue = getCurrentPhase();
+  const visiblePhasesValue = phases;
+
   // Show loading spinner while processing URL parameters
   if (isLoading) {
     return (
@@ -360,7 +446,7 @@ const RoadMap: React.FC = () => {
           <div className="text-center mb-4">
             <h2 className="text-xl font-semibold text-navy-blue inline-block mr-4">Your Journey Progress</h2>
             <span className="text-sm text-navy-blue bg-gold px-3 py-1 rounded-full font-semibold">
-              {getOverallProgress()}% Complete
+              {overallProgress}% Complete
             </span>
           </div>
         </div>
@@ -394,9 +480,9 @@ const RoadMap: React.FC = () => {
             
             {/* Phase Icons - Always show all phases */}
             <div className="relative flex justify-between">
-              {phases.map((phase) => {
+              {visiblePhasesValue.map((phase) => {
                 const progress = getPhaseProgress(phase.id);
-                const isCurrentPhase = phase.id === currentPhase;
+                const isCurrentPhase = phase.id === currentPhaseValue;
                 const isWaitingToStart = isPhaseWaitingToStart(phase.id);
                 const iconSize = isCurrentPhase ? 40 : 24;
                 const containerSize = isCurrentPhase ? 'w-20 h-20' : 'w-12 h-12';
@@ -459,7 +545,7 @@ const RoadMap: React.FC = () => {
 
         {/* Phase Cards */}
         <div className="grid gap-8 md:grid-cols-3">
-          {visiblePhases.length > 0 ? visiblePhases.map((phase) => (
+          {visiblePhasesValue.length > 0 ? visiblePhasesValue.map((phase) => (
             <div
               key={phase.id}
               className="bg-white rounded-xl p-6 shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300"
