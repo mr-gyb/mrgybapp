@@ -20,8 +20,6 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
   const navigate = useNavigate();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const { setSelectedAgent } = useChat();
-
-  if (!isAuthenticated) return null;
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -35,6 +33,8 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen, onClose]);
+
+  if (!isAuthenticated) return null;
 
   const handleLogout = async () => {
     try {
