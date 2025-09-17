@@ -15,7 +15,7 @@ import ProCard from './ProCard';
 import EnterpriseCard from './EnterpriseCard';
 import TrialSection from './TrialSection';
 
-const Commerce: React.FC = () => {
+const Dashboard: React.FC = () => {
   const { content: userContent, updateContent, refreshContent } = useUserContent();
   const { 
     performanceData, 
@@ -429,4 +429,4 @@ const Commerce: React.FC = () => {
   );
 };
 
-export default Commerce;
+export default Dashboard;
