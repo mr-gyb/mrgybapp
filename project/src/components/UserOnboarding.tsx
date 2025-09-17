@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Apple, Mail, Phone, ChevronDown, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Apple, Mail, Phone, ChevronDown, ArrowLeft, CheckCircle, Lock, Eye, EyeOff } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -19,33 +19,56 @@ const UserOnboarding: React.FC = () => {
   const [lastName, setLastName] = useState('');
   const [birthday, setBirthday] = useState('');
   const [password, setPassword] = useState(location.state?.password || '');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [userCredential, setUserCredential] = useState(location.state?.userCredential || null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [country, setCountry] = useState('US');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   // for previewUrl
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const handleContinue = () => {
     setError('');
-    if (step === 0 && !phoneNumber && !email) {
-      setError('Please enter a valid phone number or email');
-      return;
+    
+    // Step 0: Email/Password validation
+    if (step === 0) {
+      if (!email || !password) {
+        setError('Please enter both email and password');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters long');
+        return;
+      }
     }
+    
+    // Step 1: Name validation
     if (step === 1 && (!firstName || !lastName)) {
       setError('Please enter your first and last name');
       return;
     }
-    if (step === 2 && ! notificationsEnabled){
-      setError('Please enable notifications');
+    
+    // Step 2: Country validation (optional, but good to have)
+    if (step === 2 && !country) {
+      setError('Please select your country');
       return;
     }
+    
+    // Step 3: Profile image (optional step)
+    // Step 4: Final step - create account
     if (step === 4) {
       handleFinish();
       return;
     }
+    
     setStep(step + 1);
   };
 
@@ -78,54 +101,50 @@ const UserOnboarding: React.FC = () => {
     setError('');
 
     try {
-      let currentUser = auth.currentUser;
+      // Create user account first
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const currentUser = userCredential.user;
       
-      // If no current user and we have userCredential from SignIn, use it
-      if (!currentUser ) {
-        setError('No authenticated user found.');
-        return;
-      }
+      console.log('Account created successfully for:', email);
 
-      // for making null to test if user upload their own image
+      // Upload profile image if selected
       let profileImageUrl = null;
-
-
-      
-      // If still no user, create one
-      if (!currentUser) {
-        const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
-        console.log('email', email);
-        currentUser = newUserCredential.user;
-
-        await currentUser.reload(); 
-      }
-
-      if (selectedFile){
+      if (selectedFile) {
         const storage = getStorage();
-        // const fileName = `${firstName.toLowerCase()} - ${lastName.toLowerCase()}`;
         const imageRef = ref(storage, `profile-images/${currentUser.uid}`);
         await uploadBytes(imageRef, selectedFile);
         profileImageUrl = await getDownloadURL(imageRef);
       }
       
-      if (currentUser) {
-        // Create profile for the new user
-        await createProfile(currentUser.uid, {
-          email,
-          name: `${firstName} ${lastName}`,
-          username: `@${firstName.toLowerCase()}${lastName.toLowerCase()}`,
-          profile_image_url: profileImageUrl || '',
-          //phoneNumber,
-          //birthday,
-          //notificationsEnabled,
-          //country
-        });
+      // Create user profile
+      await createProfile(currentUser.uid, {
+        email,
+        name: `${firstName} ${lastName}`,
+        username: `@${firstName.toLowerCase()}${lastName.toLowerCase()}`,
+        profile_image_url: profileImageUrl || '',
+        phoneNumber: phoneNumber || '',
+        country: country,
+        notificationsEnabled,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
 
-        navigate('/home');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred during sign up');
+      console.log('Profile created successfully');
+      navigate('/home');
+      
+    } catch (err: any) {
       console.error('Sign up error:', err);
+      
+      // Handle specific Firebase errors
+      if (err.code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Please try logging in instead.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak. Please choose a stronger password.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else {
+        setError(err.message || 'An error occurred during sign up. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -134,6 +153,23 @@ const UserOnboarding: React.FC = () => {
   return (
     <div className="bg-white min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
+        {/* Progress Indicator */}
+        <div className="mb-6">
+          <div className="flex items-center justify-center space-x-2">
+            {[0, 1, 2, 3, 4].map((stepNumber) => (
+              <div
+                key={stepNumber}
+                className={`w-3 h-3 rounded-full ${
+                  stepNumber <= step ? 'bg-navy-blue' : 'bg-gray-300'
+                }`}
+              />
+            ))}
+          </div>
+          <p className="text-center text-sm text-gray-500 mt-2">
+            Step {step + 1} of 5
+          </p>
+        </div>
+
         {step > 0 && (
           <button onClick={handleBack} className="mb-4 text-navy-blue">
             <ArrowLeft size={24} />
@@ -141,8 +177,102 @@ const UserOnboarding: React.FC = () => {
         )}
         {step === 0 && (
           <>
-          <h1 className="text-3xl font-bold mb-6 text-center">Welcome to GYB AI❗</h1>
-        </>
+            <h1 className="text-3xl font-bold mb-6 text-center">Welcome to GYB AI❗</h1>
+            <h2 className="text-xl font-semibold mb-6 text-center text-gray-700">Create your account</h2>
+            
+            <div className="space-y-4">
+              {/* Email Field */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-blue focus:border-transparent"
+                    placeholder="Enter your email"
+                  />
+                </div>
+              </div>
+
+              {/* Password Field */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-blue focus:border-transparent"
+                    placeholder="Create a password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password Field */}
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-blue focus:border-transparent"
+                    placeholder="Confirm your password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
         )}
             {/*
             <div className="space-y-4">
@@ -238,7 +368,7 @@ const UserOnboarding: React.FC = () => {
           */}
         {step === 3 && (
           <>
-            <h2 className="text-2xl font-bold mb-4 dark:text-balck">Profile Image</h2>
+            <h2 className="text-2xl font-bold mb-4 dark:text-black">Profile Image</h2>
             <div className="flex items-center justify-between space-x-4">
               {previewUrl ? (
                 <img
@@ -280,7 +410,7 @@ const UserOnboarding: React.FC = () => {
           disabled={isLoading}
           className="w-full bg-navy-blue text-white rounded-full py-3 px-4 font-semibold mt-6 hover:bg-opacity-90 transition duration-300 disabled:opacity-50"
         >
-          {isLoading ? 'Loading...' : 'Continue'}
+          {isLoading ? 'Creating Account...' : step === 4 ? 'Create Account' : 'Continue'}
         </button>
       </div>
     </div>
