@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Plus, LayoutDashboard, Map } from 'lucide-react';
+import { Users, Plus, Map } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useChat } from '../contexts/ChatContext';
 import CultureIcon from './icons/CultureIcon';
@@ -23,12 +23,6 @@ const BottomMenu: React.FC = () => {
   };
 
   const menuItems = [
-    {
-      path: '/homepage',
-      icon: Home,
-      label: 'Home',
-      isCustomNav: false
-    },
     { 
       path: '/new-chat', 
       icon: CultureIcon, // Use CultureIcon here
@@ -46,12 +40,6 @@ const BottomMenu: React.FC = () => {
       path: '/gyb-live-network', 
       icon: Users, 
       label: 'Community',
-      isCustomNav: false 
-    },
-    { 
-      path: '/commerce',
-      icon: LayoutDashboard, 
-      label: 'Commerce',
       isCustomNav: false 
     }
   ];

@@ -33,7 +33,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // if user already signed up tries to access to the onboarding router
   if (!requireAuth && isAuthenticated) {
-    return <Navigate to="/homepage" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

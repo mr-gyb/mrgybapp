@@ -232,28 +232,82 @@ const HomePage: React.FC = () => {
   const CustomBarTooltip = ({ active, payload, label }: { active: boolean; payload: any[]; label: string }) => {
     if (active && payload && payload.length) {
       const barData = payload[0].payload;
-      
-      // Check if this is Facebook data
-      if (label === 'Social Media' && barData.Facebook !== undefined) {
+
+      // For Blogs
+      if (label === 'Blogs') {
         return (
           <div className="bg-white p-3 rounded shadow text-sm border border-gray-200">
             <div className="font-semibold mb-1">{label}</div>
-            <div>Facebook Content: {barData.Facebook ?? 0}</div>
-            <div>Post Impressions: {facebookMetrics?.total_impressions?.toLocaleString() ?? 'Loading...'}</div>
-            <div>Total Reactions: {facebookMetrics?.total_reactions?.toLocaleString() ?? 'Loading...'}</div>
-            <div>Instagram Content: {barData.Instagram ?? 0}</div>
-            <div>Pinterest Content: {barData.Pinterest ?? 0}</div>
-            <div>View Count: {barData.views ?? 0}</div>
+            <div>Blogger content: {barData.Blogger ?? 0}</div>
+            <div>Substack content: {barData.Substack ?? 0}</div>
+            <div>Medium content: {barData.Medium ?? 0}</div>
+            <div>Blogger views: {barData.views ?? 0}</div>
+            <div>Substack views: {barData.SubstackViews ?? 0}</div>
+            <div>Medium views: {barData.MediumViews ?? 0}</div>
           </div>
         );
       }
-      
-      // Default tooltip for other categories
+
+      // For Audio
+      if (label === 'Audio') {
+        return (
+          <div className="bg-white p-3 rounded shadow text-sm border border-gray-200">
+            <div className="font-semibold mb-1">{label}</div>
+            <div>Spotify content: {barData.Spotify ?? 0}</div>
+            <div>iTunes content: {barData.iTunes ?? 0}</div>
+            <div>Spotify views: {barData.views ?? 0}</div>
+            <div>iTunes views: {barData.iTunesViews ?? 0}</div>
+          </div>
+        );
+      }
+
+      // For YouTube
+      if (label === 'YouTube') {
+        return (
+          <div className="bg-white p-3 rounded shadow text-sm border border-gray-200">
+            <div className="font-semibold mb-1">{label}</div>
+            <div>YouTube content: {barData.count ?? 0}</div>
+            <div>View count: {barData.views ?? 0}</div>
+          </div>
+        );
+      }
+
+      // For Social Media - Enhanced with Facebook metrics
+      if (label === 'Social Media') {
+        return (
+          <div className="bg-white p-3 rounded shadow text-sm border border-gray-200">
+            <div className="font-semibold mb-1">{label}</div>
+            <div>Facebook content: {barData.Facebook ?? 0}</div>
+            <div>Post Impressions: {facebookMetrics?.total_impressions?.toLocaleString() ?? 'Loading...'}</div>
+            <div>Total Reactions: {facebookMetrics?.total_reactions?.toLocaleString() ?? 'Loading...'}</div>
+            <div>Instagram content: {barData.Instagram ?? 0}</div>
+            <div>Pinterest content: {barData.Pinterest ?? 0}</div>
+            <div>Instagram views: {barData.views ?? 0}</div>
+            <div>Pinterest views: {barData.PinterestViews ?? 0}</div>
+            <div>Facebook views: {barData.FacebookViews ?? 0}</div>
+          </div>
+        );
+      }
+
+      // For Other
+      if (label === 'Other') {
+        return (
+          <div className="bg-white p-3 rounded shadow text-sm border border-gray-200">
+            <div className="font-semibold mb-1">{label}</div>
+            <div>LinkedIn content: {barData.LinkedIn ?? 0}</div>
+            <div>Other content: {barData.Other ?? 0}</div>
+            <div>LinkedIn views: {barData.views ?? 0}</div>
+            <div>Other views: {barData.OtherViews ?? 0}</div>
+          </div>
+        );
+      }
+
+      // Default fallback
       return (
         <div className="bg-white p-3 rounded shadow text-sm border border-gray-200">
           <div className="font-semibold mb-1">{label}</div>
-          <div>Content Count: {barData.count ?? 0}</div>
-          <div>View Count: {barData.views ?? 0}</div>
+          <div>Content Count: {barData.count ?? '-'}</div>
+          <div>View Count: {barData.views ?? '-'}</div>
         </div>
       );
     }

@@ -6,6 +6,7 @@ import { Chat, Message, OpenAIMessage } from '../types/chat';
 import { generateAIResponse, generateAIResponse2 } from '../api/services/chat.service';
 import { ChatCompletionContentPart } from "openai/resources/chat/completions";
 import { getAuth } from "firebase/auth"; // for firebase auth ID token
+import { updateChatAgent } from '../lib/firebase/chats';
 
 
 interface ChatContextType {
@@ -24,6 +25,7 @@ interface ChatContextType {
   setSelectedAgent: (agent: string | null) => void;
   deleteChat: (chatId: string) => Promise<boolean>;
   updateChatTitle: (chatId: string, newTitle: string) => Promise<boolean>;
+  updateChatAgentField: (chatId: string, agent: string) => Promise<boolean>;
   uploadFileToOpenAI: (chatId: string, file: File) => Promise<void>;
 }
 
@@ -404,6 +406,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateChatAgentField = async (chatId: string, agent: string): Promise<boolean> => {
+    try {
+      const success = await updateChatAgent(chatId, agent);
+      if (success) {
+        console.log(`Successfully updated chat ${chatId} agent to: ${agent}`);
+      }
+      return success;
+    } catch (error) {
+      console.error('Error updating chat agent:', error);
+      setError('Failed to update chat agent');
+      return false;
+    }
+  };
+
   const uploadFileToOpenAI = async (chatId: string, file: File) => {
     try{
       const idToken = await user?.getIdToken();
@@ -463,6 +479,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSelectedAgent,
     deleteChat,
     updateChatTitle,
+    updateChatAgentField,
     uploadFileToOpenAI
   };
 

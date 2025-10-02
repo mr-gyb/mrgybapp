@@ -167,6 +167,20 @@ export const deleteChat = async (chatId: string): Promise<boolean> => {
   }
 };
 
+export const updateChatAgent = async (chatId: string, agent: string): Promise<boolean> => {
+  try {
+    await updateDoc(doc(db, 'chats', chatId), {
+      agent: agent,
+      updatedAt: new Date().toISOString()
+    });
+    console.log(`Updated chat ${chatId} agent to: ${agent}`);
+    return true;
+  } catch (error) {
+    console.error('Error updating chat agent:', error);
+    return false;
+  }
+};
+
 export const updateChatTitle = async (chatId: string, newTitle: string): Promise<boolean> => {
   try {
     await updateDoc(doc(db, 'chats', chatId), {
