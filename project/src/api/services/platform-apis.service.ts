@@ -598,8 +598,9 @@ export class PlatformApiService {
     }
 
     try {
+      // Fetch detailed pin data including analytics
       const response = await fetch(
-        `https://api.pinterest.com/v5/pins/${pinId}?access_token=${config.accessToken}`
+        `https://api.pinterest.com/v5/pins/${pinId}?fields=id,title,description,link,media_type,save_count,comment_count,created_at,updated_at&access_token=${config.accessToken}`
       );
 
       if (!response.ok) {
@@ -613,8 +614,14 @@ export class PlatformApiService {
         data: {
           platform: 'pinterest',
           views: 0, // Pinterest doesn't provide view counts
-          likes: 0, // Pinterest doesn't have likes in the same way
-          shares: parseInt(data.save_count || '0'),
+          likes: parseInt(data.save_count || '0'), // Saves are like "likes" on Pinterest
+          shares: parseInt(data.save_count || '0'), // Saves are the main engagement metric
+          comments: parseInt(data.comment_count || '0'),
+          title: data.title || '',
+          description: data.description || '',
+          link: data.link || '',
+          mediaType: data.media_type || 'image',
+          createdAt: data.created_at || '',
           lastUpdated: new Date().toISOString()
         }
       };

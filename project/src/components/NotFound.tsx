@@ -28,11 +28,11 @@ const NotFound: React.FC = () => {
           </button>
           
           <Link
-            to="/homepage"
+            to="/dashboard"
             className="w-full flex items-center justify-center px-6 py-3 bg-navy-blue text-white rounded-lg hover:bg-navy-blue/90 transition-colors"
           >
             <Home size={20} className="mr-2" />
-            Go to Homepage.
+            Go to Dashboard.
           </Link>
         </div>
       </div>

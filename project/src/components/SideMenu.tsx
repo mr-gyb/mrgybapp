@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { X, User, Settings, LogOut, Video, Bookmark, Palette, Moon, Sun, Map } from 'lucide-react';
+import { X, User, Settings, LogOut, Video, Bookmark, Palette, Moon, Sun, Map, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useChat } from "../contexts/ChatContext";
@@ -111,6 +111,14 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
             >
               <Map size={20} className="mr-2" />
               Roadmap
+            </Link>
+            <Link
+              to="/commerce"
+              className="flex items-center py-2 hover:text-gold transition-colors"
+              onClick={onClose}
+            >
+              <LayoutDashboard size={20} className="mr-2" />
+              Commerce
             </Link>
             <button
               onClick={() => {

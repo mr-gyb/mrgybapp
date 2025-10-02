@@ -17,3 +17,11 @@ VITE_SPOTIFY_REDIRECT_URI=http://localhost:3002/callback
 
 # YouTube API Configuration
 VITE_YOUTUBE_API_KEY=your_youtube_api_key_here
+
+# Pinterest API Configuration
+VITE_PINTEREST_ACCESS_TOKEN=your_pinterest_access_token_here
+VITE_PINTEREST_APP_ID=your_pinterest_app_id_here
+VITE_PINTEREST_APP_SECRET=your_pinterest_app_secret_here
+
+# OpenAI API Configuration
+VITE_OPENAI_API_KEY=your_openai_api_key_here

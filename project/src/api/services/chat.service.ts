@@ -17,16 +17,18 @@ const openai = new OpenAI({
 
 // Record<string, string> is the type where both key and values are strings.
 const getAssistantId = (aiAgent: string): string => {
+  // For now, we'll use a fallback approach since the hardcoded assistant IDs don't exist
+  // In the future, you can create new assistants and update these IDs
   const assistantIds: Record<string, string> = {
-    'Mr.GYB AI': 'asst_5FUXkLddYzdcjHPCsmfV9x3F',
-    'Chris': 'asst_3vtN1pMnvJ89RUgUTgYIQCf0',
-    'Sherry': 'asst_OIVmkEpenHuPVlJT8u7DCfY7',
-    'Charlotte' : 'asst_VkklftyKNwCBNz0ZGKCVthwN',
-    'Jake' : 'asst_DtKsptuonX5DEOPEmHL5f1XC',
-    'Rachel' : 'asst_U5JvdzL03Gii91NPzg74XSgi'
+    'Mr.GYB AI': 'fallback',
+    'Chris': 'fallback',
+    'Sherry': 'fallback',
+    'Charlotte': 'fallback',
+    'Jake': 'fallback',
+    'Rachel': 'fallback'
   };
 
-  return assistantIds[aiAgent] || 'asst_defaultFallbackID'; 
+  return assistantIds[aiAgent] || 'fallback'; 
 };
 
 
@@ -40,6 +42,21 @@ export const uploadImageAndGetUrl = async (file: File): Promise<string> =>{
   return downloadUrl;
 }
 
+// Helper function to get the display name for AI agents
+const getAgentDisplayName = (aiAgent: string): string => {
+  const agentNames: Record<string, string> = {
+    'Mr.GYB AI': 'Mr.GYB AI',
+    'CHRIS': 'Chris',
+    'Chris': 'Chris',
+    'Sherry': 'Sherry',
+    'Charlotte': 'Charlotte',
+    'Jake': 'Jake',
+    'Rachel': 'Rachel'
+  };
+  
+  return agentNames[aiAgent] || aiAgent;
+}
+
 export const generateAIResponse = async (
   messages: OpenAIMessage[],
   aiAgent: string
@@ -47,6 +64,32 @@ export const generateAIResponse = async (
   try {
     const lastMessage = messages[messages.length - 1];
     const assistantId = getAssistantId(aiAgent);
+
+    // Check if user is asking about the AI's name
+    if (typeof lastMessage.content === 'string') {
+      const userMessage = lastMessage.content.toLowerCase().trim();
+      const nameQuestions = [
+        "what's your name",
+        "what is your name",
+        "who are you",
+        "tell me your name",
+        "do you have a name",
+        "what should i call you",
+        "what can i call you",
+        "your name",
+        "name"
+      ];
+      
+      const isNameQuestion = nameQuestions.some(question => 
+        userMessage.includes(question) || userMessage === question
+      );
+      
+      if (isNameQuestion) {
+        // Return the agent's name directly
+        const agentName = getAgentDisplayName(aiAgent);
+        return `My name is ${agentName}.`;
+      }
+    }
 
 
     // Handle messages with file content
@@ -102,38 +145,71 @@ export const generateAIResponse = async (
       }
     }
 
-    // Handle regular text messages using the Assistants API
-    const thread = await openai.beta.threads.create();
+    // Handle regular text messages - use fallback for non-existent assistants
+    if (assistantId === 'fallback') {
+      // Use regular chat completions as fallback
+      const recentMessages = messages.slice(-5);
+      const formattedMessages = recentMessages.map(msg => ({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+      }));
 
-    // recent 5 messages
-    const recentMessages = messages.slice(-5);
-    // Add all previous messages to the thread
-    for (const msg of recentMessages) {
-      // Skip system messages for Assistants API as they're not supported
-      // if (msg.role === 'system') continue;
-      await openai.beta.threads.messages.create(thread.id, {
-        role: 'user',
-        content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: getSystemPrompt(aiAgent),
+          },
+          ...formattedMessages
+        ],
+        max_tokens: 1000,
+        temperature: 0.7
       });
+
+      return completion.choices[0]?.message?.content || '';
+    } else {
+      // Use Assistants API for valid assistant IDs
+      const thread = await openai.beta.threads.create();
+
+      // recent 5 messages
+      const recentMessages = messages.slice(-5);
+      // Add all previous messages to the thread
+      for (const msg of recentMessages) {
+        // Skip system messages for Assistants API as they're not supported
+        // if (msg.role === 'system') continue;
+        await openai.beta.threads.messages.create(thread.id, {
+          role: 'user',
+          content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+        });
+      }
+
+      const run = await openai.beta.threads.runs.create(thread.id, {
+        assistant_id: assistantId,
+      });
+
+      // Poll for completion
+      let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+      while (runStatus.status !== 'completed') {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+      }
+
+      const threadMessages = await openai.beta.threads.messages.list(thread.id);
+      return threadMessages.data[0]?.content[0]?.text?.value || '';
     }
-
-    const run = await openai.beta.threads.runs.create(thread.id, {
-      assistant_id: assistantId,
-    });
-
-    // Poll for completion
-    let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-    while (runStatus.status !== 'completed') {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-    }
-
-    const threadMessages = await openai.beta.threads.messages.list(thread.id);
-    return threadMessages.data[0]?.content[0]?.text?.value || '';
 
   } catch (error) {
     console.error('OpenAI API error:', error);
-    throw new Error('Failed to generate AI response');
+    
+    // Check if it's an authentication error
+    if (error.message && error.message.includes('401')) {
+      console.warn('OpenAI API key is invalid or expired');
+      return 'I apologize, but I\'m currently unable to process your request. The AI service is temporarily unavailable. Please check your API configuration or try again later.';
+    }
+    
+    // For other errors, provide a helpful fallback
+    return 'I apologize, but I\'m experiencing technical difficulties. Please try again in a moment.';
   }
 };
 
@@ -190,17 +266,18 @@ const fileToBase64 = (file: File): Promise<string> => {
 const getSystemPrompt = (aiAgent: string): string => {
   const prompts: Record<string, string> = {
     'Mr.GYB AI':
-      'You are Mr.GYB AI, an all-in-one business growth assistant. You specialize in digital marketing, content creation, and business strategy. Be professional, strategic, and focused on growth.',
-    CHRIS: 'You are the CEO AI, focused on high-level strategic planning and business development. Provide executive-level insights and leadership guidance.',
-    Sherry: 'You are the COO AI, specializing in operations management and process optimization. Focus on efficiency, systems, and operational excellence.',
-    Charlotte: 'You are the CHRO AI, expert in human resources and organizational development. Focus on talent management, culture, and employee experience.',
-    Jake: 'You are the CTO AI, specializing in technology strategy and innovation. Provide guidance on technical decisions and digital transformation.',
-    Rachel: 'You are the CMO AI, expert in marketing strategy and brand development. Focus on marketing campaigns, brand building, and customer engagement.',
+      'You are Mr.GYB AI, an all-in-one business growth assistant. You specialize in digital marketing, content creation, and business strategy. Be professional, strategic, and focused on growth. When asked about your name, respond naturally and politely.',
+    CHRIS: 'You are Chris, the CEO AI, focused on high-level strategic planning and business development. Provide executive-level insights and leadership guidance. When asked about your name, respond naturally and politely.',
+    Chris: 'You are Chris, the CEO AI, focused on high-level strategic planning and business development. Provide executive-level insights and leadership guidance. When asked about your name, respond naturally and politely.',
+    Sherry: 'You are Sherry, the COO AI, specializing in operations management and process optimization. Focus on efficiency, systems, and operational excellence. When asked about your name, respond naturally and politely.',
+    Charlotte: 'You are Charlotte, the CHRO AI, expert in human resources and organizational development. Focus on talent management, culture, and employee experience. When asked about your name, respond naturally and politely.',
+    Jake: 'You are Jake, the CTO AI, specializing in technology strategy and innovation. Provide guidance on technical decisions and digital transformation. When asked about your name, respond naturally and politely.',
+    Rachel: 'You are Rachel, the CMO AI, expert in marketing strategy and brand development. Focus on marketing campaigns, brand building, and customer engagement. When asked about your name, respond naturally and politely.',
   };
 
   return (
     prompts[aiAgent] ||
-    'You are a helpful AI assistant. Be professional and concise in your responses.'
+    'You are a helpful AI assistant. Be professional and concise in your responses. When asked about your name, respond naturally and politely.'
   );
 };
 
@@ -209,6 +286,33 @@ export const generateAIResponse2 = async (
   aiAgent: string
 ): Promise<string> => {
   try {
+    // Check if user is asking about the AI's name in image content
+    const textContent = content.find(item => item.type === 'text');
+    if (textContent && 'text' in textContent) {
+      const userMessage = textContent.text.toLowerCase().trim();
+      const nameQuestions = [
+        "what's your name",
+        "what is your name",
+        "who are you",
+        "tell me your name",
+        "do you have a name",
+        "what should i call you",
+        "what can i call you",
+        "your name",
+        "name"
+      ];
+      
+      const isNameQuestion = nameQuestions.some(question => 
+        userMessage.includes(question) || userMessage === question
+      );
+      
+      if (isNameQuestion) {
+        // Return the agent's name directly
+        const agentName = getAgentDisplayName(aiAgent);
+        return `My name is ${agentName}.`;
+      }
+    }
+
     /* Tradition completion API
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -234,42 +338,65 @@ export const generateAIResponse2 = async (
   const content2 = convertToMessageParts(content);
   const assistantId = getAssistantId(aiAgent);
 
-// Thread create
-const thread = await openai.beta.threads.create();
+  // Use fallback for non-existent assistants
+  if (assistantId === 'fallback') {
+    // Use regular chat completions as fallback
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: getSystemPrompt(aiAgent),
+        },
+        {
+          role: 'user',
+          content: content2,
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7
+    });
 
-// adding the user message
-await openai.beta.threads.messages.create(thread.id, {
-  role: 'user',
-  content: content2, // image + text combination
-});
+    return completion.choices[0]?.message?.content || 'No response.';
+  } else {
+    // Use Assistants API for valid assistant IDs
+    // Thread create
+    const thread = await openai.beta.threads.create();
 
-// 3.Run
-const run = await openai.beta.threads.runs.create(thread.id, {
-  assistant_id: assistantId, 
-  instructions: `You are ${aiAgent}, a helpful assistant.`,
-});
+    // adding the user message
+    await openai.beta.threads.messages.create(thread.id, {
+      role: 'user',
+      content: content2, // image + text combination
+    });
 
-// Polling until finish running
-let runStatus = run.status;
-while (runStatus !== 'completed' && runStatus !== 'failed') {
-  const updatedRun = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-  runStatus = updatedRun.status;
-  if (runStatus !== 'completed') {
-    await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+    // 3.Run
+    const run = await openai.beta.threads.runs.create(thread.id, {
+      assistant_id: assistantId, 
+      instructions: `You are ${aiAgent}, a helpful assistant.`,
+    });
+
+    // Polling until finish running
+    let runStatus = run.status;
+    while (runStatus !== 'completed' && runStatus !== 'failed') {
+      const updatedRun = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+      runStatus = updatedRun.status;
+      if (runStatus !== 'completed') {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+      }
+    }
+
+    // Retrieve the message
+    const messages = await openai.beta.threads.messages.list(thread.id);
+    const lastAssistantMessage = messages.data.find(
+      msg => msg.role === 'assistant'
+    );
+
+    return (
+      lastAssistantMessage?.content
+        ?.map((c: any) => c.text?.value)
+        .join('\n') || 'No response.'
+    );
   }
-}
-
-// Retrieve the message
-const messages = await openai.beta.threads.messages.list(thread.id);
-const lastAssistantMessage = messages.data.find(
-  msg => msg.role === 'assistant'
-);
-
-return (
-  lastAssistantMessage?.content
-    ?.map((c: any) => c.text?.value)
-    .join('\n') || 'No response.'
-);
 
   } catch (error) {
     console.error('OpenAI API error:', error);

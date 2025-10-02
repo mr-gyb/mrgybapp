@@ -247,14 +247,39 @@ const Chat: React.FC = () => {
   // Function to get AI profile image based on selected agent
   const getAIProfileImage = (agentName: string) => {
     console.log('getAIProfileImage called with:', agentName);
+    console.log('Agent name type:', typeof agentName);
+    console.log('Agent name length:', agentName?.length);
+    console.log('AI_USERS object:', AI_USERS);
     
-    // For now, let's directly return the Firebase Storage URL to test
-    const firebaseUrl = "https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58";
-    console.log('Using Firebase URL directly:', firebaseUrl);
-    return firebaseUrl;
+    // Handle null/undefined agent names
+    if (!agentName) {
+      console.log('Agent name is null/undefined, using Mr.GYB AI image');
+      const mrGybUrl = "https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58";
+      const url = new URL(mrGybUrl);
+      url.searchParams.set('t', Date.now().toString());
+      return url.toString();
+    }
     
-    // Original logic (commented out for testing)
-    /*
+    // First check if it's Mr.GYB AI with any variation
+    const mrGybVariations = ["Mr.GYB AI", "mr.gyb ai", "mr gyb ai", "mrgyb ai"];
+    if (mrGybVariations.includes(agentName)) {
+      const mrGybUrl = "https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58";
+      const url = new URL(mrGybUrl);
+      url.searchParams.set('t', Date.now().toString());
+      console.log('Using specific Mr.GYB AI URL:', url.toString());
+      return url.toString();
+    }
+    
+    // Additional check for any variation containing "GYB" or "Mr"
+    const lowerAgentName = agentName.toLowerCase();
+    if (lowerAgentName.includes('gyb') || lowerAgentName.includes('mr')) {
+      console.log('Agent name contains GYB or Mr, using Mr.GYB AI image');
+      const mrGybUrl = "https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58";
+      const url = new URL(mrGybUrl);
+      url.searchParams.set('t', Date.now().toString());
+      return url.toString();
+    }
+    
     let agentNewName = agentName.toLowerCase().trim();
     
     // Handle various forms of Mr.GYB AI name
@@ -268,12 +293,18 @@ const Chat: React.FC = () => {
     const aiUser = Object.values(AI_USERS).find((ai) => ai.id === agentNewName);
     if (aiUser) {
       console.log('AI User found:', aiUser.name, 'Image URL:', aiUser.profile_image_url);
-      return aiUser.profile_image_url;
+      // Add cache-busting parameter to force fresh load
+      const url = new URL(aiUser.profile_image_url);
+      url.searchParams.set('t', Date.now().toString());
+      return url.toString();
     }
-    console.log('AI User not found for:', agentName, 'fallback to default');
-    // Fallback to default AI profile image
-    return "/gyb-logo.svg";
-    */
+    
+    console.log('AI User not found for:', agentName, 'fallback to Mr.GYB AI image');
+    // Fallback to Mr.GYB AI image instead of generic logo
+    const mrGybUrl = "https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58";
+    const url = new URL(mrGybUrl);
+    url.searchParams.set('t', Date.now().toString());
+    return url.toString();
   };
 
   if (isLoading) {
@@ -418,15 +449,17 @@ const Chat: React.FC = () => {
                     <div className="flex items-start space-x-2">
                       <img
                         src={getAIProfileImage(selectedAgent || "Mr.GYB AI")}
-                        alt="Mr.GYB AI Profile"
+                        alt={`${selectedAgent || "Mr.GYB AI"} Profile`}
                         className="w-8 h-8 rounded-full flex-shrink-0"
                         onError={(e) => {
                           console.error('Failed to load AI profile image:', e.currentTarget.src);
-                          e.currentTarget.src = "/gyb-logo.svg";
+                          console.error('Selected agent:', selectedAgent);
+                          e.currentTarget.src = "https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58";
                         }}
                         onLoad={() => {
-                          console.log('AI profile image loaded successfully');
+                          console.log('AI profile image loaded successfully for:', selectedAgent);
                         }}
+                        key={`${selectedAgent}-${Date.now()}`}
                       />
                       <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
                         {renderMessageContent(message)}
@@ -442,15 +475,17 @@ const Chat: React.FC = () => {
                   <div className="flex items-start space-x-2">
                     <img
                       src={getAIProfileImage(selectedAgent || 'Mr.GYB AI')}
-                      alt="Mr.GYB AI Profile"
+                      alt={`${selectedAgent || 'Mr.GYB AI'} Profile`}
                       className="w-8 h-8 rounded-full flex-shrink-0"
                       onError={(e) => {
                         console.error('Failed to load AI profile image (typing):', e.currentTarget.src);
-                        e.currentTarget.src = "/gyb-logo.svg";
+                        console.error('Selected agent (typing):', selectedAgent);
+                        e.currentTarget.src = "https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58";
                       }}
                       onLoad={() => {
-                        console.log('AI profile image loaded successfully (typing)');
+                        console.log('AI profile image loaded successfully (typing) for:', selectedAgent);
                       }}
+                      key={`${selectedAgent}-typing-${Date.now()}`}
                     />
                     <div className="max-w-xs sm:max-w-md lg:max-w-lg rounded-lg p-3 bg-navy-blue text-white">
                       <p className="text-sm sm:text-base italic">

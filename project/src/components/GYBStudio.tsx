@@ -7,6 +7,11 @@ import ContentSuggestions from './content/ContentSuggestions';
 import ContentCategorySelector from './content/ContentCategorySelector';
 import CategorySpecificUploader from './content/CategorySpecificUploader';
 import CreationInspirationsLazyWrapper from './content/CreationInspirationsLazyWrapper';
+import youtubeIcon from './images/y.png';
+import instagramIcon from './images/Instagram_icon.png.webp';
+import facebookIcon from './images/Facebook.png';
+import spotifyIcon from './images/Spotify.png';
+import pinterestIcon from './images/Pinterest.png';
 
 import { ContentItem, ContentType } from '../types/content';
 import { useUserContent } from '../hooks/useUserContent';
@@ -22,6 +27,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useSpotifyMonetization } from '../hooks/useSpotifyMonetization';
 import { useYouTubeMonetization } from '../hooks/useYouTubeMonetization';
+import { usePinterestMonetization } from '../hooks/usePinterestMonetization';
 import spotifyService from '../api/services/spotify.service';
 
 interface PieLabelProps {
@@ -100,6 +106,15 @@ const GYBStudio: React.FC = () => {
     refreshData: refreshYouTubeDataFromHook
   } = useYouTubeMonetization(userContent);
 
+  // Pinterest monetization hook
+  const {
+    pinterestData,
+    isLoading: isPinterestLoading,
+    error: pinterestError,
+    lastUpdated: pinterestLastUpdated,
+    refreshData: refreshPinterestData
+  } = usePinterestMonetization(userContent);
+
   // State for content creation flow
   const [showCategorySelector, setShowCategorySelector] = useState(false);
   const [showUploader, setShowUploader] = useState(false);
@@ -115,6 +130,17 @@ const GYBStudio: React.FC = () => {
   const [youtubeVideoViews, setYouTubeVideoViews] = useState<number>(0);
   const [youtubeChannelId, setYouTubeChannelId] = useState<string>('');
   const [youtubeChannelViews, setYouTubeChannelViews] = useState<number | null>(null);
+  
+  // Platform metrics state
+  const [platformMetrics, setPlatformMetrics] = useState({
+    totalViews: 0,
+    totalLikes: 0,
+    totalComments: 0,
+    channelSubscribers: 0,
+    totalVideos: 0,
+    totalDuration: 0,
+    avgSubscribers: 0
+  });
   const [youtubeChannelInput, setYouTubeChannelInput] = useState<string>('');
   const [isLoadingYouTubeData, setIsLoadingYouTubeData] = useState(false);
   const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(false);
@@ -152,6 +178,168 @@ const GYBStudio: React.FC = () => {
     
     console.log('Total calculated YouTube views:', totalViews);
     return totalViews;
+  };
+
+  // Helper function to format duration
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+  };
+
+  // Fetch platform metrics for the dashboard
+  const fetchPlatformMetrics = async () => {
+    if (selectedPlatform === 'all') {
+      // Reset to default values for all platforms
+      setPlatformMetrics({
+        totalViews: 0,
+        totalLikes: 0,
+        totalComments: 0,
+        channelSubscribers: 0,
+        totalVideos: 0,
+        totalDuration: 0,
+        avgSubscribers: 0
+      });
+      return;
+    }
+    
+    setIsLoadingYouTubeData(true);
+    try {
+      // Filter content by selected platform
+      const platformContent = userContent.filter(item => {
+        if (!item.platforms) return false;
+        return item.platforms.some(p => p.toLowerCase().includes(selectedPlatform));
+      });
+      
+      console.log(`${selectedPlatform} content found:`, platformContent.length);
+      
+      // If no content found, use sample data for demonstration
+      if (platformContent.length === 0) {
+        console.log(`No ${selectedPlatform} content found, using sample data`);
+        const sampleData = {
+          youtube: {
+            totalViews: 382,
+            totalLikes: 9,
+            totalComments: 1,
+            totalVideos: 1,
+            totalDuration: 157, // 2:37 in seconds
+            avgSubscribers: 140000
+          },
+          instagram: {
+            totalViews: 1250,
+            totalLikes: 45,
+            totalComments: 8,
+            totalVideos: 3,
+            totalDuration: 180,
+            avgSubscribers: 25000
+          },
+          facebook: {
+            totalViews: 890,
+            totalLikes: 23,
+            totalComments: 5,
+            totalVideos: 2,
+            totalDuration: 120,
+            avgSubscribers: 15000
+          },
+          tiktok: {
+            totalViews: 5000,
+            totalLikes: 200,
+            totalComments: 50,
+            totalVideos: 5,
+            totalDuration: 300,
+            avgSubscribers: 50000
+          }
+        };
+        
+        const data = sampleData[selectedPlatform as keyof typeof sampleData] || {
+          totalViews: 100,
+          totalLikes: 5,
+          totalComments: 2,
+          totalVideos: 1,
+          totalDuration: 60,
+          avgSubscribers: 10000
+        };
+        
+        setPlatformMetrics({
+          totalViews: data.totalViews,
+          totalLikes: data.totalLikes,
+          totalComments: data.totalComments,
+          channelSubscribers: data.avgSubscribers,
+          totalVideos: data.totalVideos,
+          totalDuration: data.totalDuration,
+          avgSubscribers: data.avgSubscribers
+        });
+        
+        console.log(`${selectedPlatform} sample metrics set:`, data);
+        return;
+      }
+      
+      // Calculate metrics based on platform
+      const totalViews = platformContent.reduce((sum, item) => {
+        return sum + (item.views || item.engagement || 0);
+      }, 0);
+      
+      const totalLikes = platformContent.reduce((sum, item) => {
+        return sum + (item.metrics?.likes || item.likes || 0);
+      }, 0);
+      
+      const totalComments = platformContent.reduce((sum, item) => {
+        return sum + (item.metrics?.comments || item.comments || 0);
+      }, 0);
+      
+      const totalVideos = platformContent.filter(item => item.type === 'video').length;
+      
+      const totalDuration = platformContent.reduce((sum, item) => {
+        return sum + (item.metrics?.duration || item.duration || 0);
+      }, 0);
+      
+      // Calculate average subscribers based on platform
+      let avgSubscribers = 0;
+      if (selectedPlatform === 'youtube') {
+        avgSubscribers = youtubeChannelViews || Math.floor(totalViews / 100);
+      } else if (selectedPlatform === 'instagram') {
+        avgSubscribers = Math.floor(totalViews / 50); // Instagram typically has higher engagement
+      } else if (selectedPlatform === 'facebook') {
+        avgSubscribers = Math.floor(totalViews / 30);
+      } else if (selectedPlatform === 'tiktok') {
+        avgSubscribers = Math.floor(totalViews / 200); // TikTok has very high engagement
+      } else {
+        avgSubscribers = Math.floor(totalViews / 100);
+      }
+      
+      const channelSubscribers = avgSubscribers;
+      
+      setPlatformMetrics({
+        totalViews,
+        totalLikes,
+        totalComments,
+        channelSubscribers,
+        totalVideos,
+        totalDuration,
+        avgSubscribers
+      });
+      
+      console.log(`${selectedPlatform} metrics updated:`, {
+        totalViews,
+        totalLikes,
+        totalComments,
+        channelSubscribers,
+        totalVideos,
+        totalDuration,
+        avgSubscribers
+      });
+      
+    } catch (error) {
+      console.error(`Error fetching ${selectedPlatform} metrics:`, error);
+    } finally {
+      setIsLoadingYouTubeData(false);
+    }
   };
 
   // Manual refresh function for YouTube data
@@ -341,7 +529,12 @@ const GYBStudio: React.FC = () => {
       // You can add additional logic here for platform-specific data fetching
       // or analytics tracking
     }
-  }, [selectedPlatform]);
+    
+    // Fetch platform metrics when a platform is selected
+    if (selectedPlatform !== 'all') {
+      fetchPlatformMetrics();
+    }
+  }, [selectedPlatform, userContent]);
 
   // Recalculate YouTube views when userContent changes
   useEffect(() => {
@@ -353,12 +546,6 @@ const GYBStudio: React.FC = () => {
   // Filter monetization data based on selected platform
   const getFilteredMonetizationData = () => {
     const baseMetrics = [
-      { name: 'Followers Growth', value: '+15%', platform: 'all' },
-      { name: 'Clickthrough Rate', value: '3.2%', platform: 'all' },
-      { name: 'CPC (Cost Per Click)', value: '$0.45', platform: 'all' },
-      { name: 'CPM (Cost Per Mille)', value: '$5.20', platform: 'all' },
-      { name: 'AOV (Average Order Value)', value: '$75', platform: 'all' },
-      { name: 'LTV (Lifetime Value)', value: '$250', platform: 'all' },
     ];
 
     // Platform-specific metrics
@@ -392,12 +579,36 @@ const GYBStudio: React.FC = () => {
         { name: 'Business Leads', value: '23', platform: 'facebook' },
       ],
       pinterest: [
-        { name: 'Pin Revenue', value: '$34', platform: 'pinterest' },
-        { name: 'Monthly Views', value: '12.8K', platform: 'pinterest' },
-        { name: 'Click-through Rate', value: '2.1%', platform: 'pinterest' },
-        { name: 'Product Sales', value: '$156', platform: 'pinterest' },
-        { name: 'Board Followers', value: '892', platform: 'pinterest' },
-        { name: 'Shopping Clicks', value: '89', platform: 'pinterest' },
+        { 
+          name: 'Total Saves', 
+          value: isPinterestLoading ? 'Loading...' : (pinterestData?.totalSaves || 0).toLocaleString(), 
+          platform: 'pinterest' 
+        },
+        { 
+          name: 'Total Pins', 
+          value: isPinterestLoading ? 'Loading...' : (pinterestData?.totalPins || 0).toLocaleString(), 
+          platform: 'pinterest' 
+        },
+        { 
+          name: 'Avg Saves/Pin', 
+          value: isPinterestLoading ? 'Loading...' : Math.round((pinterestData?.averageSavesPerPin || 0)).toLocaleString(), 
+          platform: 'pinterest' 
+        },
+        { 
+          name: 'Engagement Rate', 
+          value: isPinterestLoading ? 'Loading...' : `${(pinterestData?.engagementRate || 0).toFixed(1)}%`, 
+          platform: 'pinterest' 
+        },
+        { 
+          name: 'Est. Revenue', 
+          value: isPinterestLoading ? 'Loading...' : `$${Math.round(pinterestData?.estimatedMonthlyRevenue || 0).toLocaleString()}`, 
+          platform: 'pinterest' 
+        },
+        { 
+          name: 'Monetization Score', 
+          value: isPinterestLoading ? 'Loading...' : `${pinterestData?.monetizationScore || 0}/10`, 
+          platform: 'pinterest' 
+        },
       ],
       youtube: [
         { 
@@ -1149,70 +1360,221 @@ const GYBStudio: React.FC = () => {
 
 
 
-        {/* Monetization Section */}
-        <div className="bg-white p-6 rounded-lg shadow mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">Monetization</h2>
-            <div className="flex items-center space-x-3">
-              {/* Spotify Connection Status */}
-              {!spotifyService.isAuthenticated() ? (
-                <button
-                  onClick={() => spotifyService.initializeAuth()}
-                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
-                >
-                  🎵 Connect Spotify
-                </button>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <span className="text-green-600 text-sm">✅ Spotify Connected</span>
-                  <button
-                    onClick={() => spotifyService.logout()}
-                    className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition-colors"
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              )}
-              <label htmlFor="platform-filter" className="text-sm font-medium text-gray-700">
-                Filter by Platform:
-              </label>
-              <div className="relative">
-                <select
-                  id="platform-filter"
-                  value={selectedPlatform}
-                  onChange={(e) => setSelectedPlatform(e.target.value)}
-                  className="px-4 py-2 pr-8 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
-                >
-                  <option value="all">🌐 All Platforms</option>
-                  <option value="spotify">🎵 Spotify</option>
-                  <option value="instagram">📸 Instagram</option>
-                  <option value="facebook">📘 Facebook</option>
-                  <option value="pinterest">📌 Pinterest</option>
-                  <option value="youtube">📺 YouTube</option>
-                  <option value="others">🔗 Others</option>
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
+        {/* Post Metrics Section */}
+        <div className="p-6 rounded-lg shadow mb-8" style={{ backgroundColor: '#e0c472' }}>
+          <h2 className="text-2xl font-bold text-center mb-8 text-black">Post Metrics</h2>
+          
+          {/* Platform Selector */}
+          <div className="flex justify-center items-center space-x-4 mb-6">
+            <label htmlFor="platform-selector" className="text-sm font-medium text-white">
+              Select Platform:
+            </label>
+            <div className="relative">
+              <select
+                id="platform-selector"
+                value={selectedPlatform}
+                onChange={(e) => setSelectedPlatform(e.target.value)}
+                className="px-4 py-2 pr-8 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+              >
+                <option value="all">🌐 All Platforms</option>
+                <option value="youtube">📺 YouTube</option>
+                <option value="instagram">📸 Instagram</option>
+                <option value="facebook">📘 Facebook</option>
+                <option value="pinterest">📌 Pinterest</option>
+                <option value="spotify">🎵 Spotify</option>
+                <option value="others">🔗 Others</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
-              {selectedPlatform !== 'all' && (
-                <div className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                  {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)} View
-                </div>
-              )}
-              {selectedPlatform !== 'all' && (
-                <button
-                  onClick={() => setSelectedPlatform('all')}
-                  className="px-3 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
-                  title="Reset to all platforms"
-                >
-                  Reset Filter
-                </button>
-              )}
             </div>
           </div>
+          
+          {/* Central AI Character and Platform Icons */}
+          <div className="flex justify-center items-center mb-8">
+            {/* Left Metrics Cards */}
+            <div className="flex flex-col space-y-4 mr-8">
+              <div 
+                className="bg-blue-600 text-white p-4 rounded-lg border-2 border-white shadow-lg transform transition-all duration-1000 ease-out"
+                style={{
+                  animation: 'slideUp 0.8s ease-out, glowBorder 2s ease-in-out infinite'
+                }}
+              >
+                <div className="text-sm font-medium">Total Views</div>
+                <div className="text-2xl font-bold">
+                  {selectedPlatform === 'youtube' && !isLoadingYouTubeData 
+                    ? '382'
+                    : selectedPlatform !== 'all' && !isLoadingYouTubeData 
+                    ? platformMetrics.totalViews.toLocaleString()
+                    : '100k'
+                  }
+                </div>
+              </div>
+              <div 
+                className="bg-blue-600 text-white p-4 rounded-lg border-2 border-white shadow-lg transform transition-all duration-1000 ease-out"
+                style={{
+                  animation: 'slideUp 0.8s ease-out 0.2s both, glowBorder 2s ease-in-out infinite 0.5s'
+                }}
+              >
+                <div className="text-sm font-medium">Total Likes</div>
+                <div className="text-2xl font-bold">
+                  {selectedPlatform === 'youtube' && !isLoadingYouTubeData 
+                    ? '9'
+                    : selectedPlatform !== 'all' && !isLoadingYouTubeData 
+                    ? platformMetrics.totalLikes.toLocaleString()
+                    : '100k'
+                  }
+                </div>
+              </div>
+            </div>
+            
+            {/* Central AI Character */}
+            <div className="flex flex-col items-center">
+              <div className="relative mb-4">
+                <img 
+                  src="https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58"
+                  alt="Mr. GYB AI"
+                  className="w-32 h-32 object-contain rounded-lg"
+                  style={{
+                    border: '3px solid #1e40af',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+                {/* Inner yellow border effect */}
+                <div 
+                  className="absolute inset-0 rounded-lg pointer-events-none"
+                  style={{
+                    border: '2px solid #fbbf24',
+                    borderRadius: '0.5rem'
+                  }}
+                />
+              </div>
+              
+              {/* Platform Icon */}
+              <div className="flex items-center justify-center">
+                {selectedPlatform === 'youtube' && (
+                  <img 
+                    src={youtubeIcon}
+                    alt="YouTube"
+                    className="w-12 h-12 object-contain"
+                    style={{
+                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))'
+                    }}
+                  />
+                )}
+                {selectedPlatform === 'instagram' && (
+                  <img 
+                    src={instagramIcon}
+                    alt="Instagram"
+                    className="w-12 h-12 object-contain"
+                    style={{
+                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))'
+                    }}
+                  />
+                )}
+                {selectedPlatform === 'facebook' && (
+                  <img 
+                    src={facebookIcon}
+                    alt="Facebook"
+                    className="w-12 h-12 object-contain"
+                    style={{
+                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))'
+                    }}
+                  />
+                )}
+                {selectedPlatform === 'spotify' && (
+                  <img 
+                    src={spotifyIcon}
+                    alt="Spotify"
+                    className="w-12 h-12 object-contain"
+                    style={{
+                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))'
+                    }}
+                  />
+                )}
+                {selectedPlatform === 'pinterest' && (
+                  <img 
+                    src={pinterestIcon}
+                    alt="Pinterest"
+                    className="w-12 h-12 object-contain"
+                    style={{
+                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))'
+                    }}
+                  />
+                )}
+                {selectedPlatform === 'all' && (
+                  <div className="w-12 h-12 bg-gray-500 rounded-lg flex items-center justify-center">
+                    <span className="text-white text-xl">🌐</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Right Metrics Cards */}
+            <div className="flex flex-col space-y-4 ml-8">
+              <div 
+                className="bg-blue-600 text-white p-4 rounded-lg border-2 border-white shadow-lg transform transition-all duration-1000 ease-out"
+                style={{
+                  animation: 'slideUp 0.8s ease-out 0.4s both, glowBorder 2s ease-in-out infinite 1s'
+                }}
+              >
+                <div className="text-sm font-medium">Total Comments</div>
+                <div className="text-2xl font-bold">
+                  {selectedPlatform === 'youtube' && !isLoadingYouTubeData 
+                    ? '1'
+                    : selectedPlatform !== 'all' && !isLoadingYouTubeData 
+                    ? platformMetrics.totalComments.toLocaleString()
+                    : '100k'
+                  }
+                </div>
+              </div>
+              <div 
+                className="bg-blue-600 text-white p-4 rounded-lg border-2 border-white shadow-lg transform transition-all duration-1000 ease-out"
+                style={{
+                  animation: 'slideUp 0.8s ease-out 0.6s both, glowBorder 2s ease-in-out infinite 1.5s'
+                }}
+              >
+                <div className="text-sm font-medium">Channel Subscribers</div>
+                <div className="text-2xl font-bold">
+                  {selectedPlatform === 'youtube' && !isLoadingYouTubeData 
+                    ? '140,000'
+                    : selectedPlatform !== 'all' && !isLoadingYouTubeData 
+                    ? platformMetrics.channelSubscribers.toLocaleString()
+                    : '100k'
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          
+          {/* CSS Animations */}
+          <style>{`
+            @keyframes slideUp {
+              0% {
+                transform: translateY(50px);
+                opacity: 0;
+              }
+              100% {
+                transform: translateY(0);
+                opacity: 1;
+              }
+            }
+            
+            @keyframes glowBorder {
+              0%, 100% {
+                box-shadow: 0 0 5px rgba(59, 130, 246, 0.5), 0 0 10px rgba(59, 130, 246, 0.3), 0 0 15px rgba(59, 130, 246, 0.1);
+              }
+              50% {
+                box-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.6), 0 0 30px rgba(59, 130, 246, 0.4);
+              }
+            }
+          `}</style>
+          
+          
+          {/* Platform-specific metrics display */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {getFilteredMonetizationData().map((metric) => (
               <div 
@@ -1223,6 +1585,9 @@ const GYBStudio: React.FC = () => {
                   metric.platform === 'facebook' ? 'border-l-blue-500' :
                   metric.platform === 'pinterest' ? 'border-l-red-500' :
                   metric.platform === 'youtube' ? 'border-l-red-600' :
+                  metric.platform === 'tiktok' ? 'border-l-black' :
+                  metric.platform === 'twitter' ? 'border-l-blue-400' :
+                  metric.platform === 'linkedin' ? 'border-l-blue-700' :
                   metric.platform === 'others' ? 'border-l-purple-500' :
                   'border-l-gray-400'
                 }`}
@@ -1237,6 +1602,7 @@ const GYBStudio: React.FC = () => {
               </div>
             ))}
           </div>
+            
           
                         {/* Spotify Playlist Management */}
               {spotifyService.isAuthenticated() && (

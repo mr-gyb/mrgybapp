@@ -3,7 +3,7 @@ import { ChevronLeft, Flag, Target, Clock, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getAssessmentCompletion } from '../lib/firebase/assessment';
-import { saveRoadmapProgress, getRoadmapProgress, updateMilestoneProgress, initializeRoadmapProgress } from '../lib/firebase/roadmapProgress';
+import { saveRoadmapProgress, updateMilestoneProgress, initializeRoadmapProgress } from '../lib/firebase/roadmapProgress';
 import type { RoadmapPhase } from '../lib/firebase/roadmap';
 
 const RoadMap: React.FC = () => {
@@ -18,19 +18,43 @@ const RoadMap: React.FC = () => {
       order_index: 0,
       milestones: [
         {
-          id: 'business-registration',
+          id: 'brand-identity',
           phase_id: 'foundation',
-          title: 'Business Registration',
-          description: 'Complete legal registration and documentation',
+          title: 'Define your brand identity & mission',
+          description: 'Establish your brand identity and mission statement',
           order_index: 0,
           completed: false
         },
         {
-          id: 'team-assembly',
+          id: 'content-strategy',
           phase_id: 'foundation',
-          title: 'Initial Team Assembly',
-          description: 'Hire core team members',
+          title: 'Create a simple content/editorial strategy',
+          description: 'Develop a basic content and editorial strategy',
           order_index: 1,
+          completed: false
+        },
+        {
+          id: 'lead-generation',
+          phase_id: 'foundation',
+          title: 'Create a basic lead generation funnel',
+          description: 'Set up a simple lead generation system',
+          order_index: 2,
+          completed: false
+        },
+        {
+          id: 'introductory-content',
+          phase_id: 'foundation',
+          title: 'Publish introductory content',
+          description: 'Create and publish your first content pieces',
+          order_index: 3,
+          completed: false
+        },
+        {
+          id: 'basic-automations',
+          phase_id: 'foundation',
+          title: 'Set up basic automations',
+          description: 'Implement basic automation tools for efficiency',
+          order_index: 4,
           completed: false
         }
       ]
@@ -42,11 +66,43 @@ const RoadMap: React.FC = () => {
       order_index: 1,
       milestones: [
         {
-          id: 'mvp-launch',
+          id: 'brand-identity-dev',
           phase_id: 'development',
-          title: 'MVP Launch',
-          description: 'Launch minimum viable product',
+          title: 'Define your brand identity & mission',
+          description: 'Establish your brand identity and mission statement',
           order_index: 0,
+          completed: false
+        },
+        {
+          id: 'content-strategy-dev',
+          phase_id: 'development',
+          title: 'Create a simple content/editorial strategy',
+          description: 'Develop a basic content and editorial strategy',
+          order_index: 1,
+          completed: false
+        },
+        {
+          id: 'lead-generation-dev',
+          phase_id: 'development',
+          title: 'Create a basic lead generation funnel',
+          description: 'Set up a simple lead generation system',
+          order_index: 2,
+          completed: false
+        },
+        {
+          id: 'introductory-content-dev',
+          phase_id: 'development',
+          title: 'Publish introductory content',
+          description: 'Create and publish your first content pieces',
+          order_index: 3,
+          completed: false
+        },
+        {
+          id: 'basic-automations-dev',
+          phase_id: 'development',
+          title: 'Set up basic automations',
+          description: 'Implement basic automation tools for efficiency',
+          order_index: 4,
           completed: false
         }
       ]
@@ -58,11 +114,35 @@ const RoadMap: React.FC = () => {
       order_index: 2,
       milestones: [
         {
-          id: 'market-expansion',
+          id: 'scale-ads-campaigns',
           phase_id: 'growth',
-          title: 'Market Expansion',
-          description: 'Enter new market segments',
+          title: 'Run ads or campaigns to scale winning offers',
+          description: 'Launch advertising campaigns to scale successful products/services',
           order_index: 0,
+          completed: false
+        },
+        {
+          id: 'automate-acquisition',
+          phase_id: 'growth',
+          title: 'Automate client acquisition, fulfillment, and support',
+          description: 'Implement automation systems for business operations',
+          order_index: 1,
+          completed: false
+        },
+        {
+          id: 'recurring-revenue',
+          phase_id: 'growth',
+          title: 'Build recurring revenue streams',
+          description: 'Create sustainable revenue models for long-term growth',
+          order_index: 2,
+          completed: false
+        },
+        {
+          id: 'finalize-sops',
+          phase_id: 'growth',
+          title: 'Finalize SOPs & processes so the business runs smoothly without you',
+          description: 'Document and optimize business processes for autonomous operation',
+          order_index: 3,
           completed: false
         }
       ]
@@ -87,18 +167,10 @@ const RoadMap: React.FC = () => {
       try {
         console.log('Loading roadmap progress from database for user:', user.uid);
         
-        // Try to load existing progress from database
-        const savedProgress = await getRoadmapProgress(user.uid);
-        
-        if (savedProgress) {
-          console.log('Found saved roadmap progress:', savedProgress);
-          setPhases(savedProgress.phases);
-        } else {
-          console.log('No saved progress found, initializing with default phases');
-          // Initialize with default phases and save to database
-          await initializeRoadmapProgress(user.uid, defaultPhases);
-          setPhases(defaultPhases);
-        }
+        // Force refresh with new default phases (clearing old data)
+        console.log('Forcing refresh with new default phases');
+        await initializeRoadmapProgress(user.uid, defaultPhases);
+        setPhases(defaultPhases);
       } catch (error) {
         console.error('Error loading roadmap progress:', error);
         // Fallback to default phases
@@ -125,9 +197,8 @@ const RoadMap: React.FC = () => {
       // Process URL parameters and update phases accordingly
       if (foundationCompleted === 'true' || developmentCompleted === 'true') {
         try {
-          // Get current progress from database
-          const currentProgress = await getRoadmapProgress(user.uid);
-          const currentPhases = currentProgress?.phases || defaultPhases;
+          // Use new default phases instead of loading from database
+          const currentPhases = defaultPhases;
           
           const updatedPhases = currentPhases.map(phase => {
             let shouldComplete = false;
@@ -177,9 +248,8 @@ const RoadMap: React.FC = () => {
           if (assessmentCompletion) {
             console.log('Using assessment completion from database');
             
-            // Get current progress from database
-            const currentProgress = await getRoadmapProgress(user.uid);
-            const currentPhases = currentProgress?.phases || defaultPhases;
+            // Use new default phases instead of loading from database
+            const currentPhases = defaultPhases;
             
             const updatedPhases = currentPhases.map(phase => {
               let shouldComplete = false;
@@ -376,9 +446,9 @@ const RoadMap: React.FC = () => {
     if (!phases.length) return 0;
     
     // Calculate progress based on completed phases
-    // Foundation Phase = 25% (2 milestones)
-    // Development Phase = 50% (2 milestones) 
-    // Growth Phase = 25% (2 milestones)
+    // Foundation Phase = 25% (5 milestones)
+    // Development Phase = 50% (5 milestones) 
+    // Growth Phase = 25% (4 milestones)
     // Total = 100%
     
     let totalProgress = 0;
@@ -577,13 +647,13 @@ const RoadMap: React.FC = () => {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                          <Target size={20} className={isPhaseLockedNow ? "text-gray-400" : "text-gold mr-2"} />
+                          <Target size={28} className={isPhaseLockedNow ? "text-gray-400" : "text-gold mr-2"} />
                           <h3 className={`font-semibold ${isPhaseLockedNow ? 'text-gray-500' : 'text-navy-blue'}`}>
                             {milestone.title}
                           </h3>
                         </div>
                         <div
-                          className={`w-6 h-6 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
+                          className={`w-10 h-10 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
                             isPhaseLockedNow
                               ? 'bg-gray-200 border-gray-300 cursor-not-allowed'
                               : milestone.completed
@@ -609,7 +679,7 @@ const RoadMap: React.FC = () => {
                           }
                         >
                           {milestone.completed && (
-                            <Check size={16} className={isPhaseLockedNow ? "text-gray-500" : "text-white"} />
+                            <Check size={24} className={isPhaseLockedNow ? "text-gray-500" : "text-white"} />
                           )}
                         </div>
                       </div>
