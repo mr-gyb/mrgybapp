@@ -23,16 +23,7 @@ const BusinessRoadmapWelcome: React.FC = () => {
 
       <div className="content-wrapper">
         <div className="grid-container">
-          {/* Left: Roadmap Image - Positioned at bottom */}
-          <div className="roadmap-image-container">
-            <img 
-              src={roadmapImg} 
-              alt="Business roadmap"
-              className="roadmap-image"
-            />
-          </div>
-
-          {/* Right: Text Content */}
+          {/* Text Content - Centered */}
           <div className="text-content-container">
             <div className="text-content-box">
               <h1 className="main-heading">

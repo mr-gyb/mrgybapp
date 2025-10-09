@@ -34,6 +34,41 @@ interface VideoAnalysisResult {
     description: string;
   }[];
   callToAction?: string;
+  // New fields for enhanced analysis
+  keyMoments?: {
+    title: string;
+    description: string;
+    timestamp: string;
+  }[];
+  bestSegment?: {
+    title: string;
+    description: string;
+    timestamp: string;
+    reasoning: string;
+  };
+  actionableSuggestions?: {
+    title: string;
+    description: string;
+    impact: string;
+  }[];
+  // Additional fields for summary page
+  suggestedEdits?: {
+    title: string;
+    description: string;
+    reasoning: string;
+    priority: 'high' | 'medium' | 'low';
+  }[];
+  revisedScript?: {
+    originalScript: string;
+    revisedScript: string;
+    changes: string[];
+  };
+  whatChanged?: {
+    section: string;
+    original: string;
+    revised: string;
+    reason: string;
+  }[];
 }
 
 interface OpenAIResponse {
@@ -205,7 +240,7 @@ class OpenAIService {
         duration: this.estimateVideoDuration(videoFile.size)
       };
 
-      const prompt = `You are an expert video content analyst. Analyze this video transcript and create a comprehensive, structured summary.
+      const prompt = `You are an expert video content analyst and script editor. Analyze this video transcript and create a comprehensive, structured summary with detailed editing recommendations.
 
 VIDEO DETAILS:
 - Name: ${videoInfo.name}
@@ -218,6 +253,11 @@ ${transcript}
 
 IMPORTANT: You MUST respond with ONLY valid JSON. Do not include any text before or after the JSON. Start your response with { and end with }.
 
+SPECIAL FOCUS: Pay particular attention to generating detailed content for:
+- Suggested Edits: Provide 3-5 specific editing recommendations with clear reasoning
+- Revised Script: Create a complete rewritten version with improvements
+- What Changed: Show detailed before/after comparisons with explanations
+
 Please provide a detailed analysis with the following structure:
 
 1. **Technical Information**: File size, duration, quality assessment, production values
@@ -227,6 +267,13 @@ Please provide a detailed analysis with the following structure:
 5. **Practical Frameworks**: Step-by-step processes, methodologies, or actionable advice
 6. **Call-to-Action**: Closing message, next steps, or engagement prompts
 7. **Suggested Short Segments**: Valuable clips for short-form content
+8. **Key Moments**: Important highlights and memorable segments from the video
+9. **Best Performing Segment**: The segment most likely to gain higher views/engagement
+10. **Actionable Suggestions**: Three specific recommendations to improve video structure/script
+11. **Key Points**: Bullet points of main takeaways from the video
+12. **Suggested Edits**: Specific editing recommendations with priority levels (high/medium/low) for improving video structure, pacing, clarity, and engagement
+13. **Revised Script**: Complete rewritten script with improvements for better flow, engagement, and clarity
+14. **What Changed**: Detailed comparison of original vs revised content showing specific improvements made
 
 Respond with ONLY this JSON structure:
 {
@@ -269,7 +316,87 @@ Respond with ONLY this JSON structure:
       "reasoning": "Why this segment is valuable"
     }
   ],
+  "keyMoments": [
+    {
+      "title": "Key Moment Title",
+      "description": "Description of this important moment",
+      "timestamp": "2:30-3:45"
+    }
+  ],
+  "bestSegment": {
+    "title": "Best Performing Segment",
+    "description": "Description of the segment most likely to perform well",
+    "timestamp": "1:15-2:30",
+    "reasoning": "Why this segment will gain higher views and engagement"
+  },
+  "actionableSuggestions": [
+    {
+      "title": "Suggestion 1",
+      "description": "Detailed description of the improvement",
+      "impact": "Expected impact on engagement and performance"
+    },
+    {
+      "title": "Suggestion 2", 
+      "description": "Detailed description of the improvement",
+      "impact": "Expected impact on engagement and performance"
+    },
+    {
+      "title": "Suggestion 3",
+      "description": "Detailed description of the improvement", 
+      "impact": "Expected impact on engagement and performance"
+    }
+  ],
   "keyPoints": ["Key insight 1", "Key insight 2", "Key insight 3"],
+  "suggestedEdits": [
+    {
+      "title": "Improve Opening Hook",
+      "description": "Add a compelling opening statement to grab viewer attention within the first 3 seconds",
+      "reasoning": "Strong openings increase viewer retention by 40% and reduce drop-off rates",
+      "priority": "high"
+    },
+    {
+      "title": "Clarify Main Points",
+      "description": "Restructure the middle section to present key points in a more logical sequence",
+      "reasoning": "Better organization helps viewers follow the narrative and retain information",
+      "priority": "medium"
+    },
+    {
+      "title": "Strengthen Call-to-Action",
+      "description": "Make the closing more actionable with specific next steps for viewers",
+      "reasoning": "Clear CTAs increase engagement and drive desired viewer actions",
+      "priority": "high"
+    }
+  ],
+  "revisedScript": {
+    "originalScript": "Original transcript from the video...",
+    "revisedScript": "Complete rewritten script with improved structure, better pacing, clearer messaging, and enhanced engagement elements...",
+    "changes": [
+      "Added compelling opening hook to grab attention",
+      "Restructured main points for better flow",
+      "Enhanced transitions between sections",
+      "Strengthened call-to-action with specific next steps"
+    ]
+  },
+  "whatChanged": [
+    {
+      "section": "Introduction",
+      "original": "Original opening content from transcript",
+      "revised": "New improved opening with hook and clear value proposition",
+      "reason": "Added attention-grabbing hook to reduce early drop-off and clearly communicate video value"
+    },
+    {
+      "section": "Main Content",
+      "original": "Original main content structure",
+      "revised": "Restructured content with better flow and clearer points",
+      "reason": "Improved organization helps viewers follow the narrative and retain key information"
+    },
+    {
+      "section": "Conclusion",
+      "original": "Original closing content",
+      "revised": "Enhanced conclusion with strong call-to-action",
+      "reason": "Clear CTAs increase engagement and drive desired viewer actions"
+    }
+  ],
   "duration": ${videoInfo.duration},
   "transcript": "${transcript.substring(0, 500)}..."
 }`;
@@ -335,7 +462,14 @@ Respond with ONLY this JSON structure:
           keyLessons: parsedContent.keyLessons || [],
           stories: parsedContent.stories || [],
           frameworks: parsedContent.frameworks || [],
-          callToAction: parsedContent.callToAction || ''
+          callToAction: parsedContent.callToAction || '',
+          // New fields for enhanced analysis
+          keyMoments: parsedContent.keyMoments || [],
+          bestSegment: parsedContent.bestSegment || undefined,
+          actionableSuggestions: parsedContent.actionableSuggestions || [],
+          suggestedEdits: parsedContent.suggestedEdits || [],
+          revisedScript: parsedContent.revisedScript || undefined,
+          whatChanged: parsedContent.whatChanged || []
         };
       } catch (parseError) {
         console.error('❌ JSON parsing error:', parseError);
@@ -360,7 +494,14 @@ Respond with ONLY this JSON structure:
           keyLessons: [],
           stories: [],
           frameworks: [],
-          callToAction: 'Analysis completed'
+          callToAction: 'Analysis completed',
+          // New fields for enhanced analysis
+          keyMoments: [],
+          bestSegment: undefined,
+          actionableSuggestions: [],
+          suggestedEdits: [],
+          revisedScript: undefined,
+          whatChanged: []
         };
       }
 

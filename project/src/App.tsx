@@ -23,7 +23,6 @@ const GYBMedia = lazy(() => import('./components/NewPost'));
 const GYBStudio = lazy(() => import('./components/GYBStudio'));
 const GYBStudioWelcome = lazy(() => import('./components/GYBStudioWelcome'));
 const VideoUploadPage = lazy(() => import('./components/VideoUploadPage'));
-const Create1Page = lazy(() => import('./components/Create1Page'));
 const SummaryPage = lazy(() => import('./components/SummaryPage'));
 const FacebookAPITester = lazy(() => import('./components/FacebookAPITester'));
 const FacebookPostsDisplay = lazy(() => import('./components/FacebookPostsDisplay'));
@@ -304,13 +303,6 @@ const App: React.FC = () => {
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
                   <VideoUploadPage />
-                </Suspense>
-              </ProtectedRoute>
-            } />
-            <Route path="/create1" element={
-              <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <Create1Page />
                 </Suspense>
               </ProtectedRoute>
             } />

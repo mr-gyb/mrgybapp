@@ -612,11 +612,6 @@ const GYBStudio: React.FC = () => {
       ],
       youtube: [
         { 
-          name: 'Total Videos', 
-          value: youtubeData?.totalVideos?.toString() || '0', 
-          platform: 'youtube' 
-        },
-        { 
           name: 'Total Views', 
           value: youtubeData?.totalViews?.toLocaleString() || '0', 
           platform: 'youtube' 
@@ -1402,9 +1397,22 @@ const GYBStudio: React.FC = () => {
                   animation: 'slideUp 0.8s ease-out, glowBorder 2s ease-in-out infinite'
                 }}
               >
-                <div className="text-sm font-medium">Total Views</div>
+                <div className="text-sm font-medium">
+                  {selectedPlatform === 'instagram' ? 'Followers' : 
+                   selectedPlatform === 'facebook' ? 'Followers' : 
+                   selectedPlatform === 'spotify' ? 'Followers' : 
+                   selectedPlatform === 'pinterest' ? 'Followers' : 'Total Views'}
+                </div>
                 <div className="text-2xl font-bold">
-                  {selectedPlatform === 'youtube' && !isLoadingYouTubeData 
+                  {selectedPlatform === 'instagram' 
+                    ? '25.4K'
+                    : selectedPlatform === 'facebook'
+                    ? '18.7K'
+                    : selectedPlatform === 'spotify'
+                    ? '12.3K'
+                    : selectedPlatform === 'pinterest'
+                    ? '9.8K'
+                    : selectedPlatform === 'youtube' && !isLoadingYouTubeData 
                     ? '382'
                     : selectedPlatform !== 'all' && !isLoadingYouTubeData 
                     ? platformMetrics.totalViews.toLocaleString()
@@ -1418,9 +1426,22 @@ const GYBStudio: React.FC = () => {
                   animation: 'slideUp 0.8s ease-out 0.2s both, glowBorder 2s ease-in-out infinite 0.5s'
                 }}
               >
-                <div className="text-sm font-medium">Total Likes</div>
+                <div className="text-sm font-medium">
+                  {selectedPlatform === 'instagram' ? 'CTR' : 
+                   selectedPlatform === 'facebook' ? 'CTR' : 
+                   selectedPlatform === 'spotify' ? 'Track Count' : 
+                   selectedPlatform === 'pinterest' ? 'CTR' : 'Total Likes'}
+                </div>
                 <div className="text-2xl font-bold">
-                  {selectedPlatform === 'youtube' && !isLoadingYouTubeData 
+                  {selectedPlatform === 'instagram' 
+                    ? '4.8%'
+                    : selectedPlatform === 'facebook'
+                    ? '3.2%'
+                    : selectedPlatform === 'spotify'
+                    ? '247'
+                    : selectedPlatform === 'pinterest'
+                    ? '2.7%'
+                    : selectedPlatform === 'youtube' && !isLoadingYouTubeData 
                     ? '9'
                     : selectedPlatform !== 'all' && !isLoadingYouTubeData 
                     ? platformMetrics.totalLikes.toLocaleString()
@@ -1433,15 +1454,18 @@ const GYBStudio: React.FC = () => {
             {/* Central AI Character */}
             <div className="flex flex-col items-center">
               <div className="relative mb-4">
-                <img 
-                  src="https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58"
-                  alt="Mr. GYB AI"
-                  className="w-32 h-32 object-contain rounded-lg"
-                  style={{
-                    border: '3px solid #1e40af',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-                  }}
-                />
+                 <img 
+                   src="https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58"
+                   alt="Mr. GYB AI"
+                   className="object-contain rounded-lg"
+                   style={{
+                     width: '350px',
+                     height: '350px',
+                     border: '3px solid #1e40af',
+                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                     backgroundColor: 'white'
+                   }}
+                 />
                 {/* Inner yellow border effect */}
                 <div 
                   className="absolute inset-0 rounded-lg pointer-events-none"
@@ -1520,9 +1544,22 @@ const GYBStudio: React.FC = () => {
                   animation: 'slideUp 0.8s ease-out 0.4s both, glowBorder 2s ease-in-out infinite 1s'
                 }}
               >
-                <div className="text-sm font-medium">Total Comments</div>
+                <div className="text-sm font-medium">
+                  {selectedPlatform === 'instagram' ? 'CPC' : 
+                   selectedPlatform === 'facebook' ? 'CPC' : 
+                   selectedPlatform === 'spotify' ? 'Playlists' : 
+                   selectedPlatform === 'pinterest' ? 'CPC' : 'Total Comments'}
+                </div>
                 <div className="text-2xl font-bold">
-                  {selectedPlatform === 'youtube' && !isLoadingYouTubeData 
+                  {selectedPlatform === 'instagram' 
+                    ? '$2.45'
+                    : selectedPlatform === 'facebook'
+                    ? '$1.89'
+                    : selectedPlatform === 'spotify'
+                    ? '15'
+                    : selectedPlatform === 'pinterest'
+                    ? '$1.25'
+                    : selectedPlatform === 'youtube' && !isLoadingYouTubeData 
                     ? '1'
                     : selectedPlatform !== 'all' && !isLoadingYouTubeData 
                     ? platformMetrics.totalComments.toLocaleString()
@@ -1536,9 +1573,22 @@ const GYBStudio: React.FC = () => {
                   animation: 'slideUp 0.8s ease-out 0.6s both, glowBorder 2s ease-in-out infinite 1.5s'
                 }}
               >
-                <div className="text-sm font-medium">Channel Subscribers</div>
+                <div className="text-sm font-medium">
+                  {selectedPlatform === 'instagram' ? 'Engagement Rate' : 
+                   selectedPlatform === 'facebook' ? 'Engagement Rate' : 
+                   selectedPlatform === 'spotify' ? 'Monthly Listeners' : 
+                   selectedPlatform === 'pinterest' ? 'Engagement Rate' : 'Channel Subscribers'}
+                </div>
                 <div className="text-2xl font-bold">
-                  {selectedPlatform === 'youtube' && !isLoadingYouTubeData 
+                  {selectedPlatform === 'instagram' 
+                    ? '6.2%'
+                    : selectedPlatform === 'facebook'
+                    ? '5.1%'
+                    : selectedPlatform === 'spotify'
+                    ? '8.9K'
+                    : selectedPlatform === 'pinterest'
+                    ? '4.3%'
+                    : selectedPlatform === 'youtube' && !isLoadingYouTubeData 
                     ? '140,000'
                     : selectedPlatform !== 'all' && !isLoadingYouTubeData 
                     ? platformMetrics.channelSubscribers.toLocaleString()
@@ -1574,34 +1624,6 @@ const GYBStudio: React.FC = () => {
           `}</style>
           
           
-          {/* Platform-specific metrics display */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {getFilteredMonetizationData().map((metric) => (
-              <div 
-                key={metric.name} 
-                className={`bg-gray-50 p-4 rounded-lg border-l-4 transition-all duration-200 hover:shadow-md ${
-                  metric.platform === 'spotify' ? 'border-l-green-500' :
-                  metric.platform === 'instagram' ? 'border-l-pink-500' :
-                  metric.platform === 'facebook' ? 'border-l-blue-500' :
-                  metric.platform === 'pinterest' ? 'border-l-red-500' :
-                  metric.platform === 'youtube' ? 'border-l-red-600' :
-                  metric.platform === 'tiktok' ? 'border-l-black' :
-                  metric.platform === 'twitter' ? 'border-l-blue-400' :
-                  metric.platform === 'linkedin' ? 'border-l-blue-700' :
-                  metric.platform === 'others' ? 'border-l-purple-500' :
-                  'border-l-gray-400'
-                }`}
-              >
-                <h3 className="text-sm text-gray-600 mb-1">{metric.name}</h3>
-                <p className="text-2xl font-bold">{metric.value}</p>
-                {metric.platform !== 'all' && (
-                  <div className="mt-2 text-xs text-gray-500 capitalize">
-                    {metric.platform} metric
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
             
           
                         {/* Spotify Playlist Management */}

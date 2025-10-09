@@ -36,7 +36,7 @@ const FacebookMetricsVerifier: React.FC<FacebookMetricsVerifierProps> = ({ class
         console.log('✅ Facebook credentials found, attempting real API call');
       }
 
-      const metricsData = await getFacebookMetrics();
+      const metricsData = await getFacebookMetrics(pageId);
       const postMetricsData = await getFacebookPostMetrics();
       
       setMetrics(metricsData);

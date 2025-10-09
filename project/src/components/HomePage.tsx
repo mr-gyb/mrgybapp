@@ -213,7 +213,8 @@ const HomePage: React.FC = () => {
     // Fetch Facebook metrics
     const fetchFacebookData = async () => {
       try {
-        const metrics = await getFacebookMetrics();
+        const pageId = import.meta.env.VITE_FACEBOOK_PAGE_ID;
+        const metrics = await getFacebookMetrics(pageId);
         console.log('Facebook metrics fetched:', metrics);
         setFacebookMetrics(metrics);
       } catch (error) {
