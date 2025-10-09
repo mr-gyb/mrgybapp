@@ -4,7 +4,10 @@
   min-height: 100vh;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, #11335d 0%, #e3c472 100%);
+  background: url('./images/roadmap.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .gyb-logo {
@@ -31,44 +34,22 @@
 }
 
 .grid-container {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2.5rem;
-  align-items: center;
-  justify-items: center;
-  width: 100%;
-  height: 100%;
-}
-
-@media (min-width: 768px) {
-  .grid-container {
-    grid-template-columns: 1fr 1fr;
-    gap: 4rem;
-  }
-}
-
-.roadmap-image-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
-.roadmap-image {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  max-height: 70vh;
-}
 
 .text-content-container {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: right;
+  margin-right: -50%;
   width: 100%;
-  height: 100%;
+  height: 150%;
+  position: absolute;
 }
 
 .text-content-box {

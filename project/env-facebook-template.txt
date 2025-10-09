@@ -1,6 +1,10 @@
 # Facebook Integration Environment Variables
 # Copy this file to .env and fill in your actual values
 
+# Facebook Page Configuration (Required for metrics)
+VITE_FACEBOOK_PAGE_ID=your_facebook_page_id_here
+VITE_FACEBOOK_ACCESS_TOKEN=your_facebook_access_token_here
+
 # Facebook App Configuration
 VITE_FACEBOOK_APP_ID=your_facebook_app_id_here
 VITE_FACEBOOK_APP_SECRET=your_facebook_app_secret_here
@@ -12,6 +16,7 @@ VITE_FACEBOOK_APP_SECRET=your_facebook_app_secret_here
 
 # Other existing variables (keep these if you have them)
 VITE_OPENAI_API_KEY=your_openai_api_key_here
+VITE_OPENAI_VIDEO_API_KEY=your_openai_video_api_key_here
 VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id_here
 VITE_SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
 VITE_SPOTIFY_REDIRECT_URI=http://localhost:3002/callback

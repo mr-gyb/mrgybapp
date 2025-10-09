@@ -10,7 +10,16 @@ const VideoUploadPage: React.FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
+  const [hasUploadedVideo, setHasUploadedVideo] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [showProcessingSteps, setShowProcessingSteps] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const steps = [
+    { number: 1, text: 'Extracting audio', emoji: '🎵' },
+    { number: 2, text: 'Transcribing Text', emoji: '🎤' },
+    { number: 3, text: 'Analyzing Content', emoji: '🧠' }
+  ];
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -31,6 +40,9 @@ const VideoUploadPage: React.FC = () => {
     
     if (videoFiles.length > 0) {
       setUploadedFiles(prev => [...prev, ...videoFiles]);
+      setHasUploadedVideo(true);
+      setShowProcessingSteps(true);
+      startStepAnimation();
       await processVideoWithOpenAI(videoFiles[0]);
     }
   };
@@ -41,12 +53,33 @@ const VideoUploadPage: React.FC = () => {
     
     if (videoFiles.length > 0) {
       setUploadedFiles(prev => [...prev, ...videoFiles]);
+      setHasUploadedVideo(true);
+      setShowProcessingSteps(true);
+      startStepAnimation();
       await processVideoWithOpenAI(videoFiles[0]);
     }
   };
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const startStepAnimation = () => {
+    setCurrentStep(0);
+    const stepInterval = setInterval(() => {
+      setCurrentStep(prev => {
+        if (prev < steps.length - 1) {
+          return prev + 1;
+        } else {
+          clearInterval(stepInterval);
+          // Navigate to summary page after all steps
+          setTimeout(() => {
+            navigate('/summary');
+          }, 1000);
+          return prev;
+        }
+      });
+    }, 2000); // 2 seconds per step
   };
 
   const processVideoWithOpenAI = async (videoFile: File) => {
@@ -108,13 +141,21 @@ const VideoUploadPage: React.FC = () => {
   };
 
   const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setUploadedFiles(prev => {
+      const newFiles = prev.filter((_, i) => i !== index);
+      if (newFiles.length === 0) {
+        setHasUploadedVideo(false);
+        setShowProcessingSteps(false);
+        setCurrentStep(0);
+      }
+      return newFiles;
+    });
   };
 
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Character Section - Centered */}
-      <div className="py-12">
+      <div className={`py-12 transition-all duration-500 ease-in-out ${hasUploadedVideo ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
         <div className="container mx-auto px-4">
           <div className="flex justify-center">
             {/* Character Frame */}
@@ -122,7 +163,7 @@ const VideoUploadPage: React.FC = () => {
               <div className="relative">
                 {/* Character Image */}
                 <div className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-opacity-20 animated-border" style={{ borderColor: '#11335d' }}>
-                  <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#11335d' }}>
+                  <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'white' }}>
                     <img 
                       src="https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58"
                       alt="Mr. GYB AI"
@@ -131,7 +172,7 @@ const VideoUploadPage: React.FC = () => {
                         // Fallback if image fails to load
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
-                        target.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-white text-2xl font-bold" style="background-color: #11335d;">GYB</div>';
+                        target.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-black text-2xl font-bold" style="background-color: white;">GYB</div>';
                       }}
                     />
                   </div>
@@ -147,12 +188,12 @@ const VideoUploadPage: React.FC = () => {
 
       {/* Video Upload Section */}
       <div className="container mx-auto px-4 pb-12">
-        <div className="max-w-4xl mx-auto">
+        <div className={`max-w-4xl mx-auto transition-all duration-500 ease-in-out ${hasUploadedVideo ? 'max-w-6xl' : 'max-w-4xl'}`}>
           {/* Upload Container */}
             <div 
-            className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-200 animated-border-upload ${
+            className={`relative border-2 border-dashed rounded-2xl text-center transition-all duration-500 ease-in-out animated-border-upload ${
               isDragOver ? 'bg-gray-50' : 'bg-white'
-            }`}
+            } ${hasUploadedVideo ? 'p-8' : 'p-12'}`}
             style={{
               borderColor: isDragOver ? '#11335d' : '#11335d'
             }}
@@ -309,7 +350,7 @@ const VideoUploadPage: React.FC = () => {
 
           {/* Uploaded Files List */}
           {uploadedFiles.length > 0 && (
-            <div className="mt-8">
+            <div className={`mt-8 transition-all duration-500 ease-in-out ${hasUploadedVideo ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-4'}`}>
               <h3 className="text-xl font-semibold text-gray-800 mb-4">Uploaded Videos</h3>
               <div className="space-y-3">
                 {uploadedFiles.map((file, index) => (
@@ -332,6 +373,142 @@ const VideoUploadPage: React.FC = () => {
                   </div>
                 ))}
               </div>
+              
+              {/* Processing Steps Section */}
+              {showProcessingSteps && (
+                <div className="mt-8">
+                  <div 
+                    className="relative border-2 border-dashed rounded-2xl p-8 max-w-2xl mx-auto"
+                    style={{
+                      borderColor: '#D4AF37',
+                      borderWidth: '3px'
+                    }}
+                  >
+                    {/* Title */}
+                    <h3 className="text-2xl font-bold text-black text-center mb-8">
+                      Processing Video
+                    </h3>
+
+                    {/* Processing Steps */}
+                    <div className="space-y-6">
+                      {steps.map((step, index) => (
+                        <div 
+                          key={step.number}
+                          className={`flex items-center space-x-4 transition-all duration-1500 ease-out ${
+                            index <= currentStep 
+                              ? 'opacity-100 transform translate-x-0' 
+                              : 'opacity-0 transform translate-x-6'
+                          }`}
+                          style={{
+                            transitionDelay: `${index * 600}ms`
+                          }}
+                        >
+                          {/* Step Circle */}
+                          <div className="relative">
+                            <div 
+                              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-1500 ease-out"
+                              style={{
+                                border: `3px solid #11335d`,
+                                backgroundColor: index <= currentStep ? 'white' : '#11335d',
+                                boxShadow: index <= currentStep 
+                                  ? '0 4px 12px rgba(17, 51, 93, 0.15)' 
+                                  : '0 2px 8px rgba(17, 51, 93, 0.3)'
+                              }}
+                            >
+                              <span 
+                                className="text-lg font-bold transition-all duration-1500 ease-out"
+                                style={{
+                                  color: index <= currentStep ? '#11335d' : 'white',
+                                  textShadow: index <= currentStep ? 'none' : '0 1px 2px rgba(0,0,0,0.3)'
+                                }}
+                              >
+                                {step.number}
+                              </span>
+                            </div>
+                            {/* Inner golden ring */}
+                            <div 
+                              className="absolute inset-0 rounded-full border-2 pointer-events-none transition-all duration-1500 ease-out"
+                              style={{
+                                borderColor: '#D4AF37',
+                                opacity: index <= currentStep ? 1 : 0,
+                                transform: index <= currentStep ? 'scale(1)' : 'scale(0.8)'
+                              }}
+                            ></div>
+                            {/* Blue glow effect during transition */}
+                            <div 
+                              className="absolute inset-0 rounded-full pointer-events-none transition-all duration-1500 ease-out"
+                              style={{
+                                backgroundColor: index <= currentStep ? 'transparent' : 'rgba(17, 51, 93, 0.1)',
+                                opacity: index <= currentStep ? 0 : 1,
+                                transform: index <= currentStep ? 'scale(1)' : 'scale(1.1)'
+                              }}
+                            ></div>
+                          </div>
+
+                          {/* Step Text */}
+                          <div className="flex items-center space-x-3">
+                            <span 
+                              className="text-2xl transition-all duration-1500 ease-out"
+                              style={{
+                                opacity: index <= currentStep ? 1 : 0.3,
+                                transform: index <= currentStep ? 'scale(1)' : 'scale(0.9)'
+                              }}
+                            >
+                              {step.emoji}
+                            </span>
+                            <span 
+                              className="text-lg transition-all duration-1500 ease-out"
+                              style={{
+                                color: index <= currentStep ? '#000' : '#11335d',
+                                fontWeight: index <= currentStep ? 'normal' : 'normal',
+                                opacity: index <= currentStep ? 1 : 0.7,
+                                textShadow: index <= currentStep ? 'none' : '0 1px 2px rgba(17, 51, 93, 0.2)'
+                              }}
+                            >
+                              {step.text}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Progress Indicator */}
+                    <div className="mt-6 text-center">
+                      <div className="text-sm text-gray-600">
+                        Step {currentStep + 1} of {steps.length}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Expanded Content Section */}
+              {hasUploadedVideo && !showProcessingSteps && (
+                <div className="mt-8 space-y-6">
+                  {/* Video Details */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-3">Video Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">File Name</p>
+                        <p className="font-medium text-gray-800">{uploadedFiles[0]?.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">File Size</p>
+                        <p className="font-medium text-gray-800">{(uploadedFiles[0]?.size / (1024 * 1024)).toFixed(2)} MB</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">File Type</p>
+                        <p className="font-medium text-gray-800">{uploadedFiles[0]?.type}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Upload Time</p>
+                        <p className="font-medium text-gray-800">{new Date().toLocaleTimeString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {/* Process Button */}
               <div className="mt-6 text-center">
@@ -408,6 +585,37 @@ const VideoUploadPage: React.FC = () => {
           100% {
             background-position: 0% 50%;
           }
+        }
+        
+        @keyframes fadeInFromBlue {
+          0% {
+            opacity: 0;
+            transform: translateX(20px) scale(0.9);
+            background-color: rgba(17, 51, 93, 0.8);
+            color: rgba(17, 51, 93, 0.6);
+          }
+          30% {
+            opacity: 0.6;
+            transform: translateX(10px) scale(0.95);
+            background-color: rgba(17, 51, 93, 0.4);
+            color: rgba(17, 51, 93, 0.8);
+          }
+          60% {
+            opacity: 0.8;
+            transform: translateX(5px) scale(0.98);
+            background-color: rgba(17, 51, 93, 0.2);
+            color: rgba(17, 51, 93, 0.9);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+            background-color: white;
+            color: #11335d;
+          }
+        }
+        
+        .step-fade-in {
+          animation: fadeInFromBlue 1.5s ease-out forwards;
         }
       `}</style>
     </div>

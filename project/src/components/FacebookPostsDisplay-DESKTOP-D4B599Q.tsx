@@ -20,7 +20,8 @@ const FacebookPostsDisplay: React.FC = () => {
     const fetchData = async () => {
       try {
         // Get overall metrics
-        const metricsData = await getFacebookMetrics();
+        const pageId = import.meta.env.VITE_FACEBOOK_PAGE_ID;
+        const metricsData = await getFacebookMetrics(pageId);
         setMetrics(metricsData);
 
         // Create mock posts data
