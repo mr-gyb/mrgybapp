@@ -4,6 +4,7 @@ import { X, User, Settings, LogOut, Video, Bookmark, Palette, Moon, Sun, Map, La
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useChat } from "../contexts/ChatContext";
+import { isNewUser } from '../utils/userUtils';
 
 interface SideMenuProps {
   isOpen: boolean;
@@ -16,7 +17,7 @@ interface SideMenuProps {
 
 const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
   const menuRef = useRef<HTMLDivElement>(null);
-  const { logout, isAuthenticated } = useAuth();
+  const { logout, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const { setSelectedAgent } = useChat();
@@ -44,6 +45,29 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
       onClose();
     } catch (error) {
       console.error('Logout error:', error);
+    }
+  };
+
+  const handleRoadmapClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    onClose();
+    
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const userIsNew = await isNewUser(user.uid);
+      if (userIsNew) {
+        navigate('/business-roadmap-welcome');
+      } else {
+        navigate('/roadmap');
+      }
+    } catch (error) {
+      console.error('Error checking user status:', error);
+      // If there's an error, default to the welcome page to be safe
+      navigate('/business-roadmap-welcome');
     }
   };
 
@@ -104,14 +128,13 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
               <Settings size={20} className="mr-2" />
               Settings
             </Link>
-            <Link
-              to="/roadmap"
-              className="flex items-center py-2 hover:text-gold transition-colors"
-              onClick={onClose}
+            <button
+              onClick={handleRoadmapClick}
+              className="flex items-center py-2 hover:text-gold transition-colors w-full text-left"
             >
               <Map size={20} className="mr-2" />
               Roadmap
-            </Link>
+            </button>
             <Link
               to="/commerce"
               className="flex items-center py-2 hover:text-gold transition-colors"
