@@ -1392,8 +1392,9 @@ const GYBStudio: React.FC = () => {
             {/* Left Metrics Cards */}
             <div className="flex flex-col space-y-4 mr-8">
               <div 
-                className="bg-blue-600 text-white p-4 rounded-lg border-2 border-white shadow-lg transform transition-all duration-1000 ease-out"
+                className="text-white p-4 rounded-lg border-2 border-white shadow-lg transform transition-all duration-1000 ease-out"
                 style={{
+                  backgroundColor: '#11335d',
                   animation: 'slideUp 0.8s ease-out, glowBorder 2s ease-in-out infinite'
                 }}
               >
@@ -1421,8 +1422,9 @@ const GYBStudio: React.FC = () => {
                 </div>
               </div>
               <div 
-                className="bg-blue-600 text-white p-4 rounded-lg border-2 border-white shadow-lg transform transition-all duration-1000 ease-out"
+                className="text-white p-4 rounded-lg border-2 border-white shadow-lg transform transition-all duration-1000 ease-out"
                 style={{
+                  backgroundColor: '#11335d',
                   animation: 'slideUp 0.8s ease-out 0.2s both, glowBorder 2s ease-in-out infinite 0.5s'
                 }}
               >
@@ -1539,8 +1541,9 @@ const GYBStudio: React.FC = () => {
             {/* Right Metrics Cards */}
             <div className="flex flex-col space-y-4 ml-8">
               <div 
-                className="bg-blue-600 text-white p-4 rounded-lg border-2 border-white shadow-lg transform transition-all duration-1000 ease-out"
+                className="text-white p-4 rounded-lg border-2 border-white shadow-lg transform transition-all duration-1000 ease-out"
                 style={{
+                  backgroundColor: '#11335d',
                   animation: 'slideUp 0.8s ease-out 0.4s both, glowBorder 2s ease-in-out infinite 1s'
                 }}
               >
@@ -1568,8 +1571,9 @@ const GYBStudio: React.FC = () => {
                 </div>
               </div>
               <div 
-                className="bg-blue-600 text-white p-4 rounded-lg border-2 border-white shadow-lg transform transition-all duration-1000 ease-out"
+                className="text-white p-4 rounded-lg border-2 border-white shadow-lg transform transition-all duration-1000 ease-out"
                 style={{
+                  backgroundColor: '#11335d',
                   animation: 'slideUp 0.8s ease-out 0.6s both, glowBorder 2s ease-in-out infinite 1.5s'
                 }}
               >
