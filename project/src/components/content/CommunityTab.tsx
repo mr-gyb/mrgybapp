@@ -3,8 +3,7 @@ import React, { useState } from "react";
 // import { db } from "../lib/firebase";
 // import { doc, setDoc } from "firebase/firestore";
 
-const BRAND_BLUE = "#11335d";
-const BRAND_GOLD = "#E3C472";
+const BRAND_BLUE = "var(--brand-blue)";
 
 type CommunityUser = {
   id: string;
@@ -90,7 +89,7 @@ const CommunityTab: React.FC = () => {
             <div
               key={u.id}
               className="bg-white dark:bg-[#0f1b44] rounded-xl border p-5 flex flex-col gap-4 shadow-sm"
-              style={{ borderColor: BRAND_GOLD, borderWidth: "2px" }}
+              style={{ borderColor: BRAND_BLUE, borderWidth: "2px" }}
             >
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
@@ -114,7 +113,7 @@ const CommunityTab: React.FC = () => {
                 className="self-start rounded-lg px-4 py-2 font-medium transition"
                 style={{
                   color: BRAND_BLUE,
-                  borderColor: BRAND_GOLD,
+                  borderColor: BRAND_BLUE,
                   borderWidth: "2px",
                   background: "transparent",
                 }}
@@ -126,7 +125,7 @@ const CommunityTab: React.FC = () => {
         </div>
 
         {/* Next-section placeholder like in Canva */}
-        <div className="mt-12 border-t pt-8">
+        <div className="mt-12 border-t pt-8" style={{ borderColor: BRAND_BLUE }}>
           <h2
             className="text-xl sm:text-2xl font-semibold"
             style={{ color: BRAND_BLUE }}

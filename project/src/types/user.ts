@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 export interface UserProfile {
   id: string;
   name: string;
+  businessName?: string;
   username: string;
   bio: string;
   location: string;
@@ -11,6 +12,7 @@ export interface UserProfile {
   email: string;
   industry: string;
   experienceLevel: number;
+  subscriptionLevel?: number;
   rating: number;
   following: number;
   followers: number;
