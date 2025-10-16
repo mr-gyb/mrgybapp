@@ -28,6 +28,7 @@ export const createProfile = async (userId: string, profile: Partial<UserProfile
     const newProfile: UserProfile = {
       id: userId,
       name: profile.name || '',
+      businessName: profile.businessName || '',
       username: profile.username || '',
       email: profile.email || '',
       bio: profile.bio || 'Tell us about yourself...',

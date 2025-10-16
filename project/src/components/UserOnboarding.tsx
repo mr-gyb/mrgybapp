@@ -17,6 +17,8 @@ const UserOnboarding: React.FC = () => {
   const [email, setEmail] = useState(location.state?.email || '');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [industry, setIndustry] = useState('');
   const [birthday, setBirthday] = useState('');
   const [password, setPassword] = useState(location.state?.password || '');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -50,10 +52,20 @@ const UserOnboarding: React.FC = () => {
       }
     }
     
-    // Step 1: Name validation
-    if (step === 1 && (!firstName || !lastName)) {
-      setError('Please enter your first and last name');
-      return;
+    // Step 1: Name + Business + Industry validation
+    if (step === 1) {
+      if (!firstName || !lastName) {
+        setError('Please enter your first and last name');
+        return;
+      }
+      if (!businessName) {
+        setError('Please enter your business name');
+        return;
+      }
+      if (!industry) {
+        setError('Please select your industry');
+        return;
+      }
     }
     
     // Step 2: Country validation (optional, but good to have)
@@ -120,6 +132,8 @@ const UserOnboarding: React.FC = () => {
       await createProfile(currentUser.uid, {
         email,
         name: `${firstName} ${lastName}`,
+        businessName: businessName,
+        industry: industry,
         username: `@${firstName.toLowerCase()}${lastName.toLowerCase()}`,
         profile_image_url: profileImageUrl || '',
         phoneNumber: phoneNumber || '',
@@ -319,6 +333,32 @@ const UserOnboarding: React.FC = () => {
                 placeholder="Last name"
                 className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
               />
+              <input
+                data-testid="onboard-businessName"
+                type="text"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="Business name"
+                className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
+              />
+              <select
+                data-testid="onboard-industry"
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 appearance-none focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
+              >
+                <option value="">Select industry</option>
+                <option value="Technology">Technology</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Consulting">Consulting</option>
+                <option value="Health & Wellness">Health & Wellness</option>
+                <option value="Legal">Legal</option>
+                <option value="Design">Design</option>
+                <option value="Finance">Finance</option>
+                <option value="Education">Education</option>
+                <option value="Retail">Retail</option>
+                <option value="Manufacturing">Manufacturing</option>
+              </select>
             </div>
           </>
         )}

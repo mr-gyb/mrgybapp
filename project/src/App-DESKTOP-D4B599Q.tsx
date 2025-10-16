@@ -3,8 +3,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { useTheme } from './contexts/ThemeContext';
 import Header from './components/Header';
 import BottomMenu from './components/BottomMenu';
-import Login from './components/Auth/Login';
-import SignIn from './components/Auth/SignIn';
+import Login from './components/Login';
 import NewChat from './components/NewChat';
 import Chat from './components/Chat';
 import ChatHistory from './components/ChatHistory';
@@ -29,9 +28,7 @@ import Reviews from './components/Reviews';
 import Rewards from './components/Rewards';
 import Payments from './components/Payments';
 import Earnings from './components/Earnings';
-import ForgotPassword from './components/Auth/ForgotPassword';
-import ResetPassword from './components/Auth/ResetPassword';
-import AuthCallback from './components/Auth/AuthCallback';
+import AuthCallback from './components/Auth/GoogleAuthCallback';
 import RoadMap from './components/RoadMap';
 import Portfolio from './components/Portfolio';
 import Resume from './components/Resume';
@@ -144,9 +141,7 @@ const App: React.FC = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/homepage" element={<HomePage />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+            {/* Removed non-existent SignIn, ForgotPassword, ResetPassword routes */}
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/onboarding" element={<UserOnboarding />} />
             <Route path="/about" element={<AboutPage />} />

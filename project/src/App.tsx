@@ -5,6 +5,7 @@ import Header from './components/Header';
 import BottomMenu from './components/BottomMenu';
 
 // Lazy load components for code splitting
+const CommunityTab = lazy(() => import('./components/content/CommunityTab'));
 const NewChat = lazy(() => import('./components/NewChat'));
 const Chat = lazy(() => import('./components/Chat'));
 const ChatHistory = lazy(() => import('./components/ChatHistory'));
@@ -94,6 +95,7 @@ const getPageTitle = (pathname: string): string => {
     '/dream-team': 'Community',
     '/gyb-team-chat': 'Community',
     '/profile': 'Community',
+    '/community': 'Community',
     '/dashboard': 'Commerce',
     '/commerce': 'Commerce',
     '/work-history': 'Commerce',
@@ -233,6 +235,13 @@ const App: React.FC = () => {
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
                   <GYBLiveNetwork />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/community" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <CommunityTab />
                 </Suspense>
               </ProtectedRoute>
             } />
