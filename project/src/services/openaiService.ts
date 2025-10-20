@@ -91,8 +91,8 @@ class OpenAIService {
   private baseUrl = 'https://api.openai.com/v1';
 
   constructor() {
-    this.apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    this.videoApiKey = import.meta.env.VITE_OPENAI_VIDEO_API_KEY;
+    this.apiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
+    this.videoApiKey = import.meta.env.VITE_OPENAI_VIDEO_API_KEY || '';
     
     if (!this.apiKey) {
       console.warn('OpenAI API key not found. Please set VITE_OPENAI_API_KEY in your .env file.');
@@ -119,7 +119,7 @@ class OpenAIService {
       console.error('Error analyzing video with OpenAI:', error);
       
       // Check if it's an authentication error
-      if (error.message && error.message.includes('401')) {
+      if (error instanceof Error && error.message && error.message.includes('401')) {
         console.warn('OpenAI API key is invalid or expired');
         throw new Error('OpenAI API key is invalid or expired. Please check your API configuration.');
       }
@@ -166,7 +166,6 @@ class OpenAIService {
     return new Promise((resolve, reject) => {
       const video = document.createElement('video');
       const canvas = document.createElement('canvas');
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       
       video.src = URL.createObjectURL(videoFile);
       video.crossOrigin = 'anonymous';
@@ -240,7 +239,30 @@ class OpenAIService {
         duration: this.estimateVideoDuration(videoFile.size)
       };
 
-      const prompt = `You are an expert video content analyst and script editor. Analyze this video transcript and create a comprehensive, structured summary with detailed editing recommendations.
+      // Check if transcript is valid
+      if (!transcript || transcript.trim().length < 10) {
+        console.warn('⚠️ Transcript is too short or empty, analysis may be limited');
+        return {
+          summary: 'Video analysis completed, but transcript was too short or unclear to provide detailed insights. Please ensure your video has clear audio.',
+          keyPoints: ['Transcript was too short for detailed analysis', 'Please check audio quality and try again'],
+          suggestedShorts: [],
+          duration: videoInfo.duration,
+          transcript: transcript || 'No transcript available',
+          technicalInfo: {
+            fileSize: `${videoInfo.size} MB`,
+            duration: `${Math.floor(videoInfo.duration / 60)}:${(videoInfo.duration % 60).toString().padStart(2, '0')}`,
+            quality: 'Transcript too short for quality assessment',
+            productionValues: 'Unable to assess due to short transcript'
+          },
+          mainTheme: 'Unable to determine theme due to short transcript',
+          suggestedEdits: [],
+          revisedScript: undefined,
+          whatChanged: [],
+          actionableSuggestions: []
+        };
+      }
+
+      const prompt = `You are an expert video content analyst specializing in creating accurate, detailed summaries that capture the true essence and key points of video content. Your task is to analyze the provided video transcript and create a comprehensive, accurate summary.
 
 VIDEO DETAILS:
 - Name: ${videoInfo.name}
@@ -251,154 +273,72 @@ VIDEO DETAILS:
 TRANSCRIPT:
 ${transcript}
 
-IMPORTANT: You MUST respond with ONLY valid JSON. Do not include any text before or after the JSON. Start your response with { and end with }.
+CRITICAL INSTRUCTIONS:
+1. You MUST respond with ONLY valid JSON. No text before or after the JSON.
+2. Base your analysis EXCLUSIVELY on the actual transcript content provided above.
+3. Do NOT make assumptions or add generic content not present in the transcript.
+4. If the transcript is short or unclear, acknowledge this limitation in your analysis.
+5. Focus on accurately capturing what was actually said in the video.
 
-SPECIAL FOCUS: Pay particular attention to generating detailed content for:
-- Suggested Edits: Provide 3-5 specific editing recommendations with clear reasoning
-- Revised Script: Create a complete rewritten version with improvements
-- What Changed: Show detailed before/after comparisons with explanations
+ANALYSIS REQUIREMENTS:
+- Create a summary that accurately reflects the actual content of the video
+- Extract key points that are genuinely mentioned in the transcript
+- Identify the main theme based on what was actually discussed
+- Provide specific, actionable suggestions based on the actual content
+- If the transcript is incomplete or unclear, note this in your analysis
 
-Please provide a detailed analysis with the following structure:
-
-1. **Technical Information**: File size, duration, quality assessment, production values
-2. **Main Theme**: Core message and primary focus of the video
-3. **Key Lessons**: Numbered sections with headings and detailed explanations
-4. **Stories/Examples**: Specific stories, anecdotes, or case studies mentioned
-5. **Practical Frameworks**: Step-by-step processes, methodologies, or actionable advice
-6. **Call-to-Action**: Closing message, next steps, or engagement prompts
-7. **Suggested Short Segments**: Valuable clips for short-form content
-8. **Key Moments**: Important highlights and memorable segments from the video
-9. **Best Performing Segment**: The segment most likely to gain higher views/engagement
-10. **Actionable Suggestions**: Three specific recommendations to improve video structure/script
-11. **Key Points**: Bullet points of main takeaways from the video
-12. **Suggested Edits**: Specific editing recommendations with priority levels (high/medium/low) for improving video structure, pacing, clarity, and engagement
-13. **Revised Script**: Complete rewritten script with improvements for better flow, engagement, and clarity
-14. **What Changed**: Detailed comparison of original vs revised content showing specific improvements made
+IMPORTANT: You MUST respond with ONLY valid JSON. Start your response with { and end with }.
 
 Respond with ONLY this JSON structure:
 {
-  "summary": "Comprehensive overview of the video content and main themes...",
-  "technicalInfo": {
-    "fileSize": "${videoInfo.size} MB",
-    "duration": "${Math.floor(videoInfo.duration / 60)}:${(videoInfo.duration % 60).toString().padStart(2, '0')}",
-    "quality": "Assessment of video/audio quality",
-    "productionValues": "Professional evaluation of production quality"
-  },
-  "mainTheme": "Core message and primary focus",
-  "keyLessons": [
-    {
-      "heading": "Lesson 1: [Title]",
-      "content": "Detailed explanation of this lesson",
-      "timestamp": "0:00-2:30"
-    }
-  ],
-  "stories": [
-    {
-      "title": "Story/Example Title",
-      "description": "What was shared",
-      "significance": "Why it matters"
-    }
-  ],
-  "frameworks": [
-    {
-      "name": "Framework/Process Name",
-      "steps": ["Step 1", "Step 2", "Step 3"],
-      "description": "How to apply this framework"
-    }
-  ],
-  "callToAction": "Closing message and next steps",
-  "suggestedShorts": [
-    {
-      "title": "Segment Title",
-      "description": "What this segment contains",
-      "startTime": 0,
-      "endTime": 15,
-      "reasoning": "Why this segment is valuable"
-    }
-  ],
-  "keyMoments": [
-    {
-      "title": "Key Moment Title",
-      "description": "Description of this important moment",
-      "timestamp": "2:30-3:45"
-    }
-  ],
-  "bestSegment": {
-    "title": "Best Performing Segment",
-    "description": "Description of the segment most likely to perform well",
-    "timestamp": "1:15-2:30",
-    "reasoning": "Why this segment will gain higher views and engagement"
-  },
-  "actionableSuggestions": [
-    {
-      "title": "Suggestion 1",
-      "description": "Detailed description of the improvement",
-      "impact": "Expected impact on engagement and performance"
-    },
-    {
-      "title": "Suggestion 2", 
-      "description": "Detailed description of the improvement",
-      "impact": "Expected impact on engagement and performance"
-    },
-    {
-      "title": "Suggestion 3",
-      "description": "Detailed description of the improvement", 
-      "impact": "Expected impact on engagement and performance"
-    }
-  ],
-  "keyPoints": ["Key insight 1", "Key insight 2", "Key insight 3"],
+  "summary": "Accurate, detailed summary based EXCLUSIVELY on the transcript content provided. Capture the main themes, key points, and actual content discussed in the video.",
+  "keyPoints": ["Extract 3-5 key points that are actually mentioned in the transcript", "Focus on specific insights or information shared", "Avoid generic statements not supported by the content"],
+  "mainTheme": "The core message or primary focus as actually discussed in the video",
+  "duration": ${videoInfo.duration},
+  "transcript": "${transcript.substring(0, 1000)}...",
   "suggestedEdits": [
     {
-      "title": "Improve Opening Hook",
-      "description": "Add a compelling opening statement to grab viewer attention within the first 3 seconds",
-      "reasoning": "Strong openings increase viewer retention by 40% and reduce drop-off rates",
-      "priority": "high"
-    },
-    {
-      "title": "Clarify Main Points",
-      "description": "Restructure the middle section to present key points in a more logical sequence",
-      "reasoning": "Better organization helps viewers follow the narrative and retain information",
-      "priority": "medium"
-    },
-    {
-      "title": "Strengthen Call-to-Action",
-      "description": "Make the closing more actionable with specific next steps for viewers",
-      "reasoning": "Clear CTAs increase engagement and drive desired viewer actions",
+      "title": "Specific editing recommendation based on actual content",
+      "description": "Detailed suggestion based on what was actually said in the video",
+      "reasoning": "Why this improvement would help, based on the actual content",
       "priority": "high"
     }
   ],
   "revisedScript": {
-    "originalScript": "Original transcript from the video...",
-    "revisedScript": "Complete rewritten script with improved structure, better pacing, clearer messaging, and enhanced engagement elements...",
-    "changes": [
-      "Added compelling opening hook to grab attention",
-      "Restructured main points for better flow",
-      "Enhanced transitions between sections",
-      "Strengthened call-to-action with specific next steps"
-    ]
+    "originalScript": "Key excerpts from the actual transcript",
+    "revisedScript": "Improved version based on the actual content, with specific enhancements",
+    "changes": ["Specific changes made based on actual content", "Focus on real improvements to the actual script"]
   },
   "whatChanged": [
     {
-      "section": "Introduction",
-      "original": "Original opening content from transcript",
-      "revised": "New improved opening with hook and clear value proposition",
-      "reason": "Added attention-grabbing hook to reduce early drop-off and clearly communicate video value"
-    },
-    {
-      "section": "Main Content",
-      "original": "Original main content structure",
-      "revised": "Restructured content with better flow and clearer points",
-      "reason": "Improved organization helps viewers follow the narrative and retain key information"
-    },
-    {
-      "section": "Conclusion",
-      "original": "Original closing content",
-      "revised": "Enhanced conclusion with strong call-to-action",
-      "reason": "Clear CTAs increase engagement and drive desired viewer actions"
+      "section": "Specific section from the actual video",
+      "original": "Actual content from the transcript",
+      "revised": "Improved version based on the actual content",
+      "reason": "Specific reason for the change based on the actual content"
     }
   ],
-  "duration": ${videoInfo.duration},
-  "transcript": "${transcript.substring(0, 500)}..."
+  "suggestedShorts": [
+    {
+      "title": "Segment title based on actual content",
+      "description": "What this segment actually contains",
+      "startTime": 0,
+      "endTime": 15,
+      "reasoning": "Why this segment is valuable based on actual content"
+    }
+  ],
+  "technicalInfo": {
+    "fileSize": "${videoInfo.size} MB",
+    "duration": "${Math.floor(videoInfo.duration / 60)}:${(videoInfo.duration % 60).toString().padStart(2, '0')}",
+    "quality": "Assessment based on transcript clarity and content",
+    "productionValues": "Evaluation based on actual content structure"
+  },
+  "actionableSuggestions": [
+    {
+      "title": "Suggestion based on actual content",
+      "description": "Specific recommendation based on what was actually discussed",
+      "impact": "Expected improvement based on actual content analysis"
+    }
+  ]
 }`;
 
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -450,15 +390,30 @@ Respond with ONLY this JSON structure:
         
         const parsedContent = JSON.parse(jsonContent);
         console.log('✅ Successfully parsed GPT-4 response');
+        
+        // Validate that we have essential content
+        if (!parsedContent.summary || parsedContent.summary.length < 50) {
+          console.warn('⚠️ Summary seems too short or generic, may not be accurate');
+        }
+        
+        if (!parsedContent.keyPoints || parsedContent.keyPoints.length === 0) {
+          console.warn('⚠️ No key points extracted, analysis may be incomplete');
+        }
+        
         return {
-          summary: parsedContent.summary || 'Video analysis completed',
-          keyPoints: parsedContent.keyPoints || [],
+          summary: parsedContent.summary || 'Video analysis completed - please check if the transcript was clear and complete',
+          keyPoints: parsedContent.keyPoints || ['Analysis completed - no specific key points extracted'],
           suggestedShorts: parsedContent.suggestedShorts || [],
           duration: parsedContent.duration || videoInfo.duration,
-          transcript: parsedContent.transcript || transcript.substring(0, 500) + '...',
+          transcript: parsedContent.transcript || transcript.substring(0, 1000) + '...',
           // Add new structured data
-          technicalInfo: parsedContent.technicalInfo || {},
-          mainTheme: parsedContent.mainTheme || '',
+          technicalInfo: parsedContent.technicalInfo || {
+            fileSize: `${videoInfo.size} MB`,
+            duration: `${Math.floor(videoInfo.duration / 60)}:${(videoInfo.duration % 60).toString().padStart(2, '0')}`,
+            quality: 'Analysis completed',
+            productionValues: 'Analysis completed'
+          },
+          mainTheme: parsedContent.mainTheme || 'Theme not clearly identified from transcript',
           keyLessons: parsedContent.keyLessons || [],
           stories: parsedContent.stories || [],
           frameworks: parsedContent.frameworks || [],
@@ -511,22 +466,6 @@ Respond with ONLY this JSON structure:
     }
   }
 
-  /**
-   * Convert file to base64 string
-   */
-  private async fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const result = reader.result as string;
-        // Remove data URL prefix to get just the base64 string
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = error => reject(error);
-    });
-  }
 
 
 

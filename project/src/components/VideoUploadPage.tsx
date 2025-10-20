@@ -116,15 +116,35 @@ const VideoUploadPage: React.FC = () => {
       
       console.log('Video analysis completed:', analysisResult);
       
+      // Check if video is long enough for automatic short video conversion
+      const isLongVideo = analysisResult.duration > 120; // 2 minutes or longer
+      const shouldAutoConvert = isLongVideo && analysisResult.suggestedShorts && analysisResult.suggestedShorts.length > 0;
+      
       // Store analysis result in sessionStorage for the summary page
+      console.log('💾 Storing analysis result in sessionStorage:', analysisResult);
       sessionStorage.setItem('videoAnalysis', JSON.stringify(analysisResult));
       sessionStorage.setItem('uploadedVideoName', videoFile.name);
       sessionStorage.setItem('uploadedVideoSize', videoFile.size.toString());
       sessionStorage.setItem('uploadedVideoType', videoFile.type);
       sessionStorage.setItem('processingTimestamp', new Date().toISOString());
+      sessionStorage.setItem('isLongVideo', isLongVideo.toString());
+      sessionStorage.setItem('shouldAutoConvert', shouldAutoConvert.toString());
+      
+      // Debug: Verify storage
+      console.log('✅ Analysis stored. Verifying...');
+      console.log('videoAnalysis in sessionStorage:', sessionStorage.getItem('videoAnalysis') ? 'YES' : 'NO');
+      console.log('Analysis summary:', analysisResult.summary);
 
-      // Navigate to create1 page for processing animation
-      navigate('/create1');
+      // If it's a long video with suggested shorts, automatically trigger conversion
+      if (shouldAutoConvert) {
+        console.log('🎬 Long video detected! Auto-triggering short video conversion...');
+        sessionStorage.setItem('autoConvertShorts', 'true');
+        sessionStorage.setItem('conversionTriggered', 'true');
+      }
+
+      // Navigate to summary page to show analysis results
+      console.log('🧭 Navigating to summary page...');
+      navigate('/summary');
     } catch (error) {
       console.error('Error processing video:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -186,6 +206,289 @@ const VideoUploadPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Processing Steps Section */}
+      {showProcessingSteps && (
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <div 
+              className="relative border-2 border-dashed rounded-2xl p-8 max-w-2xl mx-auto"
+              style={{
+                borderColor: '#D4AF37',
+                borderWidth: '3px'
+              }}
+            >
+              {/* Title */}
+              <h3 className="text-2xl font-bold text-black text-center mb-8">
+                Processing Video
+              </h3>
+
+              {/* Processing Steps */}
+              <div className="space-y-6">
+                {steps.map((step, index) => (
+                  <div 
+                    key={step.number}
+                    className={`flex items-center space-x-4 transition-all duration-1500 ease-out ${
+                      index <= currentStep 
+                        ? 'opacity-100 transform translate-x-0' 
+                        : 'opacity-0 transform translate-x-6'
+                    }`}
+                    style={{
+                      transitionDelay: `${index * 600}ms`
+                    }}
+                  >
+                    {/* Step Circle */}
+                    <div className="relative">
+                      <div 
+                        className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-1500 ease-out"
+                        style={{
+                          border: `3px solid #11335d`,
+                          backgroundColor: index <= currentStep ? 'white' : '#11335d',
+                          boxShadow: index <= currentStep 
+                            ? '0 4px 12px rgba(17, 51, 93, 0.15)' 
+                            : '0 2px 8px rgba(17, 51, 93, 0.3)'
+                        }}
+                      >
+                        <span 
+                          className="text-lg font-bold transition-all duration-1500 ease-out"
+                          style={{
+                            color: index <= currentStep ? '#11335d' : 'white',
+                            textShadow: index <= currentStep ? 'none' : '0 1px 2px rgba(0,0,0,0.3)'
+                          }}
+                        >
+                          {step.number}
+                        </span>
+                      </div>
+                      {/* Inner golden ring */}
+                      <div 
+                        className="absolute inset-0 rounded-full border-2 pointer-events-none transition-all duration-1500 ease-out"
+                        style={{
+                          borderColor: '#D4AF37',
+                          opacity: index <= currentStep ? 1 : 0,
+                          transform: index <= currentStep ? 'scale(1)' : 'scale(0.8)'
+                        }}
+                      ></div>
+                      {/* Blue glow effect during transition */}
+                      <div 
+                        className="absolute inset-0 rounded-full pointer-events-none transition-all duration-1500 ease-out"
+                        style={{
+                          backgroundColor: index <= currentStep ? 'transparent' : 'rgba(17, 51, 93, 0.1)',
+                          opacity: index <= currentStep ? 0 : 1,
+                          transform: index <= currentStep ? 'scale(1)' : 'scale(1.1)'
+                        }}
+                      ></div>
+                    </div>
+
+                    {/* Step Text */}
+                    <div className="flex items-center space-x-3">
+                      <span 
+                        className="text-2xl transition-all duration-1500 ease-out"
+                        style={{
+                          opacity: index <= currentStep ? 1 : 0.3,
+                          transform: index <= currentStep ? 'scale(1)' : 'scale(0.9)'
+                        }}
+                      >
+                        {step.emoji}
+                      </span>
+                      <span 
+                        className="text-lg transition-all duration-1500 ease-out"
+                        style={{
+                          color: index <= currentStep ? '#000' : '#11335d',
+                          fontWeight: index <= currentStep ? 'normal' : 'normal',
+                          opacity: index <= currentStep ? 1 : 0.7,
+                          textShadow: index <= currentStep ? 'none' : '0 1px 2px rgba(17, 51, 93, 0.2)'
+                        }}
+                      >
+                        {step.text}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Progress Indicator */}
+              <div className="mt-6 text-center">
+                <div className="text-sm text-gray-600">
+                  Step {currentStep + 1} of {steps.length}
+                </div>
+              </div>
+
+              {/* Animated Video Clip Icon - Shows when processing is complete */}
+              {currentStep >= steps.length - 1 && (
+                <div className="mt-8 text-center">
+                  <h4 className="text-lg font-semibold text-black mb-4">Processing Complete!</h4>
+                  
+                  {/* Video Clip Icon - Premium Animation System */}
+                  <div className="flex justify-center mb-4">
+                    <div className="relative group">
+                      {/* Multiple Animated Rings with Different Speeds */}
+                      <div className="absolute inset-0 rounded-full border-2 border-blue-500 animate-ping opacity-60" style={{ animationDuration: '2s' }}></div>
+                      <div className="absolute inset-0 rounded-full border-2 border-blue-400 animate-ping opacity-40" style={{ animationDuration: '3s', animationDelay: '0.5s' }}></div>
+                      <div className="absolute inset-0 rounded-full border-2 border-blue-300 animate-ping opacity-30" style={{ animationDuration: '4s', animationDelay: '1s' }}></div>
+                      
+                      {/* Rotating Background Circle */}
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500/20 to-blue-400/20 animate-spin" style={{ animationDuration: '8s' }}></div>
+                      
+                      {/* Video Clip Icon with Up/Down Movement Animation */}
+                      <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center relative z-10 transform transition-all duration-700 group-hover:scale-125 group-hover:rotate-12 group-hover:drop-shadow-lg" 
+                           style={{
+                             animation: 'upDownMove 2s ease-in-out infinite, videoGlow 2s ease-in-out infinite alternate',
+                             border: '3px solid #11335d'
+                           }}>
+                        <svg 
+                          width="32" 
+                          height="32" 
+                          viewBox="0 0 24 24" 
+                          fill="none" 
+                          className="text-blue-500"
+                          style={{
+                            filter: 'drop-shadow(0 0 5px rgba(59, 130, 246, 0.3))'
+                          }}
+                        >
+                          <path 
+                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" 
+                            stroke="currentColor" 
+                            strokeWidth="2" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </div>
+                      
+                      {/* Glowing Effect on Hover */}
+                      <div className="absolute inset-0 rounded-full bg-blue-500/20 scale-0 group-hover:scale-150 transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600">Your video is ready for analysis!</p>
+                </div>
+              )}
+              
+              {/* CSS Animations for Video Clip Icon */}
+              <style>{`
+                @keyframes upDownMove {
+                  0%, 100% { 
+                    transform: translateY(0px); 
+                  }
+                  25% { 
+                    transform: translateY(-8px); 
+                  }
+                  50% { 
+                    transform: translateY(-15px); 
+                  }
+                  75% { 
+                    transform: translateY(-8px); 
+                  }
+                }
+                
+                @keyframes videoGlow {
+                  0% { 
+                    filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.3));
+                  }
+                  100% { 
+                    filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.6)) drop-shadow(0 0 25px rgba(59, 130, 246, 0.4));
+                  }
+                }
+                
+                @keyframes pulseRing {
+                  0% { 
+                    transform: scale(0.8);
+                    opacity: 1;
+                  }
+                  100% { 
+                    transform: scale(2.4);
+                    opacity: 0;
+                  }
+                }
+                
+                .group:hover .animate-ping {
+                  animation: pulseRing 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+                }
+              `}</style>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Animated Video Icon Section - Shows after processing */}
+      {hasUploadedVideo && !showProcessingSteps && (
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-black mb-8">Video Processing Complete!</h3>
+              
+              {/* Video Camera Icon - Premium Animation System */}
+              <div className="flex justify-center mb-6">
+                <div className="relative group">
+                  {/* Multiple Animated Rings with Different Speeds */}
+                  <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-60" style={{ animationDuration: '2s' }}></div>
+                  <div className="absolute inset-0 rounded-full border-2 border-red-400 animate-ping opacity-40" style={{ animationDuration: '3s', animationDelay: '0.5s' }}></div>
+                  <div className="absolute inset-0 rounded-full border-2 border-red-300 animate-ping opacity-30" style={{ animationDuration: '4s', animationDelay: '1s' }}></div>
+                  
+                  {/* Rotating Background Circle */}
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-red-500/20 to-red-400/20 animate-spin" style={{ animationDuration: '8s' }}></div>
+                  
+                  {/* Video Icon with Up/Down Movement Animation */}
+                  <Video 
+                    size={64} 
+                    className="text-red-500 relative z-10 transform transition-all duration-700 group-hover:scale-125 group-hover:rotate-12 group-hover:text-red-600 group-hover:drop-shadow-lg" 
+                    style={{
+                      animation: 'upDownMove 2s ease-in-out infinite, videoGlow 2s ease-in-out infinite alternate'
+                    }}
+                  />
+                  
+                  {/* Glowing Effect on Hover */}
+                  <div className="absolute inset-0 rounded-full bg-red-500/20 scale-0 group-hover:scale-150 transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
+                </div>
+              </div>
+              
+              <p className="text-lg text-gray-600 mb-6">Your video has been successfully analyzed and is ready for review!</p>
+              
+              {/* Advanced CSS Animations */}
+              <style>{`
+                @keyframes upDownMove {
+                  0%, 100% { 
+                    transform: translateY(0px); 
+                  }
+                  25% { 
+                    transform: translateY(-12px); 
+                  }
+                  50% { 
+                    transform: translateY(-20px); 
+                  }
+                  75% { 
+                    transform: translateY(-12px); 
+                  }
+                }
+                
+                @keyframes videoGlow {
+                  0% { 
+                    filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.3));
+                  }
+                  100% { 
+                    filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.6)) drop-shadow(0 0 25px rgba(239, 68, 68, 0.4));
+                  }
+                }
+                
+                @keyframes pulseRing {
+                  0% { 
+                    transform: scale(0.8);
+                    opacity: 1;
+                  }
+                  100% { 
+                    transform: scale(2.4);
+                    opacity: 0;
+                  }
+                }
+                
+                .group:hover .animate-ping {
+                  animation: pulseRing 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+                }
+              `}</style>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Video Upload Section */}
       <div className="container mx-auto px-4 pb-12">
         <div className={`max-w-4xl mx-auto transition-all duration-500 ease-in-out ${hasUploadedVideo ? 'max-w-6xl' : 'max-w-4xl'}`}>
@@ -201,98 +504,16 @@ const VideoUploadPage: React.FC = () => {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            {/* Video Camera Icon - Premium Animation System */}
+            {/* Simple Upload Icon */}
             <div className="flex justify-center mb-6">
-              <div className="relative group">
-                {/* Multiple Animated Rings with Different Speeds */}
-                <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-60" style={{ animationDuration: '2s' }}></div>
-                <div className="absolute inset-0 rounded-full border-2 border-red-400 animate-ping opacity-40" style={{ animationDuration: '3s', animationDelay: '0.5s' }}></div>
-                <div className="absolute inset-0 rounded-full border-2 border-red-300 animate-ping opacity-30" style={{ animationDuration: '4s', animationDelay: '1s' }}></div>
-                
-                {/* Rotating Background Circle */}
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-red-500/20 to-red-400/20 animate-spin" style={{ animationDuration: '8s' }}></div>
-                
-                {/* Video Icon with Up/Down Movement Animation */}
-                <Video 
-                  size={48} 
-                  className="text-red-500 relative z-10 transform transition-all duration-700 group-hover:scale-125 group-hover:rotate-12 group-hover:text-red-600 group-hover:drop-shadow-lg" 
-                  style={{
-                    animation: 'upDownMove 2s ease-in-out infinite, videoGlow 2s ease-in-out infinite alternate'
-                  }}
-                />
-                
-                {/* Glowing Effect on Hover */}
-                <div className="absolute inset-0 rounded-full bg-red-500/20 scale-0 group-hover:scale-150 transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                <Video size={32} className="text-gray-500" />
               </div>
             </div>
-            
-            {/* Advanced CSS Animations */}
-            <style>{`
-              @keyframes upDownMove {
-                0%, 100% { 
-                  transform: translateY(0px); 
-                }
-                25% { 
-                  transform: translateY(-12px); 
-                }
-                50% { 
-                  transform: translateY(-20px); 
-                }
-                75% { 
-                  transform: translateY(-12px); 
-                }
-              }
-              
-              @keyframes videoGlow {
-                0% { 
-                  filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.3));
-                }
-                100% { 
-                  filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.6)) drop-shadow(0 0 25px rgba(239, 68, 68, 0.4));
-                }
-              }
-              
-              @keyframes pulseRing {
-                0% { 
-                  transform: scale(0.8);
-                  opacity: 1;
-                }
-                100% { 
-                  transform: scale(2.4);
-                  opacity: 0;
-                }
-              }
-              
-              .group:hover .animate-ping {
-                animation: pulseRing 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-              }
-            `}</style>
 
             {/* Upload Content */}
             <div className="space-y-4">
-              {isProcessing ? (
-                <>
-                  <div className="flex items-center justify-center space-x-3">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: '#11335d' }}></div>
-                    <h2 className="text-3xl font-bold" style={{ color: '#11335d' }}>
-                      Processing video with OpenAI...
-                    </h2>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-lg text-gray-600">
-                      Our AI is processing your video using the complete workflow
-                    </p>
-                    <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
-                      <span>🎵 Extracting audio...</span>
-                      <span>🎤 Transcribing with Whisper...</span>
-                      <span>🧠 Analyzing with GPT-4...</span>
-                    </div>
-                    <div className="text-xs text-gray-400 text-center">
-                      Step 1: Extract Audio → Step 2: Whisper Transcription → Step 3: GPT-4 Analysis
-                    </div>
-                  </div>
-                </>
-              ) : (
+              {!isProcessing && (
                 <>
                   <h2 className="text-3xl font-bold" style={{ color: '#11335d' }}>
                     Drop video files here or click to browse
@@ -374,113 +595,6 @@ const VideoUploadPage: React.FC = () => {
                 ))}
               </div>
               
-              {/* Processing Steps Section */}
-              {showProcessingSteps && (
-                <div className="mt-8">
-                  <div 
-                    className="relative border-2 border-dashed rounded-2xl p-8 max-w-2xl mx-auto"
-                    style={{
-                      borderColor: '#D4AF37',
-                      borderWidth: '3px'
-                    }}
-                  >
-                    {/* Title */}
-                    <h3 className="text-2xl font-bold text-black text-center mb-8">
-                      Processing Video
-                    </h3>
-
-                    {/* Processing Steps */}
-                    <div className="space-y-6">
-                      {steps.map((step, index) => (
-                        <div 
-                          key={step.number}
-                          className={`flex items-center space-x-4 transition-all duration-1500 ease-out ${
-                            index <= currentStep 
-                              ? 'opacity-100 transform translate-x-0' 
-                              : 'opacity-0 transform translate-x-6'
-                          }`}
-                          style={{
-                            transitionDelay: `${index * 600}ms`
-                          }}
-                        >
-                          {/* Step Circle */}
-                          <div className="relative">
-                            <div 
-                              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-1500 ease-out"
-                              style={{
-                                border: `3px solid #11335d`,
-                                backgroundColor: index <= currentStep ? 'white' : '#11335d',
-                                boxShadow: index <= currentStep 
-                                  ? '0 4px 12px rgba(17, 51, 93, 0.15)' 
-                                  : '0 2px 8px rgba(17, 51, 93, 0.3)'
-                              }}
-                            >
-                              <span 
-                                className="text-lg font-bold transition-all duration-1500 ease-out"
-                                style={{
-                                  color: index <= currentStep ? '#11335d' : 'white',
-                                  textShadow: index <= currentStep ? 'none' : '0 1px 2px rgba(0,0,0,0.3)'
-                                }}
-                              >
-                                {step.number}
-                              </span>
-                            </div>
-                            {/* Inner golden ring */}
-                            <div 
-                              className="absolute inset-0 rounded-full border-2 pointer-events-none transition-all duration-1500 ease-out"
-                              style={{
-                                borderColor: '#D4AF37',
-                                opacity: index <= currentStep ? 1 : 0,
-                                transform: index <= currentStep ? 'scale(1)' : 'scale(0.8)'
-                              }}
-                            ></div>
-                            {/* Blue glow effect during transition */}
-                            <div 
-                              className="absolute inset-0 rounded-full pointer-events-none transition-all duration-1500 ease-out"
-                              style={{
-                                backgroundColor: index <= currentStep ? 'transparent' : 'rgba(17, 51, 93, 0.1)',
-                                opacity: index <= currentStep ? 0 : 1,
-                                transform: index <= currentStep ? 'scale(1)' : 'scale(1.1)'
-                              }}
-                            ></div>
-                          </div>
-
-                          {/* Step Text */}
-                          <div className="flex items-center space-x-3">
-                            <span 
-                              className="text-2xl transition-all duration-1500 ease-out"
-                              style={{
-                                opacity: index <= currentStep ? 1 : 0.3,
-                                transform: index <= currentStep ? 'scale(1)' : 'scale(0.9)'
-                              }}
-                            >
-                              {step.emoji}
-                            </span>
-                            <span 
-                              className="text-lg transition-all duration-1500 ease-out"
-                              style={{
-                                color: index <= currentStep ? '#000' : '#11335d',
-                                fontWeight: index <= currentStep ? 'normal' : 'normal',
-                                opacity: index <= currentStep ? 1 : 0.7,
-                                textShadow: index <= currentStep ? 'none' : '0 1px 2px rgba(17, 51, 93, 0.2)'
-                              }}
-                            >
-                              {step.text}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Progress Indicator */}
-                    <div className="mt-6 text-center">
-                      <div className="text-sm text-gray-600">
-                        Step {currentStep + 1} of {steps.length}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Expanded Content Section */}
               {hasUploadedVideo && !showProcessingSteps && (
