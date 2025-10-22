@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { spotifyService, SpotifyFollowerGrowth, SpotifyPlaylistData } from '../api/services/spotify.service';
+import spotifyService, { SpotifyFollowerGrowth, SpotifyPlaylistData } from '../api/services/spotify.service';
 
 export interface SpotifyMonetizationMetrics {
   currentFollowers: number;

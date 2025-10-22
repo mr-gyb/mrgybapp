@@ -16,7 +16,9 @@
     "spotify:token": "node scripts/generate-spotify-token.js",
     "spotify:manager": "node scripts/spotify-token-manager.js",
     "setup:env": "node scripts/setup-env.js",
-    "setup:spotify": "node scripts/setup-spotify-api.js"
+    "setup:spotify": "node scripts/setup-spotify-api.js",
+    "backfill:users": "tsx scripts/backfillUsers.ts",
+    "test:friendship": "tsx scripts/testFriendshipFlow.ts"
   },
   "dependencies": {
     "axios": "^1.6.7",

@@ -11,7 +11,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 // For Firebase logic
 import {
@@ -23,6 +23,7 @@ import {
   getDocs,
   doc,
   updateDoc,
+  setDoc,
   deleteDoc,
   query,
   where,
@@ -38,6 +39,11 @@ import { AI_USERS } from "../types/user";
 import { generateAIResponse } from "../api/services";
 import ReactMarkdown from "react-markdown";
 import { useChat } from "../contexts/ChatContext";
+import { watchRoom, sendMessage, getRoom, ChatMessage as ChatServiceMessage, ensureDirectRoom } from "../services/chat";
+import { watchConnections } from "../services/friends";
+import ChatMessage from "./ChatMessage";
+import TypingIndicator from "./TypingIndicator";
+import VoiceSearch from "./VoiceSearch";
 
 interface ChatMessage {
   id: string;
@@ -82,6 +88,7 @@ const GYBTeamChat: React.FC = () => {
   //for invitations
   const [invitations, setInvitations] = useState<ChatInvitation[]>([]);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [chatParticipants, setChatParticipants] = useState<{
     [chatId: string]: string[];
   }>({});
@@ -100,6 +107,21 @@ const GYBTeamChat: React.FC = () => {
   const [processingAiAgnet, setIsProcessingAiAgent] = useState("");
   // For test
   const [message123, setMessage123] = useState("");
+  
+  // Friends list state
+  const [friends, setFriends] = useState<string[]>([]);
+  const [friendProfiles, setFriendProfiles] = useState<{[uid: string]: {name: string, email: string}}>({});
+  
+  // Direct chat messages state
+  const [directChatMessages, setDirectChatMessages] = useState<ChatServiceMessage[]>([]);
+  const [isDirectChat, setIsDirectChat] = useState(false);
+  
+  // Typing indicator state
+  const [typingUsers, setTypingUsers] = useState<{[userId: string]: boolean}>({});
+  const [isTyping, setIsTyping] = useState(false);
+  
+  // Presence tracking state
+  const [onlineUsers, setOnlineUsers] = useState<{[userId: string]: boolean}>({});
 
   // Getting the existing message based on the chat
   // For right side of the dream_team ( Messages lists )
@@ -169,6 +191,47 @@ const GYBTeamChat: React.FC = () => {
 
     return () => unsubscribe();
   }, [selectedChat]);
+
+  // Handle direct messages for friendship chat rooms
+  useEffect(() => {
+    if (!selectedChat || !user?.uid) return;
+
+    // Check if this is a direct message room (from friendship system)
+    const roomId = searchParams.get('room');
+    if (roomId && roomId === selectedChat) {
+      setIsDirectChat(true);
+      
+      // Use the new chat service for direct messages
+      const unsubscribeMessages = watchRoom(selectedChat, (messages: ChatServiceMessage[]) => {
+        setDirectChatMessages(messages);
+      });
+
+      // Set up typing indicator listener
+      const typingCollection = collection(db, `chatRooms/${selectedChat}/typing`);
+      const unsubscribeTyping = onSnapshot(typingCollection, (snapshot) => {
+        const typing: {[userId: string]: boolean} = {};
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.isTyping && doc.id !== user.uid) {
+            typing[doc.id] = true;
+          }
+        });
+        setTypingUsers(typing);
+      });
+
+      return () => {
+        unsubscribeMessages();
+        unsubscribeTyping();
+        setIsDirectChat(false);
+        setDirectChatMessages([]);
+        setTypingUsers({});
+      };
+    } else {
+      setIsDirectChat(false);
+      setDirectChatMessages([]);
+      setTypingUsers({});
+    }
+  }, [selectedChat, user?.uid, searchParams]);
 
   // Getting the existing chat
   // For left side of the dream_team ( Chat room lists )
@@ -253,8 +316,130 @@ const GYBTeamChat: React.FC = () => {
   // Enable to automatically scrolls the screen to the last message after rendering the message.
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages])
+  }, [chatMessages]);
 
+  // Enhanced auto-scroll for direct chat messages
+  useEffect(() => {
+    if (directChatMessages.length > 0) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        messageEndRef.current?.scrollIntoView({ 
+          behavior: "smooth",
+          block: "end"
+        });
+      }, 100);
+    }
+  }, [directChatMessages]);
+
+  // Auto-scroll when typing indicator changes
+  useEffect(() => {
+    if (Object.keys(typingUsers).length > 0) {
+      setTimeout(() => {
+        messageEndRef.current?.scrollIntoView({ 
+          behavior: "smooth",
+          block: "end"
+        });
+      }, 100);
+    }
+  }, [typingUsers]);
+
+  // Presence tracking
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    // Set user as online when component mounts
+    setOnline();
+
+    // Listen for presence updates
+    const presenceCollection = collection(db, 'presence');
+    const unsubscribePresence = onSnapshot(presenceCollection, (snapshot) => {
+      const online: {[userId: string]: boolean} = {};
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.isOnline && doc.id !== user.uid) {
+          online[doc.id] = true;
+        }
+      });
+      setOnlineUsers(online);
+    });
+
+    // Set user as offline when component unmounts
+    const handleBeforeUnload = () => setOffline();
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      unsubscribePresence();
+      setOffline();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [user?.uid]);
+
+  // Handle room parameter from URL
+  useEffect(() => {
+    const roomId = searchParams.get('room');
+    if (roomId && user?.uid) {
+      // Load the specific room
+      setSelectedChat(roomId);
+      
+      // Load room details
+      getRoom(roomId).then((room) => {
+        if (room && room.members.includes(user.uid)) {
+          console.log('✅ Room loaded from URL:', roomId);
+        } else {
+          console.error('❌ Room not found or user not a member');
+          setSelectedChat(null);
+        }
+      }).catch((error) => {
+        console.error('❌ Error loading room:', error);
+        setSelectedChat(null);
+      });
+    }
+  }, [searchParams, user?.uid]);
+
+  // Load friends list
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const unsubscribe = watchConnections(user.uid, (friendUids) => {
+      setFriends(friendUids);
+      
+      // Load friend profiles
+      const loadFriendProfiles = async () => {
+        const profiles: {[uid: string]: {name: string, email: string}} = {};
+        
+        for (const uid of friendUids) {
+          try {
+            const profileRef = doc(db, "profiles", uid);
+            const profileSnap = await getDoc(profileRef);
+            if (profileSnap.exists()) {
+              const data = profileSnap.data();
+              profiles[uid] = {
+                name: data.name || "Unknown",
+                email: data.email || ""
+              };
+            } else {
+              profiles[uid] = {
+                name: "Unknown",
+                email: ""
+              };
+            }
+          } catch (error) {
+            console.error(`Error loading profile for ${uid}:`, error);
+            profiles[uid] = {
+              name: "Unknown",
+              email: ""
+            };
+          }
+        }
+        
+        setFriendProfiles(profiles);
+      };
+      
+      loadFriendProfiles();
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
 
   // Handling message send, stores to the firebase in the dream_team chat field
   // Goes to subdomain "Message " field
@@ -403,6 +588,149 @@ const GYBTeamChat: React.FC = () => {
       }
     }
   };
+
+  // Handle direct messages using the new chat service
+  const handleDirectMessage = async () => {
+    if (message.trim() && selectedChat && user?.uid) {
+      try {
+        await sendMessage(selectedChat, user.uid, message.trim());
+        setMessage("");
+      } catch (error) {
+        console.error("Error sending direct message:", error);
+      }
+    }
+  };
+
+  // Handle voice search transcription
+  const handleVoiceTranscription = (transcribedText: string) => {
+    setMessage(transcribedText);
+    // Optionally auto-send the message
+    // You can uncomment the following lines if you want auto-send
+    // if (selectedChat && user?.uid) {
+    //   if (isDirectChat) {
+    //     handleDirectMessage();
+    //   } else {
+    //     handleSendMessage();
+    //   }
+    // }
+  };
+
+  // Handle friend click - create or open direct chat room
+  const handleFriendClick = async (friendUid: string) => {
+    if (!user?.uid) return;
+
+    try {
+      // Create or get existing direct room
+      const roomId = await ensureDirectRoom(user.uid, friendUid);
+      
+      // Navigate to the chat room
+      navigate(`/gyb-team-chat?room=${roomId}`);
+    } catch (error) {
+      console.error("Error creating/opening chat room:", error);
+    }
+  };
+
+  // Get the other user's name for display
+  const getOtherUserName = (roomId: string, currentUserId: string): string => {
+    if (!isDirectChat) return 'Unknown';
+    
+    // Find the other user in the room
+    const room = teamChats.find(chat => chat.id === roomId);
+    if (!room) return 'Unknown';
+    
+    const otherUserId = room.members.find(uid => uid !== currentUserId);
+    if (!otherUserId) return 'Unknown';
+    
+    return friendProfiles[otherUserId]?.name || 'Unknown';
+  };
+
+  // Generate consistent avatar colors based on user ID
+  const getAvatarColor = (userId: string): string => {
+    const colors = [
+      'bg-gradient-to-br from-blue-400 to-purple-500',
+      'bg-gradient-to-br from-green-400 to-blue-500',
+      'bg-gradient-to-br from-pink-400 to-red-500',
+      'bg-gradient-to-br from-yellow-400 to-orange-500',
+      'bg-gradient-to-br from-indigo-400 to-purple-500',
+      'bg-gradient-to-br from-teal-400 to-green-500',
+      'bg-gradient-to-br from-rose-400 to-pink-500',
+      'bg-gradient-to-br from-cyan-400 to-blue-500'
+    ];
+    
+    // Use userId to consistently assign colors
+    const hash = userId.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  // Typing indicator functions
+  const startTyping = async () => {
+    if (!selectedChat || !user?.uid || !isDirectChat) return;
+    
+    try {
+      const typingRef = doc(db, `chatRooms/${selectedChat}/typing`, user.uid);
+      await setDoc(typingRef, {
+        isTyping: true,
+        timestamp: serverTimestamp()
+      }, { merge: true }); // Use setDoc with merge to create if not exists
+    } catch (error) {
+      console.error('Error starting typing indicator:', error);
+    }
+  };
+
+  const stopTyping = async () => {
+    if (!selectedChat || !user?.uid || !isDirectChat) return;
+    
+    try {
+      const typingRef = doc(db, `chatRooms/${selectedChat}/typing`, user.uid);
+      await setDoc(typingRef, {
+        isTyping: false,
+        timestamp: serverTimestamp()
+      }, { merge: true }); // Use setDoc with merge to create if not exists
+    } catch (error) {
+      console.error('Error stopping typing indicator:', error);
+    }
+  };
+
+  // Handle typing with debounce
+  const handleTyping = (() => {
+    let typingTimeout: NodeJS.Timeout;
+    
+    return () => {
+      if (!isTyping) {
+        setIsTyping(true);
+        startTyping();
+      }
+      
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        setIsTyping(false);
+        stopTyping();
+      }, 1000);
+    };
+  })();
+
+  // Presence tracking functions
+  const updatePresence = async (isOnline: boolean) => {
+    if (!user?.uid) return;
+    
+    try {
+      const presenceRef = doc(db, 'presence', user.uid);
+      await setDoc(presenceRef, {
+        isOnline,
+        lastSeen: serverTimestamp(),
+        userId: user.uid
+      }, { merge: true }); // Use setDoc with merge to create if not exists
+    } catch (error) {
+      console.error('Error updating presence:', error);
+    }
+  };
+
+  const setOnline = () => updatePresence(true);
+  const setOffline = () => updatePresence(false);
 
   // inviting user through valid email
   // Getting the user information via email in profile field and
@@ -562,6 +890,51 @@ const GYBTeamChat: React.FC = () => {
               />
             </div>
           </div>
+          
+          {/* Friends List Section */}
+          {friends.length > 0 && (
+            <div className="px-4 mb-4">
+              <h3 className="text-sm font-semibold text-gray-600 mb-2">Connected Friends</h3>
+              <div className="space-y-1">
+                {friends.map((friendUid) => {
+                  const friendProfile = friendProfiles[friendUid];
+                  return (
+                    <div
+                      key={friendUid}
+                      onClick={() => handleFriendClick(friendUid)}
+                      className="p-3 hover:bg-gray-100 cursor-pointer rounded-lg transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-semibold text-sm">
+                            {friendProfile?.name?.charAt(0)?.toUpperCase() || '?'}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {friendProfile?.name || 'Unknown'}
+                            </p>
+                            {onlineUsers[friendUid] && (
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 truncate">
+                            {friendProfile?.email || ''}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
+          {/* Team Chats Section */}
+          <div className="px-4 mb-4">
+            <h3 className="text-sm font-semibold text-gray-600 mb-2">Team Chats</h3>
+          </div>
           {teamChats.map((chat) => {
             if (!user) {
               return null;
@@ -647,7 +1020,44 @@ const GYBTeamChat: React.FC = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {chatMessages.map((msg) => (
+                {/* Display messages based on chat type */}
+                {isDirectChat ? (
+                  // Direct chat messages with enhanced UI using ChatMessage component
+                  directChatMessages.map((msg, index) => {
+                    const isCurrentUser = msg.senderId === user?.uid;
+                    const otherUserName = getOtherUserName(selectedChat || '', user?.uid || '');
+                    const senderName = isCurrentUser ? (userData?.name || 'You') : otherUserName;
+                    
+                    // Enhanced message grouping logic
+                    const isFirstInGroup = index === 0 || 
+                      directChatMessages[index - 1].senderId !== msg.senderId;
+                    
+                    const isLastInGroup = index === directChatMessages.length - 1 || 
+                      directChatMessages[index + 1].senderId !== msg.senderId;
+                    
+                    // Get avatar color and initial
+                    const avatarColor = getAvatarColor(msg.senderId);
+                    const avatarInitial = senderName.charAt(0).toUpperCase();
+                    
+                    return (
+                      <ChatMessage
+                        key={msg.id}
+                        id={msg.id}
+                        senderId={msg.senderId}
+                        text={msg.text}
+                        createdAt={msg.createdAt}
+                        isCurrentUser={isCurrentUser}
+                        senderName={senderName}
+                        isFirstInGroup={isFirstInGroup}
+                        isLastInGroup={isLastInGroup}
+                        avatarInitial={avatarInitial}
+                        avatarColor={avatarColor}
+                      />
+                    );
+                  })
+                ) : (
+                  // Regular team chat messages
+                  chatMessages.map((msg) => (
                   <div
                     key={msg.id}
                     className={`flex items-start space-x-2 ${
@@ -704,7 +1114,20 @@ const GYBTeamChat: React.FC = () => {
                       )
                     )}
                   </div>
-                ))}
+                  ))
+                )}
+
+                {/* Typing indicator for direct chat */}
+                {isDirectChat && (
+                  <TypingIndicator 
+                    typingUsers={typingUsers}
+                    userProfiles={friendProfiles}
+                    avatarColor={Object.keys(typingUsers).length > 0 ? 
+                      getAvatarColor(Object.keys(typingUsers)[0]) : 
+                      'bg-gradient-to-br from-blue-400 to-purple-500'
+                    }
+                  />
+                )}
 
                 {isProcessing && (
                   <div className="flex justify-start">
@@ -734,16 +1157,30 @@ const GYBTeamChat: React.FC = () => {
                   <input
                     type="text"
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                    onChange={(e) => {
+                      setMessage(e.target.value);
+                      if (isDirectChat) {
+                        handleTyping();
+                      }
+                    }}
                     onKeyPress={handleKeyPress}
                     placeholder="Type a message..."
                     className="flex-1 bg-transparent border-none focus:outline-none px-4 py-2 text-navy-blue"
                   />
-                  <button className="p-2 text-gray-500 hover:text-navy-blue">
-                    <Mic size={20} />
-                  </button>
+                  <VoiceSearch
+                    onTranscriptionComplete={handleVoiceTranscription}
+                    disabled={!selectedChat}
+                    className="voice-search-integration"
+                  />
                   <button
-                    onClick={handleSendMessage}
+                    onClick={() => {
+                      const roomId = searchParams.get('room');
+                      if (roomId && roomId === selectedChat) {
+                        handleDirectMessage();
+                      } else {
+                        handleSendMessage();
+                      }
+                    }}
                     className="p-2 text-blue-500 hover:text-blue-600"
                   >
                     <Send size={20} />
