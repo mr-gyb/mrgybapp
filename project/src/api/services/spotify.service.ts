@@ -699,6 +699,5 @@ class SpotifyService {
 // Create and export a single instance
 const spotifyService = new SpotifyService();
 
-// Export both default and named for compatibility
+// Export as default only
 export default spotifyService;
-export { spotifyService };

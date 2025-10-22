@@ -3,7 +3,6 @@ import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEma
 import { auth, db, facebookProvider } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile } from '../types/user';
-
 import { storage } from '../utils/storage';
 
 import { getInitials } from '../services/profile.service';
@@ -98,9 +97,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await setDoc(userDocRef, defaultProfile);
             setUserData(defaultProfile);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error fetching user data:', error);
-          // if error -> Log out
+          
+          // Check if it's an offline error
+          if (error.code === 'unavailable' || error.message?.includes('offline')) {
+            console.warn('Firebase is offline, user data will be loaded when connection is restored');
+            // Don't logout on offline errors, just set loading to false
+            setLoading(false);
+            return;
+          }
+          
+          // For other errors, logout the user
           await logout();
         }
       } else {
