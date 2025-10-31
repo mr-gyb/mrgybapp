@@ -5,6 +5,7 @@ import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { ChatProvider } from './contexts/ChatContext'
+import { NotificationsProvider } from './contexts/NotificationsContext'
 import ErrorBoundary from './components/ErrorBoundary'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -13,7 +14,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <ThemeProvider>
           <ChatProvider>
-            <App />
+            <NotificationsProvider>
+              <App />
+            </NotificationsProvider>
           </ChatProvider>
         </ThemeProvider>
       </AuthProvider>

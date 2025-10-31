@@ -13,6 +13,7 @@ import FileUploadButton from './FileUploadButton';
 import { processFileForAI } from '../../api/services/chat.service';
 import { OpenAIMessage } from '../../types/chat';
 import { ChatCompletionContentPart } from "openai/resources/chat/completions";
+import VoiceInput from '../VoiceInput';
 import { useChat } from '../../contexts/ChatContext';
 
 // Web Speech API types
@@ -89,6 +90,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const isStartingRef = useRef<boolean>(false);
   const lastMessageSentRef = useRef<boolean>(false);
   const { uploadFileToOpenAI, currentChatId } = useChat();
 
@@ -231,15 +233,23 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   // recording feature
   const startRecording = () => {
+    if (isStartingRef.current || isRecording) {
+      console.log('Speech recognition already starting/recording; ignoring duplicate start');
+      return;
+    }
+    isStartingRef.current = true;
+    
     // check if the browser supports the web speech api
     if (!('webkitSpeechRecognition' in window)) {
       alert('Speech recognition is not supported in this browser.');
+      isStartingRef.current = false;
       return;
     }
     
     // Stop any existing recording first
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try { recognitionRef.current.abort(); } catch {}
+      try { recognitionRef.current.stop(); } catch {}
       recognitionRef.current = null;
     }
     
@@ -254,6 +264,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     recognition.onstart = () => {
       console.log('Speech recognition started');
       setIsRecording(true);
+      isStartingRef.current = false;
     };
 
     // set the event handler to update the input using setInput(transcript)
@@ -267,27 +278,25 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
     // when recording error, setIsRecording to false
     recognition.onerror = (event: SpeechRecognitionError) => {
-      console.error('Speech recognition error:', event.error);
-      
-      // Handle specific error types gracefully
-      if (event.error === 'no-speech') {
-        console.log('No speech detected, stopping recording gracefully');
-        // Don't show error for no-speech, just stop recording
+      // Treat aborted and no-speech as benign
+      if (event.error === 'aborted' || event.error === 'no-speech') {
+        console.log(`Speech recognition ${event.error}, stopping gracefully`);
       } else if (event.error === 'audio-capture') {
-        console.log('Audio capture error, microphone may not be available');
+        console.error('Audio capture error, microphone may not be available');
       } else if (event.error === 'not-allowed') {
-        console.log('Microphone permission denied');
+        console.error('Microphone permission denied');
       } else {
-        console.log('Speech recognition error:', event.error);
+        console.error('Speech recognition error:', event.error);
       }
-      
       setIsRecording(false);
+      isStartingRef.current = false;
     };
 
     // when recording ends, setIsRecording to false
     recognition.onend = () => {
       console.log('Speech recognition ended');
       setIsRecording(false);
+      isStartingRef.current = false;
     };
 
     // start the recording
@@ -307,19 +316,24 @@ const MessageInput: React.FC<MessageInputProps> = ({
     } catch (error) {
       console.error('Failed to start speech recognition:', error);
       setIsRecording(false);
+      isStartingRef.current = false;
     }
   };
 
   const stopRecording = () => {
     if (recognitionRef.current) {
       try {
+        recognitionRef.current.abort();
+      } catch {}
+      try {
         recognitionRef.current.stop();
-        recognitionRef.current = null;
       } catch (error) {
         console.error('Error stopping speech recognition:', error);
       }
+      recognitionRef.current = null;
     }
     setIsRecording(false);
+    isStartingRef.current = false;
   };
 
   const handleMicClick = () => {
@@ -521,12 +535,23 @@ const MessageInput: React.FC<MessageInputProps> = ({
         />
 
         <div className="flex items-center space-x-1 sm:space-x-2 px-2">
-          <button 
-            onClick={handleMicClick}
-            className={`p-2 ${isRecording ? 'text-red-500' : 'text-gray-600 hover:text-navy-blue'}`}
-          >
-            <Mic size={20} />
-          </button>
+          <VoiceInput
+            onTranscript={(transcript) => {
+              setInput(transcript);
+              // Auto-send after voice input
+              setTimeout(() => {
+                handleSendMessage1();
+              }, 500);
+            }}
+            onError={(error) => {
+              console.error('Voice input error:', error);
+            }}
+            disabled={isProcessing}
+            placeholder="Click mic to speak..."
+            showTranscript={false}
+            autoSubmit={false}
+            className="voice-input-minimal"
+          />
 
           <button className="p-2 text-gray-600 hover:text-navy-blue">
             <VideoIcon

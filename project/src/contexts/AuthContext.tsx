@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithPopup } from 'firebase/auth';
-import { auth, db, facebookProvider } from '../lib/firebase';
+import { auth, db, facebookProvider, handleFirestoreError } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile } from '../types/user';
 import { storage } from '../utils/storage';
@@ -30,15 +30,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // check token for auto log out.
   const checkTokenExpiration = async (currentUser: User) => {
     try {
+      // Check if we're online before making network requests
+      if (!navigator.onLine) {
+        console.warn('⚠️ Device is offline - skipping token validation');
+        return true; // Allow offline usage
+      }
+      
       // Firebase Auth automatically updates the token but verify it
       const token = await currentUser.getIdToken(true);
       if (!token) {
         throw new Error('Invalid token');
       }
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Token validation failed:', error);
-      await logout();
+      
+      // Handle network errors gracefully
+      if (error.code === 'auth/network-request-failed' || error.message.includes('ERR_INTERNET_DISCONNECTED')) {
+        console.warn('⚠️ Network error during token validation - allowing offline usage');
+        return true; // Allow offline usage for network errors
+      }
+      
+      // Only logout for actual authentication errors
+      if (error.code?.startsWith('auth/') && error.code !== 'auth/network-request-failed') {
+        await logout();
+      }
+      
       return false;
     }
   };
@@ -100,10 +117,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error: any) {
           console.error('Error fetching user data:', error);
           
-          // Check if it's an offline error
-          if (error.code === 'unavailable' || error.message?.includes('offline')) {
-            console.warn('Firebase is offline, user data will be loaded when connection is restored');
-            // Don't logout on offline errors, just set loading to false
+          // Handle Firestore connection errors
+          handleFirestoreError(error);
+          
+          // Check if it's an offline error or QUIC protocol error
+          if (error.code === 'unavailable' || 
+              error.message?.includes('offline') ||
+              error.message?.includes('QUIC_PROTOCOL_ERROR') ||
+              error.message?.includes('WebChannelConnection')) {
+            console.warn('Firebase connection issue, user data will be loaded when connection is restored');
+            // Don't logout on connection errors, just set loading to false
             setLoading(false);
             return;
           }

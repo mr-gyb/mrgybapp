@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator, enableNetwork, disableNetwork } from 'firebase/firestore';
 import { getAuth, FacebookAuthProvider } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
@@ -21,6 +21,74 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
+
+// Firestore connection management
+let isFirestoreOnline = true;
+let connectionRetryCount = 0;
+const maxRetries = 3;
+
+// Monitor Firestore connection status
+export const monitorFirestoreConnection = () => {
+  // Listen for online/offline events
+  window.addEventListener('online', async () => {
+    console.log('🌐 Network back online - reconnecting Firestore...');
+    try {
+      await enableNetwork(db);
+      isFirestoreOnline = true;
+      connectionRetryCount = 0;
+      console.log('✅ Firestore reconnected');
+    } catch (error) {
+      console.error('❌ Failed to reconnect Firestore:', error);
+    }
+  });
+
+  window.addEventListener('offline', async () => {
+    console.log('📴 Network offline - disabling Firestore...');
+    try {
+      await disableNetwork(db);
+      isFirestoreOnline = false;
+      console.log('⚠️ Firestore offline mode enabled');
+    } catch (error) {
+      console.error('❌ Failed to disable Firestore:', error);
+    }
+  });
+};
+
+// Handle Firestore connection errors
+export const handleFirestoreError = (error: any) => {
+  console.error('🔥 Firestore error:', error);
+  
+  // Check for QUIC protocol errors
+  if (error.message?.includes('QUIC_PROTOCOL_ERROR') || 
+      error.message?.includes('WebChannelConnection') ||
+      error.message?.includes('transport errored')) {
+    
+    console.warn('⚠️ QUIC protocol error detected - attempting recovery...');
+    
+    if (connectionRetryCount < maxRetries) {
+      connectionRetryCount++;
+      console.log(`🔄 Retry attempt ${connectionRetryCount}/${maxRetries}`);
+      
+      // Retry connection after a delay
+      setTimeout(async () => {
+        try {
+          await disableNetwork(db);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          await enableNetwork(db);
+          console.log('✅ Firestore connection retry successful');
+        } catch (retryError) {
+          console.error('❌ Firestore retry failed:', retryError);
+        }
+      }, 2000 * connectionRetryCount); // Exponential backoff
+    } else {
+      console.error('❌ Max retries reached - Firestore connection failed');
+      isFirestoreOnline = false;
+    }
+  }
+};
+
+// Initialize connection monitoring
+monitorFirestoreConnection();
 
 // Configure Facebook Auth Provider
 export const facebookProvider = new FacebookAuthProvider();

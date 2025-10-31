@@ -10,6 +10,10 @@ import {
   Video,
   Plus,
   X,
+  MoreVertical,
+  Archive,
+  Trash2,
+  ArchiveRestore,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -33,6 +37,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
+import VoiceInput from './VoiceInput';
 import { useAuth } from "../contexts/AuthContext";
 import { OpenAIMessage } from "../types/chat";
 import { AI_USERS } from "../types/user";
@@ -40,10 +45,13 @@ import { generateAIResponse } from "../api/services";
 import ReactMarkdown from "react-markdown";
 import { useChat } from "../contexts/ChatContext";
 import { watchRoom, sendMessage, getRoom, ChatMessage as ChatServiceMessage, ensureDirectRoom } from "../services/chat";
+import { watchUserChats, watchArchivedChats, archiveChat, deleteChatForEveryone, unarchiveChat, deleteChatForUser, ChatRoom } from "../services/chats";
 import { watchConnections } from "../services/friends";
 import ChatMessage from "./ChatMessage";
 import TypingIndicator from "./TypingIndicator";
 import VoiceSearch from "./VoiceSearch";
+import FriendRequestsPanel from "./FriendRequestsPanel";
+import NotificationDropdown from "./NotificationDropdown";
 
 interface ChatMessage {
   id: string;
@@ -115,6 +123,12 @@ const GYBTeamChat: React.FC = () => {
   // Direct chat messages state
   const [directChatMessages, setDirectChatMessages] = useState<ChatServiceMessage[]>([]);
   const [isDirectChat, setIsDirectChat] = useState(false);
+  
+  // Direct chat rooms state (from chatRooms collection)
+  const [directChatRooms, setDirectChatRooms] = useState<ChatRoom[]>([]);
+  const [archivedChatRooms, setArchivedChatRooms] = useState<ChatRoom[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   
   // Typing indicator state
   const [typingUsers, setTypingUsers] = useState<{[userId: string]: boolean}>({});
@@ -249,17 +263,48 @@ const GYBTeamChat: React.FC = () => {
     // doc.data() => the field that inside the corresponding id
     // ...doc.data() list the data of the docs
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const rooms = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<TeamChat, "id" | "messages">),
-        messages: teamChats.find((c) => c.id === doc.id)?.messages || [],
-      }));
+      const rooms = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as Omit<TeamChat, "id" | "messages">),
+          messages: teamChats.find((c) => c.id === doc.id)?.messages || [],
+        }))
+        // Hide archived/deleted team chats for this user
+        .filter((room: any) => {
+          const archivedBy = room.archivedBy || {};
+          const deletedBy = room.deletedBy || {};
+          return !archivedBy[user.uid] && !deletedBy[user.uid];
+        });
 
-      setTeamChats(rooms); // update the all the rooms in the list
+      setTeamChats(rooms);
     });
 
     return () => unsubscribe();
   }, [user, selectedChat]);
+
+  // Watch direct chat rooms (from chatRooms collection)
+  useEffect(() => {
+    if (!user || !user.uid) return;
+
+    const unsubscribe = watchUserChats(user.uid, (rooms) => {
+      console.log('📋 Direct chat rooms updated:', rooms.length);
+      setDirectChatRooms(rooms);
+    });
+
+    return unsubscribe;
+  }, [user?.uid]);
+
+  // Watch archived chat rooms
+  useEffect(() => {
+    if (!user || !user.uid) return;
+
+    const unsubscribe = watchArchivedChats(user.uid, (rooms) => {
+      console.log('📦 Archived chat rooms:', rooms.length);
+      setArchivedChatRooms(rooms);
+    });
+
+    return unsubscribe;
+  }, [user?.uid]);
 
   // if User got invitation by some user
   // For Sending invitation create a chat invitation field in firebase database
@@ -278,7 +323,9 @@ const GYBTeamChat: React.FC = () => {
       }));
       setInvitations(invites); // for UI state
     });
-  });
+
+    return unsubscribe;
+  }, [user?.uid]);
 
   //  Fetch Participants of the chat room and stores the participants to ChatParticipants state.
   // Show participants below the chatroom title.
@@ -789,6 +836,134 @@ const GYBTeamChat: React.FC = () => {
     });
   };
 
+  // Archive a direct chat room
+  const handleArchiveChat = async (chatId: string) => {
+    if (!user?.uid) return;
+    
+    try {
+      await archiveChat(chatId, user.uid);
+      console.log('✅ Chat archived:', chatId);
+      // If archived chat was selected, clear selection
+      if (selectedChat === chatId) {
+        setSelectedChat(null);
+      }
+    } catch (error) {
+      console.error('❌ Error archiving chat:', error);
+    }
+  };
+
+  // Delete a direct chat room
+  const handleDeleteChat = async (chatId: string) => {
+    if (!user?.uid) return;
+    
+    if (!window.confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      const room = directChatRooms.find(r => r.id === chatId) || archivedChatRooms.find(r => r.id === chatId);
+      const canHardDelete = room?.canHardDelete?.includes(user.uid);
+      
+      if (canHardDelete) {
+        await deleteChatForEveryone(chatId, user.uid);
+        console.log('✅ Chat permanently deleted:', chatId);
+      } else {
+        // Soft delete - archive for this user
+        await archiveChat(chatId, user.uid);
+        console.log('✅ Chat archived (soft delete):', chatId);
+      }
+      
+      // If deleted chat was selected, clear selection
+      if (selectedChat === chatId) {
+        setSelectedChat(null);
+      }
+    } catch (error) {
+      console.error('❌ Error deleting chat:', error);
+    }
+  };
+
+  // Archive a team chat (dream_team_chat) for current user
+  const handleArchiveTeamChat = async (chatId: string) => {
+    if (!user?.uid) return;
+    try {
+      const chatRef = doc(db, "dream_team_chat", chatId);
+      const snap = await getDoc(chatRef);
+      if (!snap.exists()) return;
+      const data = snap.data() as any;
+      const archivedBy = { ...(data.archivedBy || {}) } as { [key: string]: boolean };
+      archivedBy[user.uid] = true;
+      await setDoc(chatRef, { archivedBy }, { merge: true });
+      console.log('✅ Team chat archived for user:', chatId);
+      if (selectedChat === chatId) {
+        setSelectedChat(null);
+      }
+    } catch (err) {
+      console.error('❌ Error archiving team chat:', err);
+    }
+  };
+
+  // Unarchive a team chat for current user
+  const handleUnarchiveTeamChat = async (chatId: string) => {
+    if (!user?.uid) return;
+    try {
+      const chatRef = doc(db, "dream_team_chat", chatId);
+      const snap = await getDoc(chatRef);
+      if (!snap.exists()) return;
+      const data = snap.data() as any;
+      const archivedBy = { ...(data.archivedBy || {}) } as { [key: string]: boolean };
+      delete archivedBy[user.uid];
+      await setDoc(chatRef, { archivedBy }, { merge: true });
+      console.log('✅ Team chat unarchived for user:', chatId);
+    } catch (err) {
+      console.error('❌ Error unarchiving team chat:', err);
+    }
+  };
+
+  // Delete a team chat for current user, hard delete if all members deleted
+  const handleDeleteTeamChat = async (chatId: string) => {
+    if (!user?.uid) return;
+    if (!window.confirm('Delete this team chat for you? If all members delete, the chat will be removed permanently.')) {
+      return;
+    }
+    try {
+      const chatRef = doc(db, "dream_team_chat", chatId);
+      const snap = await getDoc(chatRef);
+      if (!snap.exists()) return;
+      const data = snap.data() as any;
+      const teamMembers: string[] = data.teamMembers || [];
+      const deletedBy = { ...(data.deletedBy || {}) } as { [key: string]: boolean };
+      deletedBy[user.uid] = true;
+      await setDoc(chatRef, { deletedBy }, { merge: true });
+      console.log('✅ Team chat marked deleted for user:', chatId);
+      const allDeleted = teamMembers.length > 0 && teamMembers.every(uid => deletedBy[uid]);
+      if (allDeleted) {
+        // Delete messages subcollection then the room
+        const messagesCol = collection(db, `dream_team_chat/${chatId}/messages`);
+        const messagesSnap = await getDocs(messagesCol);
+        await Promise.all(messagesSnap.docs.map(m => deleteDoc(doc(messagesCol, m.id))));
+        await deleteDoc(chatRef);
+        console.log('✅ Team chat permanently deleted:', chatId);
+      }
+      if (selectedChat === chatId) {
+        setSelectedChat(null);
+      }
+    } catch (err) {
+      console.error('❌ Error deleting team chat:', err);
+    }
+  };
+
+  // Unarchive a chat
+  const handleUnarchiveChat = async (chatId: string) => {
+    if (!user?.uid) return;
+    
+    try {
+      await unarchiveChat(chatId, user.uid);
+      console.log('✅ Chat unarchived:', chatId);
+    } catch (error) {
+      console.error('❌ Error unarchiving chat:', error);
+    }
+  };
+
   // if user press the send button
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
@@ -865,13 +1040,26 @@ const GYBTeamChat: React.FC = () => {
           </Link>
           <h1 className="text-2xl font-bold">GYB Team Chat</h1>
         </div>
-        <button
-          onClick={() => setShowNewChatModal(true)}
-          className="bg-gold text-navy-blue px-3 py-1 rounded-full flex items-center text-sm"
-        >
-          <Plus size={16} className="mr-1" />
-          New Chat
-        </button>
+        <div className="flex items-center space-x-4">
+          <NotificationDropdown 
+            onNotificationClick={(notification) => {
+              if (notification.type === 'friend_request' || notification.type === 'request_accepted') {
+                // Navigate to friend requests section
+                console.log('Navigate to friend requests');
+              } else if (notification.type === 'new_message' && notification.chatRoomId) {
+                // Navigate to specific chat room
+                navigate(`/gyb-team-chat?room=${notification.chatRoomId}`);
+              }
+            }}
+          />
+          <button
+            onClick={() => setShowNewChatModal(true)}
+            className="bg-gold text-navy-blue px-3 py-1 rounded-full flex items-center text-sm"
+          >
+            <Plus size={16} className="mr-1" />
+            New Chat
+          </button>
+        </div>
       </div>
 
       <div className="flex-grow flex overflow-hidden">
@@ -931,6 +1119,103 @@ const GYBTeamChat: React.FC = () => {
             </div>
           )}
           
+          {/* Friend Requests Section */}
+          <div className="px-4 mb-4">
+            <FriendRequestsPanel />
+          </div>
+          
+          {/* Direct Chats Section (from chatRooms) */}
+          {directChatRooms.length > 0 && (
+            <>
+              <div className="px-4 mb-4">
+                <h3 className="text-sm font-semibold text-gray-600 mb-2">Direct Chats</h3>
+              </div>
+              {directChatRooms.map((chat) => {
+                if (!user) return null;
+                
+                const otherUserId = chat.members.find(uid => uid !== user.uid);
+                const otherUserName = otherUserId ? (friendProfiles[otherUserId]?.name || 'Unknown') : 'Unknown';
+                const lastMessage = directChatMessages.find(m => m.roomId === chat.id);
+                
+                return (
+                  <div
+                    key={chat.id}
+                    className={`relative px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer group ${
+                      selectedChat === chat.id ? "bg-gray-100 dark:bg-gray-700" : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedChat(chat.id);
+                      navigate(`/gyb-team-chat?room=${chat.id}`);
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium">
+                        {otherUserName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-white truncate">
+                          {otherUserName}
+                        </div>
+                        {lastMessage && (
+                          <div className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                            {lastMessage.text}
+                          </div>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(openMenuId === chat.id ? null : chat.id);
+                          }}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreVertical size={16} className="text-gray-600 dark:text-gray-400" />
+                        </button>
+                        
+                        {openMenuId === chat.id && (
+                          <>
+                            <div 
+                              className="fixed inset-0 z-10" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(null);
+                              }}
+                            />
+                            <div className="absolute right-4 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleArchiveChat(chat.id);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              >
+                                <Archive size={16} />
+                                Archive Chat
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteChat(chat.id);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              >
+                                <Trash2 size={16} />
+                                Delete Chat
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+          
           {/* Team Chats Section */}
           <div className="px-4 mb-4">
             <h3 className="text-sm font-semibold text-gray-600 mb-2">Team Chats</h3>
@@ -986,6 +1271,65 @@ const GYBTeamChat: React.FC = () => {
               </div>
             );
           })}
+          
+          {/* Archived Chats Section */}
+          {archivedChatRooms.length > 0 && (
+            <>
+              <div className="px-4 mb-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <h3 
+                    className="text-sm font-semibold text-gray-600 mb-2 cursor-pointer hover:text-gray-800"
+                    onClick={() => setShowArchived(!showArchived)}
+                  >
+                    Archived Chats ({archivedChatRooms.length})
+                  </h3>
+                </div>
+              </div>
+              {showArchived && archivedChatRooms.map((chat) => {
+                if (!user) return null;
+                
+                const otherUserId = chat.members.find(uid => uid !== user.uid);
+                const otherUserName = otherUserId ? (friendProfiles[otherUserId]?.name || 'Unknown') : 'Unknown';
+                
+                return (
+                  <div
+                    key={chat.id}
+                    className={`px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer group ${
+                      selectedChat === chat.id ? "bg-gray-100 dark:bg-gray-700" : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedChat(chat.id);
+                      navigate(`/gyb-team-chat?room=${chat.id}`);
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center text-white font-medium">
+                        {otherUserName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-600 dark:text-gray-400 truncate">
+                          {otherUserName}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-500">
+                          Archived
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUnarchiveChat(chat.id);
+                        }}
+                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Unarchive"
+                      >
+                        <ArchiveRestore size={16} className="text-gray-600 dark:text-gray-400" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
 
         {/* Right chat area */}
@@ -1002,21 +1346,57 @@ const GYBTeamChat: React.FC = () => {
                     {chatParticipants[selectedChat]?.join(", ") || ""}
                   </div>
                 </div>
-                <button
-                  onClick={() => setshowInstruction(true)}
-                  className="bg-red-300 text-white px-3 py-1 rounded-full text-sm hover:underline"
-                >
-                  ❓How To Use
-                
-                </button>
-                {/* 
-                <div className="p-4">
-                  <button onClick={handleClick} className="bg-blue-500 text-white px-4 py-2 rounded">
-                    서버에서 인사받기
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setshowInstruction(true)}
+                    className="bg-red-300 text-white px-3 py-1 rounded-full text-sm hover:underline"
+                  >
+                    ❓How To Use
                   </button>
-                  {message123 && <p className="mt-2 text-green-700">{message123}</p>}
+                  {/* Always visible actions; disabled for non-direct chats */}
+                  <button
+                    onClick={() => {
+                      if (!selectedChat) return;
+                      if (isDirectChat) {
+                        if (archivedChatRooms.some(r => r.id === selectedChat)) {
+                          handleUnarchiveChat(selectedChat);
+                        } else {
+                          handleArchiveChat(selectedChat);
+                        }
+                      } else {
+                        const teamRoom = teamChats.find(c => c.id === selectedChat) as any;
+                        const isArchived = !!teamRoom?.archivedBy?.[user?.uid || ''];
+                        if (isArchived) {
+                          handleUnarchiveTeamChat(selectedChat);
+                        } else {
+                          handleArchiveTeamChat(selectedChat);
+                        }
+                      }
+                    }}
+                    disabled={!selectedChat}
+                    className={`px-3 py-1 rounded-full text-sm border flex items-center gap-1 ${(!selectedChat) ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+                    title={'Archive or restore chat'}
+                  >
+                    <Archive size={14} />
+                    Archive
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!selectedChat) return;
+                      if (isDirectChat) {
+                        handleDeleteChat(selectedChat);
+                      } else {
+                        handleDeleteTeamChat(selectedChat);
+                      }
+                    }}
+                    disabled={!selectedChat}
+                    className={`px-3 py-1 rounded-full text-sm border flex items-center gap-1 ${(!selectedChat) ? 'border-red-100 text-red-300 cursor-not-allowed' : 'border-red-300 text-red-600 hover:bg-red-50'}`}
+                    title={'Delete chat'}
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
                 </div>
-                */}
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -1167,10 +1547,26 @@ const GYBTeamChat: React.FC = () => {
                     placeholder="Type a message..."
                     className="flex-1 bg-transparent border-none focus:outline-none px-4 py-2 text-navy-blue"
                   />
-                  <VoiceSearch
-                    onTranscriptionComplete={handleVoiceTranscription}
+                  <VoiceInput
+                    onTranscript={(transcript) => {
+                      setMessage(transcript);
+                      // Auto-send after voice input
+                      setTimeout(() => {
+                        const roomId = searchParams.get('room');
+                        if (roomId && roomId === selectedChat) {
+                          handleDirectMessage();
+                        } else {
+                          handleSendMessage();
+                        }
+                      }, 500);
+                    }}
+                    onError={(error) => {
+                      console.error('Voice input error:', error);
+                    }}
                     disabled={!selectedChat}
-                    className="voice-search-integration"
+                    placeholder="Click mic to speak..."
+                    showTranscript={true}
+                    autoSubmit={false}
                   />
                   <button
                     onClick={() => {

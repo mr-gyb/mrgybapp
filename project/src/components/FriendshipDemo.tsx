@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Users, MessageCircle, Bell, Search } from 'lucide-react';
 import ChatInterface from './ChatInterface';
-import { useNotifications } from '../hooks/useNotifications';
+import { useUserNotifications } from '../hooks/useNotifications';
 
 const FriendshipDemo: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'friends' | 'chat'>('friends');
-  const { unreadCount, friendRequestCount } = useNotifications();
+  const { unreadCount, friendRequestCount } = useUserNotifications();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

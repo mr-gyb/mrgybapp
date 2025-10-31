@@ -38,16 +38,44 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({
   const isSpeechRecognitionSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
   const isMediaRecorderSupported = 'MediaRecorder' in window;
 
+  // Detect Safari browser
+  const isSafari = () => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isSafariUA = /safari/.test(userAgent);
+    const isChromeUA = /chrome/.test(userAgent);
+    const isEdgeUA = /edg/.test(userAgent);
+    return isSafariUA && !isChromeUA && !isEdgeUA;
+  };
+
   // Initialize speech recognition (browser fallback)
   const initializeSpeechRecognition = useCallback(() => {
     if (!isSpeechRecognitionSupported) return null;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
+    const safari = isSafari();
     
+    // Safari works better with continuous: false
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
+    
+    // Safari-specific timeout configuration
+    if (safari) {
+      try {
+        if ('speechTimeout' in recognition) {
+          (recognition as any).speechTimeout = 15000; // 15 seconds for Safari
+        }
+        if ('noSpeechTimeout' in recognition) {
+          (recognition as any).noSpeechTimeout = 12000; // 12 seconds for Safari
+        }
+        if ('speechStartTimeout' in recognition) {
+          (recognition as any).speechStartTimeout = 8000; // 8 seconds for Safari
+        }
+      } catch (configError) {
+        // Ignore if not supported
+      }
+    }
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -75,8 +103,14 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({
     };
 
     recognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
-      setError(`Speech recognition error: ${event.error}`);
+      // "no-speech" and "aborted" are normal conditions - don't treat as errors
+      if (event.error === 'aborted' || event.error === 'no-speech') {
+        console.log(`🎤 Speech recognition ${event.error} (normal condition)`);
+        // Don't set error for these cases
+      } else {
+        console.error('Speech recognition error:', event.error);
+        setError(`Speech recognition error: ${event.error}`);
+      }
       setIsListening(false);
       setIsProcessing(false);
     };

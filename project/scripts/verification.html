@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firestore State Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .expected {
+            background-color: #e7f3ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .code {
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .console-output {
+            background-color: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Firestore State Verification</h1>
+        
+        <div class="step">
+            <h2>Step 1: Load Verification Scripts</h2>
+            <p>First, make sure you're logged into your app and have the Firebase SDK loaded.</p>
+            <button onclick="loadVerificationScripts()">Load Verification Scripts</button>
+        </div>
+
+        <div class="step">
+            <h2>Step 2: Check Current State</h2>
+            <p>Check the current state of your Firestore database.</p>
+            <button onclick="checkCurrentState()">Check Current State</button>
+        </div>
+
+        <div class="step">
+            <h2>Step 3: Test Friend Request Flow</h2>
+            <p>Follow these steps to test the complete flow:</p>
+            <ol>
+                <li>Send a friend request using your app's UI</li>
+                <li>Click "Check After Send" to verify the request was added to user documents</li>
+                <li>Accept or decline the request using your app's UI</li>
+                <li>Click "Check After Accept/Decline" to verify the final state</li>
+            </ol>
+            <button onclick="checkAfterSend()">Check After Send</button>
+            <button onclick="checkAfterAccept()">Check After Accept</button>
+            <button onclick="checkAfterDecline()">Check After Decline</button>
+        </div>
+
+        <div class="step">
+            <h2>Expected Behavior</h2>
+            
+            <div class="expected">
+                <h3>📤 When A sends request to B:</h3>
+                <div class="code">
+users/{B}.incomingRequests = [{ id: "A_B", fromUid: "A", createdAt: timestamp, seen: false }]
+users/{A}.sentRequests = [{ id: "A_B", toUid: "B", createdAt: timestamp }]
+chatRooms = [] (no chat documents)
+                </div>
+            </div>
+
+            <div class="expected">
+                <h3>✅ When B accepts request:</h3>
+                <div class="code">
+users/{A}.friends = [{ uid: "B", since: timestamp }]
+users/{B}.friends = [{ uid: "A", since: timestamp }]
+users/{A}.sentRequests = []
+users/{B}.incomingRequests = []
+chatRooms = [{ id: "chatId", members: ["A", "B"], pairKey: "A_B" }]
+                </div>
+            </div>
+
+            <div class="expected">
+                <h3>❌ When B declines request:</h3>
+                <div class="code">
+users/{A}.sentRequests = []
+users/{B}.incomingRequests = []
+users/{A}.friends = [] (unchanged)
+users/{B}.friends = [] (unchanged)
+chatRooms = [] (no chat documents)
+                </div>
+            </div>
+        </div>
+
+        <div class="console-output" id="console-output">
+            <div>Console output will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        // Override console.log to display in our custom console
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function logToCustomConsole(message) {
+            const output = document.getElementById('console-output');
+            const div = document.createElement('div');
+            div.textContent = message;
+            output.appendChild(div);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logToCustomConsole(args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logToCustomConsole('ERROR: ' + args.join(' '));
+        };
+
+        function loadVerificationScripts() {
+            console.log('🔍 Loading verification scripts...');
+            
+            // Check if Firebase is available
+            if (typeof firebase === 'undefined') {
+                console.error('❌ Firebase SDK not loaded. Please make sure you\'re running this from your app.');
+                return;
+            }
+            
+            console.log('✅ Firebase SDK detected');
+            console.log('💡 You can now use the verification functions in the browser console');
+            console.log('💡 Run: verifyFirestoreState() to check current state');
+        }
+
+        function checkCurrentState() {
+            console.log('🔍 Checking current Firestore state...');
+            console.log('💡 Open browser console (F12) and run: verifyFirestoreState()');
+        }
+
+        function checkAfterSend() {
+            console.log('📤 Checking state after sending friend request...');
+            console.log('💡 Open browser console (F12) and run: verifyFirestoreState()');
+        }
+
+        function checkAfterAccept() {
+            console.log('✅ Checking state after accepting friend request...');
+            console.log('💡 Open browser console (F12) and run: verifyFirestoreState()');
+        }
+
+        function checkAfterDecline() {
+            console.log('❌ Checking state after declining friend request...');
+            console.log('💡 Open browser console (F12) and run: verifyFirestoreState()');
+        }
+    </script>
+</body>
+</html>

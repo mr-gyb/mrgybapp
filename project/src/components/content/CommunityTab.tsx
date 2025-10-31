@@ -3,17 +3,13 @@ import { Search, UserPlus, Check, X, MessageCircle, UserMinus, Users } from 'luc
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
-import { 
-  sendFriendRequest,
-  acceptFriendRequest,
-  declineFriendRequest,
-  removeConnection,
-  watchIncomingRequests,
-  watchOutgoingRequests,
-  watchConnections
-} from '../../services/friends';
+import { sendFriendRequest, acceptFriendRequest, declineFriendRequest } from '../../services/friendRequests';
+import { query, collection, where, getDocs } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { removeConnection } from '../../services/friends';
 import { ensureDirectRoom } from '../../services/chat';
 import { UserProfile } from '../../types/friendships';
+import FriendRequestsPanel from '../community/FriendRequestsPanel';
 
 interface CommunityTabProps {
   className?: string;
@@ -24,11 +20,7 @@ type UserStatus = 'add' | 'requested' | 'pending' | 'friends';
 const CommunityTab: React.FC<CommunityTabProps> = ({ className = '' }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [incomingRequests, setIncomingRequests] = useState<string[]>([]);
-  const [outgoingRequests, setOutgoingRequests] = useState<string[]>([]);
-  const [connections, setConnections] = useState<string[]>([]);
   const [loading, setLoading] = useState<Set<string>>(new Set());
-  const [pendingCount, setPendingCount] = useState(0);
   
   const { user, isAuthenticated } = useAuth();
   const { showSuccess, showError } = useToast();
@@ -43,9 +35,8 @@ const CommunityTab: React.FC<CommunityTabProps> = ({ className = '' }) => {
       industry: 'Technology',
       email: 'jane@techsolutions.com',
       friends: [],
-      pendingRequests: [],
-      sentRequests: [],
-      notifications: []
+      incomingRequests: [],
+      sentRequests: []
     },
     {
       uid: 'user2',
@@ -54,9 +45,8 @@ const CommunityTab: React.FC<CommunityTabProps> = ({ className = '' }) => {
       industry: 'Marketing',
       email: 'john@marketingpro.com',
       friends: [],
-      pendingRequests: [],
-      sentRequests: [],
-      notifications: []
+      incomingRequests: [],
+      sentRequests: []
     },
     {
       uid: 'user3',
@@ -65,45 +55,11 @@ const CommunityTab: React.FC<CommunityTabProps> = ({ className = '' }) => {
       industry: 'Design',
       email: 'mike@designstudio.com',
       friends: [],
-      pendingRequests: [],
-      sentRequests: [],
-      notifications: []
+      incomingRequests: [],
+      sentRequests: []
     }
   ];
 
-  // Watch incoming requests
-  useEffect(() => {
-    if (!isAuthenticated || !user?.uid) return;
-
-    const unsubscribe = watchIncomingRequests(user.uid, (requests) => {
-      setIncomingRequests(requests);
-      setPendingCount(requests.length);
-    });
-
-    return () => unsubscribe();
-  }, [isAuthenticated, user?.uid]);
-
-  // Watch outgoing requests
-  useEffect(() => {
-    if (!isAuthenticated || !user?.uid) return;
-
-    const unsubscribe = watchOutgoingRequests(user.uid, (requests) => {
-      setOutgoingRequests(requests);
-    });
-
-    return () => unsubscribe();
-  }, [isAuthenticated, user?.uid]);
-
-  // Watch connections
-  useEffect(() => {
-    if (!isAuthenticated || !user?.uid) return;
-
-    const unsubscribe = watchConnections(user.uid, (friends) => {
-      setConnections(friends);
-    });
-
-    return () => unsubscribe();
-  }, [isAuthenticated, user?.uid]);
 
   // Load users (mock implementation)
   useEffect(() => {
@@ -112,10 +68,8 @@ const CommunityTab: React.FC<CommunityTabProps> = ({ className = '' }) => {
     setUsers(filteredUsers);
   }, [user?.uid]);
 
-  const getUserStatus = (targetUid: string): UserStatus => {
-    if (connections.includes(targetUid)) return 'friends';
-    if (incomingRequests.includes(targetUid)) return 'pending';
-    if (outgoingRequests.includes(targetUid)) return 'requested';
+  const getUserStatus = (_targetUid: string): UserStatus => {
+    // For now, always return 'add' since FriendRequestsPanel handles friend request logic
     return 'add';
   };
 
@@ -125,6 +79,7 @@ const CommunityTab: React.FC<CommunityTabProps> = ({ className = '' }) => {
     try {
       setLoading(prev => new Set(prev).add(targetUid));
       await sendFriendRequest(user.uid, targetUid);
+      console.log('FR lifecycle -> created', { senderId: user.uid, receiverId: targetUid });
       showSuccess(`Friend request sent to ${targetName}`);
     } catch (error: any) {
       console.error('Error sending friend request:', error);
@@ -143,11 +98,25 @@ const CommunityTab: React.FC<CommunityTabProps> = ({ className = '' }) => {
 
     try {
       setLoading(prev => new Set(prev).add(senderUid));
-      const roomId = await acceptFriendRequest(user.uid, senderUid);
-      showSuccess(`Friend request from ${senderName} accepted!`);
       
-      // Navigate to the chat room
-      navigate(`/gyb-team-chat?room=${roomId}`);
+      // Find the request ID from the normalized collection
+      const friendRequestsRef = collection(db, 'friendRequests');
+      const q = query(
+        friendRequestsRef,
+        where('senderId', '==', senderUid),
+        where('receiverId', '==', user.uid),
+        where('status', '==', 'pending')
+      );
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        showError('Friend request not found');
+        return;
+      }
+      
+      const requestId = snapshot.docs[0].id;
+      await acceptFriendRequest(requestId, user.uid);
+      showSuccess(`Friend request from ${senderName} accepted!`);
     } catch (error: any) {
       console.error('Error accepting friend request:', error);
       showError(error.message || 'Failed to accept friend request');
@@ -165,7 +134,24 @@ const CommunityTab: React.FC<CommunityTabProps> = ({ className = '' }) => {
 
     try {
       setLoading(prev => new Set(prev).add(senderUid));
-      await declineFriendRequest(user.uid, senderUid);
+      
+      // Find the request ID from the normalized collection
+      const friendRequestsRef = collection(db, 'friendRequests');
+      const q = query(
+        friendRequestsRef,
+        where('senderId', '==', senderUid),
+        where('receiverId', '==', user.uid),
+        where('status', '==', 'pending')
+      );
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        showError('Friend request not found');
+        return;
+      }
+      
+      const requestId = snapshot.docs[0].id;
+      await declineFriendRequest(requestId, user.uid);
       showSuccess(`Friend request from ${senderName} declined`);
     } catch (error: any) {
       console.error('Error declining friend request:', error);
@@ -220,8 +206,8 @@ const CommunityTab: React.FC<CommunityTabProps> = ({ className = '' }) => {
   const filteredUsers = users.filter(user => {
     const searchLower = searchTerm.toLowerCase();
     return user.name.toLowerCase().includes(searchLower) || 
-           user.businessName.toLowerCase().includes(searchLower) ||
-           user.industry.toLowerCase().includes(searchLower);
+           (user.businessName?.toLowerCase().includes(searchLower) || false) ||
+           (user.industry?.toLowerCase().includes(searchLower) || false);
   });
 
   if (!isAuthenticated) {
@@ -247,14 +233,17 @@ const CommunityTab: React.FC<CommunityTabProps> = ({ className = '' }) => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Community
             </h3>
-            {pendingCount > 0 && (
-              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                {pendingCount} pending
-              </span>
-            )}
           </div>
         </div>
       </div>
+
+      {/* Friend Requests Panel */}
+      {user?.uid && (
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <FriendRequestsPanel />
+        </div>
+      )}
+
 
       {/* Search */}
       <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
@@ -382,7 +371,7 @@ const CommunityTab: React.FC<CommunityTabProps> = ({ className = '' }) => {
                             <UserMinus size={12} />
                           )}
                         </button>
-                      </div>
+                </div>
                     )}
                   </div>
                 </div>
@@ -390,7 +379,7 @@ const CommunityTab: React.FC<CommunityTabProps> = ({ className = '' }) => {
             );
           })
         )}
-      </div>
+        </div>
 
       {/* Footer */}
       {filteredUsers.length > 0 && (

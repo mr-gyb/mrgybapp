@@ -1,388 +1,264 @@
 import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  onSnapshot, 
-  query, 
-  where, 
-  or,
-  orderBy,
-  serverTimestamp,
-  getDoc,
-  getDocs,
-  deleteDoc,
-  writeBatch,
-  Timestamp
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { UserProfile, Notification, ChatRoom } from '../types/friendships';
-import { ensureDirectRoom } from './chat';
-
-// Collection references
-const usersCollection = collection(db, 'users');
-const chatRoomsCollection = collection(db, 'chatRooms');
+  doc, getDoc, updateDoc, setDoc, onSnapshot, arrayUnion, arrayRemove, serverTimestamp
+} from "firebase/firestore";
+import { db } from "../lib/firebase";
+import { IncomingRequest, SentRequest, FriendRef } from "../types/friendships";
+import { createOrGetDirectChat } from "./chats";
 
 /**
- * Send friend request: add to recipient.pendingRequests and sender.sentRequests; add notification to recipient.
+ * Ensure user document exists with required arrays
  */
-const sendFriendRequest = async (fromUid: string, toUid: string): Promise<void> => {
-  try {
-    // Guard against self-requests
-    if (fromUid === toUid) {
-      throw new Error('Cannot send friend request to yourself');
-    }
-
-    // Check if request already exists
-    const existingRequest = await getFriendRequest(toUid, fromUid);
-    if (existingRequest) {
-      throw new Error('Friend request already exists');
-    }
-
-    const batch = writeBatch(db);
-    
-    // Get both user documents
-    const [fromUserRef, toUserRef] = [
-      doc(usersCollection, fromUid),
-      doc(usersCollection, toUid)
-    ];
-    
-    const [fromUserDoc, toUserDoc] = await Promise.all([
-      getDoc(fromUserRef),
-      getDoc(toUserRef)
-    ]);
-
-    if (!fromUserDoc.exists() || !toUserDoc.exists()) {
-      throw new Error('One or both users not found');
-    }
-
-    const fromUserData = fromUserDoc.data();
-    const toUserData = toUserDoc.data();
-
-    // Add to sender's sentRequests
-    batch.update(fromUserRef, {
-      sentRequests: [...(fromUserData.sentRequests || []), toUid],
-      updatedAt: serverTimestamp()
-    });
-
-    // Add to recipient's pendingRequests
-    batch.update(toUserRef, {
-      pendingRequests: [...(toUserData.pendingRequests || []), fromUid],
-      updatedAt: serverTimestamp()
-    });
-
-    // Add notification to recipient
-    const notification: Notification = {
-      id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type: 'friend_request',
-      fromUser: fromUid,
-      timestamp: serverTimestamp() as Timestamp,
-      read: false
+export async function ensureUserDocument(uid: string, userData?: any) {
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  
+  if (!snap.exists()) {
+    // Create user document if it doesn't exist
+    const defaultData = {
+      uid,
+      name: userData?.name || 'Unknown User',
+      email: userData?.email || '',
+      incomingRequests: [],
+      sentRequests: [],
+      friends: [],
+      ...userData
     };
+    await setDoc(ref, defaultData);
+    console.log('✅ Created user document for:', uid);
+    return defaultData;
+  }
+  
+  const data = snap.data() || {};
+  
+  // Ensure required arrays exist
+  const updates: any = {};
+  if (!Array.isArray(data.incomingRequests)) updates.incomingRequests = [];
+  if (!Array.isArray(data.sentRequests)) updates.sentRequests = [];
+  if (!Array.isArray(data.friends)) updates.friends = [];
+  
+  if (Object.keys(updates).length > 0) {
+    await setDoc(ref, updates, { merge: true });
+    console.log('✅ Updated user document arrays for:', uid);
+  }
+  
+  return { ...data, ...updates };
+}
 
-    batch.update(toUserRef, {
-      notifications: [...(toUserData.notifications || []), notification]
-    });
-
-    await batch.commit();
+/**
+ * Send a friend request from one user to another
+ */
+export async function sendFriendRequest(fromUid: string, toUid: string, fromName: string, toName: string) {
+  console.log('📤 Sending friend request from', fromUid, 'to', toUid);
+  
+  try {
+    // Ensure both user documents exist
+    await ensureUserDocument(fromUid, { name: fromName });
+    await ensureUserDocument(toUid, { name: toName });
+    
+    const id = `${fromUid}_${toUid}`;
+    const requestData = {
+      id, 
+      fromUid, 
+      fromName, 
+      createdAt: serverTimestamp(), 
+      seen: false
+    };
+    
+    const sentData = {
+      id, 
+      toUid, 
+      toName, 
+      createdAt: serverTimestamp()
+    };
+    
+    // Get current data to append to existing arrays
+    const [fromDoc, toDoc] = await Promise.all([
+      getDoc(doc(db, "users", fromUid)),
+      getDoc(doc(db, "users", toUid))
+    ]);
+    
+    const fromData = fromDoc.data() || {};
+    const toData = toDoc.data() || {};
+    
+    // Append to existing arrays
+    const updatedFromSent = [...(fromData.sentRequests || []), sentData];
+    const updatedToIncoming = [...(toData.incomingRequests || []), requestData];
+    
+    // Update both documents
+    await Promise.all([
+      setDoc(doc(db, "users", fromUid), {
+        sentRequests: updatedFromSent
+      }, { merge: true }),
+      setDoc(doc(db, "users", toUid), {
+        incomingRequests: updatedToIncoming
+      }, { merge: true })
+    ]);
+    
     console.log('✅ Friend request sent successfully');
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ Error sending friend request:', error);
     throw error;
   }
-};
+}
 
 /**
- * Watch incoming requests for a user (recipient)
+ * Accept a friend request and create chat room
  */
-const watchIncomingRequests = (
-  uid: string, 
-  cb: (uids: string[]) => void
-): (() => void) => {
+export async function acceptFriendRequest(currentUid: string, fromUid: string) {
+  console.log('✅ Accepting friend request from', fromUid, 'by', currentUid);
+  
   try {
-    const userRef = doc(usersCollection, uid);
+    const id = `${fromUid}_${currentUid}`;
     
-    const unsubscribe = onSnapshot(userRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        const pendingRequests = data.pendingRequests || [];
-        console.log(`📨 Incoming requests updated: ${pendingRequests.length} requests`);
-        cb(pendingRequests);
-      } else {
-        cb([]);
-      }
-    }, (error) => {
-      console.error('❌ Error watching incoming requests:', error);
-    });
-    
-    return unsubscribe;
-  } catch (error) {
-    console.error('❌ Error setting up incoming requests listener:', error);
-    throw error;
-  }
-};
-
-/**
- * Watch outgoing requests for a user (sender)
- */
-const watchOutgoingRequests = (
-  uid: string, 
-  cb: (uids: string[]) => void
-): (() => void) => {
-  try {
-    const userRef = doc(usersCollection, uid);
-    
-    const unsubscribe = onSnapshot(userRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        const sentRequests = data.sentRequests || [];
-        console.log(`📤 Outgoing requests updated: ${sentRequests.length} requests`);
-        cb(sentRequests);
-      } else {
-        cb([]);
-      }
-    }, (error) => {
-      console.error('❌ Error watching outgoing requests:', error);
-    });
-    
-    return unsubscribe;
-  } catch (error) {
-    console.error('❌ Error setting up outgoing requests listener:', error);
-    throw error;
-  }
-};
-
-/**
- * Accept request: move from pending/sent into both users' friends[]; create chatRoom if not exists; add notification to sender.
- */
-const acceptFriendRequest = async (recipientUid: string, senderUid: string): Promise<string> => {
-  try {
-    const batch = writeBatch(db);
-    
-    // Get both user documents
-    const [recipientUserRef, senderUserRef] = [
-      doc(usersCollection, recipientUid),
-      doc(usersCollection, senderUid)
-    ];
-    
-    const [recipientUserDoc, senderUserDoc] = await Promise.all([
-      getDoc(recipientUserRef),
-      getDoc(senderUserRef)
+    // Get current data
+    const [currentDoc, fromDoc] = await Promise.all([
+      getDoc(doc(db, "users", currentUid)),
+      getDoc(doc(db, "users", fromUid))
     ]);
-
-    if (!recipientUserDoc.exists() || !senderUserDoc.exists()) {
-      throw new Error('One or both users not found');
-    }
-
-    const recipientUserData = recipientUserDoc.data();
-    const senderUserData = senderUserDoc.data();
-
-    // Remove from pending/sent arrays and add to friends
-    batch.update(recipientUserRef, {
-      friends: [...(recipientUserData.friends || []), senderUid],
-      pendingRequests: (recipientUserData.pendingRequests || []).filter((uid: string) => uid !== senderUid),
-      updatedAt: serverTimestamp()
-    });
-
-    batch.update(senderUserRef, {
-      friends: [...(senderUserData.friends || []), recipientUid],
-      sentRequests: (senderUserData.sentRequests || []).filter((uid: string) => uid !== recipientUid),
-      updatedAt: serverTimestamp()
-    });
-
-    // Add notification to sender
-    const notification: Notification = {
-      id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type: 'request_accepted',
-      fromUser: recipientUid,
-      timestamp: serverTimestamp() as Timestamp,
-      read: false
-    };
-
-    batch.update(senderUserRef, {
-      notifications: [...(senderUserData.notifications || []), notification]
-    });
-
-    await batch.commit();
-
-    // Create chatRoom if it doesn't exist
-    const roomId = await ensureDirectRoom(recipientUid, senderUid);
-
-    console.log('✅ Friend request accepted and chat room created:', roomId);
-    return roomId;
-  } catch (error: any) {
+    
+    const currentData = currentDoc.data() || {};
+    const fromData = fromDoc.data() || {};
+    
+    // Remove from arrays and add to friends
+    const updatedCurrentIncoming = (currentData.incomingRequests || []).filter((r: any) => r.id !== id);
+    const updatedFromSent = (fromData.sentRequests || []).filter((r: any) => r.id !== id);
+    
+    const newFriendRef = { uid: fromUid, since: serverTimestamp() };
+    const updatedCurrentFriends = [...(currentData.friends || []), newFriendRef];
+    const updatedFromFriends = [...(fromData.friends || []), { uid: currentUid, since: serverTimestamp() }];
+    
+    // Update both users
+    await Promise.all([
+      setDoc(doc(db, "users", currentUid), {
+        incomingRequests: updatedCurrentIncoming,
+        friends: updatedCurrentFriends
+      }, { merge: true }),
+      setDoc(doc(db, "users", fromUid), {
+        sentRequests: updatedFromSent,
+        friends: updatedFromFriends
+      }, { merge: true })
+    ]);
+    
+    // Create chat room after successful friend acceptance
+    await createOrGetDirectChat(currentUid, fromUid);
+    console.log('✅ Friend request accepted and chat created');
+  } catch (error) {
     console.error('❌ Error accepting friend request:', error);
     throw error;
   }
-};
+}
 
 /**
- * Decline: remove from recipient.pendingRequests and sender.sentRequests
+ * Decline a friend request (no chat creation)
  */
-const declineFriendRequest = async (recipientUid: string, senderUid: string): Promise<void> => {
+export async function declineFriendRequest(currentUid: string, fromUid: string) {
+  console.log('❌ Declining friend request from', fromUid, 'by', currentUid);
+  
   try {
-    const batch = writeBatch(db);
+    const id = `${fromUid}_${currentUid}`;
     
-    // Get both user documents
-    const [recipientUserRef, senderUserRef] = [
-      doc(usersCollection, recipientUid),
-      doc(usersCollection, senderUid)
-    ];
-    
-    const [recipientUserDoc, senderUserDoc] = await Promise.all([
-      getDoc(recipientUserRef),
-      getDoc(senderUserRef)
+    // Get current data
+    const [currentDoc, fromDoc] = await Promise.all([
+      getDoc(doc(db, "users", currentUid)),
+      getDoc(doc(db, "users", fromUid))
     ]);
-
-    if (!recipientUserDoc.exists() || !senderUserDoc.exists()) {
-      throw new Error('One or both users not found');
-    }
-
-    const recipientUserData = recipientUserDoc.data();
-    const senderUserData = senderUserDoc.data();
-
-    // Remove from pending/sent arrays
-    batch.update(recipientUserRef, {
-      pendingRequests: (recipientUserData.pendingRequests || []).filter((uid: string) => uid !== senderUid),
-      updatedAt: serverTimestamp()
-    });
-
-    batch.update(senderUserRef, {
-      sentRequests: (senderUserData.sentRequests || []).filter((uid: string) => uid !== recipientUid),
-      updatedAt: serverTimestamp()
-    });
-
-    await batch.commit();
+    
+    const currentData = currentDoc.data() || {};
+    const fromData = fromDoc.data() || {};
+    
+    // Remove from arrays
+    const updatedCurrentIncoming = (currentData.incomingRequests || []).filter((r: any) => r.id !== id);
+    const updatedFromSent = (fromData.sentRequests || []).filter((r: any) => r.id !== id);
+    
+    // Update both users
+    await Promise.all([
+      setDoc(doc(db, "users", currentUid), {
+        incomingRequests: updatedCurrentIncoming
+      }, { merge: true }),
+      setDoc(doc(db, "users", fromUid), {
+        sentRequests: updatedFromSent
+      }, { merge: true })
+    ]);
+    
     console.log('✅ Friend request declined');
-  } catch (error: any) {
+  } catch (error) {
     console.error('❌ Error declining friend request:', error);
     throw error;
   }
-};
+}
 
 /**
- * Remove connection: remove each other's uid from friends[]
+ * Watch incoming friend requests in real-time
  */
-const removeConnection = async (uidA: string, uidB: string): Promise<void> => {
+export function watchIncomingRequests(uid: string, cb: (reqs: IncomingRequest[]) => void) {
+  return onSnapshot(doc(db, "users", uid), (snap) => {
+    const d = snap.data() || {};
+    cb((d.incomingRequests || []) as IncomingRequest[]);
+  });
+}
+
+/**
+ * Watch sent friend requests in real-time
+ */
+export function watchSentRequests(uid: string, cb: (reqs: SentRequest[]) => void) {
+  return onSnapshot(doc(db, "users", uid), (snap) => {
+    const d = snap.data() || {};
+    cb((d.sentRequests || []) as SentRequest[]);
+  });
+}
+
+/**
+ * Mark all incoming requests as seen
+ */
+export async function markIncomingSeen(uid: string) {
   try {
-    const batch = writeBatch(db);
-    
-    // Get both user documents
-    const [userARef, userBRef] = [
-      doc(usersCollection, uidA),
-      doc(usersCollection, uidB)
-    ];
-    
-    const [userADoc, userBDoc] = await Promise.all([
-      getDoc(userARef),
-      getDoc(userBRef)
+    const ref = doc(db, "users", uid);
+    const snap = await getDoc(ref);
+    const d = snap.data() || {};
+    const updated = (d.incomingRequests || []).map((r: any) => ({ ...r, seen: true }));
+    await setDoc(ref, { incomingRequests: updated }, { merge: true });
+    console.log('✅ Marked incoming requests as seen');
+  } catch (error) {
+    console.error('❌ Error marking requests as seen:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove a friend connection
+ */
+export async function removeConnection(currentUid: string, friendUid: string) {
+  try {
+    const [currentDoc, friendDoc] = await Promise.all([
+      getDoc(doc(db, "users", currentUid)),
+      getDoc(doc(db, "users", friendUid))
     ]);
-
-    if (!userADoc.exists() || !userBDoc.exists()) {
-      throw new Error('One or both users not found');
-    }
-
-    const userAData = userADoc.data();
-    const userBData = userBDoc.data();
-
-    // Remove from friends arrays
-    batch.update(userARef, {
-      friends: (userAData.friends || []).filter((uid: string) => uid !== uidB),
-      updatedAt: serverTimestamp()
-    });
-
-    batch.update(userBRef, {
-      friends: (userBData.friends || []).filter((uid: string) => uid !== uidA),
-      updatedAt: serverTimestamp()
-    });
-
-    await batch.commit();
-    console.log('✅ Connection removed');
-  } catch (error: any) {
-    console.error('❌ Error removing connection:', error);
+    
+    const currentData = currentDoc.data() || {};
+    const friendData = friendDoc.data() || {};
+    
+    const currentFriends = (currentData.friends || []).filter((f: any) => f.uid !== friendUid);
+    const friendFriends = (friendData.friends || []).filter((f: any) => f.uid !== currentUid);
+    
+    await Promise.all([
+      setDoc(doc(db, "users", currentUid), { friends: currentFriends }, { merge: true }),
+      setDoc(doc(db, "users", friendUid), { friends: friendFriends }, { merge: true })
+    ]);
+    
+    console.log('✅ Friend connection removed');
+  } catch (error) {
+    console.error('❌ Error removing friend connection:', error);
     throw error;
   }
-};
+}
 
 /**
- * Watch current connections
+ * Watch user's friends list
  */
-const watchConnections = (
-  uid: string, 
-  cb: (friendUids: string[]) => void
-): (() => void) => {
-  try {
-    const userRef = doc(usersCollection, uid);
-    
-    const unsubscribe = onSnapshot(userRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        const friends = data.friends || [];
-        console.log(`👥 Connections updated: ${friends.length} friends`);
-        cb(friends);
-      } else {
-        cb([]);
-      }
-    }, (error) => {
-      console.error('❌ Error watching connections:', error);
-    });
-    
-    return unsubscribe;
-  } catch (error) {
-    console.error('❌ Error setting up connections listener:', error);
-    throw error;
-  }
-};
-
-/**
- * Helpers for UI to fetch single request/connection
- */
-const getFriendRequest = async (recipientUid: string, senderUid: string): Promise<boolean> => {
-  try {
-    const userRef = doc(usersCollection, recipientUid);
-    const userDoc = await getDoc(userRef);
-    
-    if (!userDoc.exists()) {
-      return false;
-    }
-    
-    const data = userDoc.data();
-    const pendingRequests = data.pendingRequests || [];
-    return pendingRequests.includes(senderUid);
-  } catch (error) {
-    console.error('❌ Error getting friend request:', error);
-    return false;
-  }
-};
-
-const getConnection = async (uidA: string, uidB: string): Promise<boolean> => {
-  try {
-    const userRef = doc(usersCollection, uidA);
-    const userDoc = await getDoc(userRef);
-    
-    if (!userDoc.exists()) {
-      return false;
-    }
-    
-    const data = userDoc.data();
-    const friends = data.friends || [];
-    return friends.includes(uidB);
-  } catch (error) {
-    console.error('❌ Error getting connection:', error);
-    return false;
-  }
-};
-
-
-// Export all functions
-export {
-  sendFriendRequest,
-  watchIncomingRequests,
-  watchOutgoingRequests,
-  acceptFriendRequest,
-  declineFriendRequest,
-  removeConnection,
-  watchConnections,
-  getFriendRequest,
-  getConnection
-};
+export function watchConnections(uid: string, cb: (friends: string[]) => void) {
+  return onSnapshot(doc(db, "users", uid), (snap) => {
+    const d = snap.data() || {};
+    const friends = (d.friends || []).map((f: any) => f.uid);
+    cb(friends);
+  });
+}

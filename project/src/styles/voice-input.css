@@ -1,0 +1,86 @@
+/* Voice Input Component Styles */
+.voice-input-container {
+  @apply w-full;
+}
+
+.voice-input-container form {
+  @apply flex items-center space-x-2;
+}
+
+.voice-input-container input {
+  @apply flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.voice-input-container button {
+  @apply transition-colors duration-200;
+}
+
+/* Minimal voice input for chat areas */
+.voice-input-minimal {
+  @apply flex-shrink-0;
+}
+
+.voice-input-minimal form {
+  @apply flex items-center space-x-1;
+}
+
+.voice-input-minimal input {
+  @apply hidden; /* Hide input for minimal version */
+}
+
+.voice-input-minimal button {
+  @apply p-2 rounded-lg text-white transition-colors duration-200;
+}
+
+/* Chat room specific styles */
+.chat-room-voice-input {
+  @apply w-full;
+}
+
+.chat-room-voice-input form {
+  @apply flex items-center space-x-3;
+}
+
+.chat-room-voice-input input {
+  @apply flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+/* Recording states */
+.voice-recording {
+  @apply animate-pulse;
+}
+
+.voice-error {
+  @apply text-red-500;
+}
+
+.voice-success {
+  @apply text-green-500;
+}
+
+/* Status indicators */
+.voice-status {
+  @apply text-sm mt-1;
+}
+
+.voice-status.error {
+  @apply text-red-500;
+}
+
+.voice-status.success {
+  @apply text-green-500;
+}
+
+.voice-status.info {
+  @apply text-blue-500;
+}
+
+/* Confidence indicator */
+.voice-confidence {
+  @apply text-xs text-gray-500 mt-1;
+}
+
+/* Clear button */
+.voice-clear {
+  @apply text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mt-2 cursor-pointer;
+}

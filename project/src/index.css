@@ -1,3 +1,6 @@
+/* Import voice input styles */
+@import './styles/voice-input.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
