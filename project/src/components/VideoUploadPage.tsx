@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Video, Upload } from 'lucide-react';
-import { openaiService, VideoAnalysisResult } from '../services/openaiService';
-import { testOpenAIVideoConnection, testOpenAICompletion } from '../utils/testOpenAI';
+import { openaiService } from '../services/openaiService';
+import { testOpenAIVideoConnection } from '../utils/testOpenAI';
 
 const VideoUploadPage: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ const VideoUploadPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [hasUploadedVideo, setHasUploadedVideo] = useState(false);
+  const [showUploadSection, setShowUploadSection] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [showProcessingSteps, setShowProcessingSteps] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,7 +62,13 @@ const VideoUploadPage: React.FC = () => {
   };
 
   const handleUploadClick = () => {
-    fileInputRef.current?.click();
+    // If upload section is not shown yet, show it
+    if (!showUploadSection) {
+      setShowUploadSection(true);
+    } else {
+      // If upload section is already shown, trigger file selection
+      fileInputRef.current?.click();
+    }
   };
 
   const startStepAnimation = () => {
@@ -175,32 +182,82 @@ const VideoUploadPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Character Section - Centered */}
-      <div className={`py-12 transition-all duration-500 ease-in-out ${hasUploadedVideo ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
+      <div className={`py-12 transition-all duration-500 ease-in-out ${showUploadSection ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
         <div className="container mx-auto px-4">
-          <div className="flex justify-center">
-            {/* Character Frame */}
-            <div className="relative">
-              <div className="relative">
-                {/* Character Image */}
-                <div className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-opacity-20 animated-border" style={{ borderColor: '#11335d' }}>
-                  <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'white' }}>
+          <div className="flex flex-col items-center">
+            {/* Character Frame with Double Border */}
+            <div className="relative mb-8">
+              {/* Outer Blue Border */}
+              <div 
+                className="rounded-2xl p-2"
+                style={{
+                  backgroundColor: '#11335d',
+                  width: '400px',
+                  height: '400px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {/* Inner Yellow Border */}
+                <div 
+                  className="rounded-xl p-2"
+                  style={{
+                    backgroundColor: '#D4AF37',
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {/* Character Image */}
+                  <div 
+                    className="rounded-lg overflow-hidden"
+                    style={{
+                      width: '350px',
+                      height: '350px'
+                    }}
+                  >
                     <img 
-                      src="https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58"
-                      alt="Mr. GYB AI"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        // Fallback if image fails to load
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        target.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-black text-2xl font-bold" style="background-color: white;">GYB</div>';
-                      }}
+                      src="/cropped_ai_image.png"
+                      alt="Chris - Your AI Business Coach"
+                      className="w-full h-full object-contain"
                     />
                   </div>
                 </div>
-                
-                {/* Golden Border Overlay */}
-                <div className="absolute inset-0 rounded-2xl border-2 border-yellow-400 pointer-events-none"></div>
               </div>
+            </div>
+
+            {/* Introduction Text */}
+            <div className="text-center mb-8">
+              <h1 
+                className="text-4xl font-bold mb-4"
+                style={{ color: '#11335d' }}
+              >
+                Hi, I'm Chris! Your AI Business Coach
+              </h1>
+            </div>
+
+            {/* Call to Action Button */}
+            <div className="text-center">
+              <button
+                onClick={handleUploadClick}
+                className="px-8 py-4 text-white font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                style={{ 
+                  backgroundColor: '#11335d',
+                  fontSize: '18px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#0f2a4a';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#11335d';
+                }}
+              >
+                Let's Get Started
+              </button>
+              
             </div>
           </div>
         </div>
@@ -489,25 +546,27 @@ const VideoUploadPage: React.FC = () => {
         </div>
       )}
 
-      {/* Video Upload Section */}
-      <div className="container mx-auto px-4 pb-12">
-        <div className={`max-w-4xl mx-auto transition-all duration-500 ease-in-out ${hasUploadedVideo ? 'max-w-6xl' : 'max-w-4xl'}`}>
-          {/* Upload Container */}
-            <div 
-            className={`relative border-2 border-dashed rounded-2xl text-center transition-all duration-500 ease-in-out animated-border-upload ${
-              isDragOver ? 'bg-gray-50' : 'bg-white'
-            } ${hasUploadedVideo ? 'p-8' : 'p-12'}`}
-            style={{
-              borderColor: isDragOver ? '#11335d' : '#11335d'
-            }}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            {/* Simple Upload Icon */}
+      {/* Video Upload Section - Hidden by default, shown after button click */}
+      {showUploadSection && (
+        <div className="container mx-auto px-4 pb-12">
+          <div className={`max-w-4xl mx-auto transition-all duration-500 ease-in-out ${hasUploadedVideo ? 'max-w-6xl' : 'max-w-4xl'}`}>
+            {/* Upload Container - Matching the design */}
+              <div 
+              className={`relative border-2 border-dashed rounded-2xl text-center transition-all duration-500 ease-in-out ${
+                isDragOver ? 'bg-gray-50' : 'bg-white'
+              } ${hasUploadedVideo ? 'p-8' : 'p-12'}`}
+              style={{
+                borderColor: '#D4AF37', // Golden dashed border
+                borderWidth: '3px'
+              }}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+            {/* Video Camera Icon - Custom color as requested */}
             <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                <Video size={32} className="text-gray-500" />
+              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: '#204777' }}>
+                <Video size={32} className="text-white" />
               </div>
             </div>
 
@@ -522,14 +581,13 @@ const VideoUploadPage: React.FC = () => {
                     Drag and drop your files here or click to browse
                   </p>
                   
-                  {/* Upload Button */}
+                  {/* Upload Button - Dark blue as shown in design */}
                   <button
                     onClick={handleUploadClick}
                     disabled={isProcessing}
                     className="inline-flex items-center px-6 py-3 text-white font-semibold rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ 
-                      backgroundColor: '#11335d',
-                      ':hover': { backgroundColor: '#0f2a4a' }
+                      backgroundColor: '#11335d'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#0f2a4a';
@@ -539,7 +597,7 @@ const VideoUploadPage: React.FC = () => {
                     }}
                   >
                     <Upload size={20} className="mr-2" />
-                    Choose Video Files
+                    Choose a file
                   </button>
                 </>
               )}
@@ -634,6 +692,7 @@ const VideoUploadPage: React.FC = () => {
           )}
         </div>
       </div>
+      )}
       
       {/* Animated Border CSS */}
       <style>{`

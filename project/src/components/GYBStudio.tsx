@@ -1523,15 +1523,14 @@ const GYBStudio: React.FC = () => {
             <div className="flex flex-col items-center">
               <div className="relative mb-4">
                  <img 
-                   src="/Mr.GYB_AI.png"
+                   src="/cropped_ai_image.png"
                    alt="Mr. GYB AI"
                    className="object-contain rounded-lg"
                    style={{
                      width: '350px',
                      height: '350px',
-                     border: '3px solid #1e40af',
-                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                     backgroundColor: 'black'
+                     border: '3px solid #1e40af'
+                    /* boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',*/
                    }}
                  />
                 {/* Inner yellow border effect */}

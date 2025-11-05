@@ -46,7 +46,7 @@ const GYBStudioWelcome: React.FC = () => {
             Create
           </Link>
           <Link
-            to="/gyb-studio"
+            to="/chris-ai-coach"
             className="px-6 py-3 bg-transparent border-2 border-black rounded text-white font-semibold text-lg hover:bg-white hover:text-black transition-all duration-200 text-center"
             style={{ width: 'fit-content', minWidth: '120px' }}
           >

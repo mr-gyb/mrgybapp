@@ -66,6 +66,7 @@ const BusinessRoadmapWelcome = lazy(() => import('./components/BusinessRoadmapWe
 const LetsBegin = lazy(() => import('./components/LetsBegin'));
 const Assessment = lazy(() => import('./components/Assessment'));
 const TestImage = lazy(() => import('./components/TestImage'));
+const ChrisAIBusinessCoach = lazy(() => import('./components/ChrisAIBusinessCoach'));
 
 // Loading spinner component
 const LoadingSpinner = () => (
@@ -101,7 +102,8 @@ const getPageTitle = (pathname: string): string => {
     '/reviews': 'Commerce',
     '/rewards': 'Commerce',
     '/payments': 'Commerce',
-    '/earnings': 'Commerce'
+    '/earnings': 'Commerce',
+    '/chris-ai-coach': 'Content'
   };
   
   // Check if pathname matches chat route pattern (/chat/:chatId)
@@ -176,6 +178,11 @@ const App: React.FC = () => {
             <Route path="/test-image" element={
               <Suspense fallback={<LoadingSpinner />}>
                 <TestImage />
+              </Suspense>
+            } />
+            <Route path="/chris-ai-coach" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <ChrisAIBusinessCoach />
               </Suspense>
             } />
 

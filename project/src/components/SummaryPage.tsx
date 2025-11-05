@@ -42,6 +42,9 @@ const SummaryPage: React.FC = () => {
         console.log('Suggested Edits:', analysis.suggestedEdits);
         console.log('Revised Script:', analysis.revisedScript);
         console.log('What Changed:', analysis.whatChanged);
+        console.log('Areas of Improvement:', analysis.areasOfImprovement);
+        console.log('Tone:', analysis.tone);
+        console.log('Engagement:', analysis.engagement);
         
         // Check if this is a long video that should auto-convert to shorts
         const isLongVideo = sessionStorage.getItem('isLongVideo') === 'true';
@@ -143,14 +146,14 @@ const SummaryPage: React.FC = () => {
                {/* Action Buttons */}
                <div className="flex flex-col sm:flex-row gap-4">
                  <button
-                   onClick={() => navigate('/gyb-studio')}
+                   onClick={() => navigate('/gyb-studio/create')}
                    className="px-6 py-3 text-black font-semibold rounded-lg transition-colors flex items-center justify-center"
                    style={{ backgroundColor: '#e0c472' }}
                  >
                    Generate Scripts
                  </button>
                  <button
-                   onClick={() => setShowVideoModal(true)}
+                   onClick={() => navigate('/gyb-studio/create')}
                    className="px-6 py-3 text-white font-semibold rounded-lg transition-colors flex items-center justify-center"
                    style={{ 
                      background: 'linear-gradient(90deg, #11335d, #6b5b95)'
@@ -173,100 +176,120 @@ const SummaryPage: React.FC = () => {
                     <p className="text-gray-600">AI-powered analysis of your uploaded video</p>
                   </div>
 
-                  {/* Brief Summary */}
+                  {/* Summary */}
                   <div className="mb-6">
                     <h3 className="text-xl font-bold text-black mb-3">📝 Summary</h3>
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                      <p className="text-lg text-black leading-relaxed">{analysisResult.summary || 'No summary available'}</p>
+                      <p className="text-lg text-black leading-relaxed">
+                        {typeof analysisResult.summary === 'string' 
+                          ? analysisResult.summary 
+                          : analysisResult.summary?.text || JSON.stringify(analysisResult.summary) || 'No summary available'
+                        }
+                      </p>
                     </div>
                   </div>
 
-
-
-
-                  {/* Key Points */}
+                  {/* Tone */}
                   <div className="mb-6">
-                    <h3 className="text-xl font-bold text-black mb-3">📋 Key Points</h3>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                      {analysisResult.keyPoints && Array.isArray(analysisResult.keyPoints) && analysisResult.keyPoints.length > 0 ? (
-                        <ul className="space-y-3">
-                          {analysisResult.keyPoints.map((point, index) => (
-                            <li key={index} className="flex items-start space-x-3">
-                              <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1">
-                                {index + 1}
+                    <h3 className="text-xl font-bold text-black mb-3">🎭 Tone</h3>
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                      {analysisResult.tone ? (
+                        <div className="space-y-3">
+                          <p className="text-lg text-black leading-relaxed">
+                            {typeof analysisResult.tone === 'string' 
+                              ? analysisResult.tone 
+                              : analysisResult.tone?.overall || analysisResult.tone?.description || JSON.stringify(analysisResult.tone)
+                            }
+                          </p>
+                          {analysisResult.toneAnalysis && (
+                            <div className="bg-white border border-purple-200 rounded p-4">
+                              <p className="text-sm text-purple-800 font-medium mb-2">Analysis:</p>
+                              <p className="text-sm text-gray-700">
+                                {typeof analysisResult.toneAnalysis === 'string' 
+                                  ? analysisResult.toneAnalysis 
+                                  : analysisResult.toneAnalysis?.text || JSON.stringify(analysisResult.toneAnalysis)
+                                }
+                              </p>
                               </div>
-                              <span className="text-gray-700">{point}</span>
+                          )}
+                          {/* Handle tone examples if they exist */}
+                          {analysisResult.tone?.examples && Array.isArray(analysisResult.tone.examples) && analysisResult.tone.examples.length > 0 && (
+                            <div className="bg-white border border-purple-200 rounded p-4">
+                              <p className="text-sm text-purple-800 font-medium mb-2">Examples:</p>
+                              <ul className="space-y-1">
+                                {analysisResult.tone.examples.map((example, index) => (
+                                  <li key={index} className="flex items-start space-x-2">
+                                    <span className="text-purple-600 mt-1">•</span>
+                                    <span className="text-sm text-gray-700">
+                                      {typeof example === 'string' ? example : example?.text || JSON.stringify(example)}
+                                    </span>
                             </li>
                           ))}
                         </ul>
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <div className="text-center py-4">
-                          <p className="text-gray-600 italic mb-2">Key points are being analyzed...</p>
+                          <p className="text-gray-600 italic mb-2">Tone analysis is being processed...</p>
                           <div className="flex justify-center">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Suggested Edits */}
+                  {/* Engagement */}
                   <div className="mb-6">
-                    <h3 className="text-xl font-bold text-black mb-3">✏️ Suggested Edits</h3>
-                    <div className="space-y-4">
-                      {analysisResult.suggestedEdits && Array.isArray(analysisResult.suggestedEdits) && analysisResult.suggestedEdits.length > 0 ? (
-                        analysisResult.suggestedEdits.map((edit, index) => (
-                          <div key={index} className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                            <div className="flex items-start justify-between mb-3">
-                              <h4 className="font-semibold text-orange-900">{edit.title || 'Edit Suggestion'}</h4>
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                edit.priority === 'high' 
-                                  ? 'bg-red-100 text-red-800' 
-                                  : edit.priority === 'medium'
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-green-100 text-green-800'
-                              }`}>
-                                {(edit.priority || 'medium').toUpperCase()} PRIORITY
-                              </span>
-                            </div>
-                            <p className="text-gray-700 mb-3">{edit.description || 'No description available'}</p>
-                            <div className="bg-white border border-orange-200 rounded p-3">
-                              <p className="text-sm text-orange-800 font-medium">Reasoning:</p>
-                              <p className="text-sm text-gray-700">{edit.reasoning || 'No reasoning provided'}</p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-                          <p className="text-gray-600 italic mb-2">Suggested edits are being analyzed...</p>
-                          <div className="flex justify-center">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600"></div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Revised Script */}
-                  <div className="mb-6">
-                    <h3 className="text-xl font-bold text-black mb-3">📝 Here Is The Revised Script For Your Video!</h3>
+                    <h3 className="text-xl font-bold text-black mb-3">📊 Engagement</h3>
                     <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                      {analysisResult.revisedScript && analysisResult.revisedScript.revisedScript ? (
-                        <div className="space-y-6">
-                          <div>
-                            <h4 className="font-semibold text-green-900 mb-3">Revised Script:</h4>
-                            <div className="bg-white border border-green-200 rounded-lg p-4">
-                              <p className="text-gray-700 whitespace-pre-wrap">{analysisResult.revisedScript.revisedScript}</p>
-                            </div>
-                          </div>
-                          {analysisResult.revisedScript.changes && Array.isArray(analysisResult.revisedScript.changes) && analysisResult.revisedScript.changes.length > 0 && (
-                            <div>
-                              <h4 className="font-semibold text-green-900 mb-3">Key Changes Made:</h4>
-                              <ul className="space-y-2">
-                                {analysisResult.revisedScript.changes.map((change, index) => (
+                      {analysisResult.engagement ? (
+                    <div className="space-y-4">
+                          <p className="text-lg text-black leading-relaxed">
+                            {typeof analysisResult.engagement === 'string' 
+                              ? analysisResult.engagement 
+                              : analysisResult.engagement?.overall || analysisResult.engagement?.description || JSON.stringify(analysisResult.engagement)
+                            }
+                          </p>
+                          {/* Handle engagement examples if they exist */}
+                          {analysisResult.engagement?.examples && Array.isArray(analysisResult.engagement.examples) && analysisResult.engagement.examples.length > 0 && (
+                            <div className="bg-white border border-green-200 rounded p-4">
+                              <p className="text-sm text-green-800 font-medium mb-2">Examples:</p>
+                              <ul className="space-y-1">
+                                {analysisResult.engagement.examples.map((example, index) => (
                                   <li key={index} className="flex items-start space-x-2">
                                     <span className="text-green-600 mt-1">•</span>
-                                    <span className="text-gray-700">{change}</span>
+                                    <span className="text-sm text-gray-700">
+                                      {typeof example === 'string' ? example : example?.text || JSON.stringify(example)}
+                              </span>
+                                  </li>
+                                ))}
+                              </ul>
+                        </div>
+                      )}
+                          {analysisResult.engagementScore && (
+                            <div className="bg-white border border-green-200 rounded p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-sm text-green-800 font-medium">Engagement Score:</p>
+                                <span className="text-lg font-bold text-green-600">{analysisResult.engagementScore}/10</span>
+                    </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-green-500 h-2 rounded-full transition-all duration-1000"
+                                  style={{ width: `${(analysisResult.engagementScore / 10) * 100}%` }}
+                                ></div>
+                  </div>
+                            </div>
+                          )}
+                          {analysisResult.engagementTips && Array.isArray(analysisResult.engagementTips) && analysisResult.engagementTips.length > 0 && (
+                            <div className="bg-white border border-green-200 rounded p-4">
+                              <p className="text-sm text-green-800 font-medium mb-2">Engagement Tips:</p>
+                              <ul className="space-y-1">
+                                {analysisResult.engagementTips.map((tip, index) => (
+                                  <li key={index} className="flex items-start space-x-2">
+                                    <span className="text-green-600 mt-1">•</span>
+                                    <span className="text-sm text-gray-700">{tip}</span>
                                   </li>
                                 ))}
                               </ul>
@@ -274,8 +297,8 @@ const SummaryPage: React.FC = () => {
                           )}
                         </div>
                       ) : (
-                        <div className="text-center py-6">
-                          <p className="text-gray-600 italic mb-2">Revised script is being generated...</p>
+                        <div className="text-center py-4">
+                          <p className="text-gray-600 italic mb-2">Engagement analysis is being processed...</p>
                           <div className="flex justify-center">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
                           </div>
@@ -284,40 +307,113 @@ const SummaryPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* What's Changed */}
+                  {/* Areas of Improvement */}
                   <div className="mb-6">
-                    <h3 className="text-xl font-bold text-black mb-3">🔄 What's Changed</h3>
+                    <h3 className="text-xl font-bold text-black mb-3">🚀 Areas of Improvement</h3>
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+                      {analysisResult.areasOfImprovement && Array.isArray(analysisResult.areasOfImprovement) && analysisResult.areasOfImprovement.length > 0 ? (
                     <div className="space-y-4">
-                      {analysisResult.whatChanged && Array.isArray(analysisResult.whatChanged) && analysisResult.whatChanged.length > 0 ? (
-                        analysisResult.whatChanged.map((change, index) => (
-                          <div key={index} className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                            <h4 className="font-semibold text-indigo-900 mb-3">{change.section || 'Section'}</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="bg-red-50 border border-red-200 rounded p-3">
-                                <p className="text-sm text-red-800 font-medium mb-2">Original:</p>
-                                <p className="text-sm text-gray-700">{change.original || 'No original content'}</p>
+                          {analysisResult.areasOfImprovement.map((area, index) => {
+                            console.log(`Processing area ${index}:`, area, typeof area);
+                            // Handle both string and object formats
+                            if (typeof area === 'string') {
+                              return (
+                                <div key={index} className="bg-white border border-orange-200 rounded-lg p-4">
+                                  <p className="text-gray-700">{area}</p>
+                                </div>
+                              );
+                            }
+                            
+                            // Handle object format with level, description, strengths, weaknesses
+                            return (
+                              <div key={index} className="bg-white border border-orange-200 rounded-lg p-4">
+                                <div className="flex items-start justify-between mb-3">
+                                  <h4 className="font-semibold text-orange-900">
+                                    {area.title || area.level || `Improvement Area ${index + 1}`}
+                                  </h4>
+                                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                    area.priority === 'high' 
+                                      ? 'bg-red-100 text-red-800' 
+                                      : area.priority === 'medium'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    {(area.priority || 'medium').toUpperCase()} PRIORITY
+                                  </span>
+                                </div>
+                                
+                                <p className="text-gray-700 mb-3">
+                                  {typeof area.description === 'string' ? area.description : area.description?.text || JSON.stringify(area.description) || 'No description available'}
+                                </p>
+                                
+                                {/* Strengths */}
+                                {area.strengths && Array.isArray(area.strengths) && area.strengths.length > 0 && (
+                                  <div className="bg-green-50 border border-green-200 rounded p-3 mb-3">
+                                    <p className="text-sm text-green-800 font-medium mb-2">Strengths:</p>
+                                    <ul className="space-y-1">
+                                      {area.strengths.map((strength, strengthIndex) => {
+                                        console.log(`Strength ${strengthIndex}:`, strength, typeof strength);
+                                        return (
+                                          <li key={strengthIndex} className="flex items-start space-x-2">
+                                            <span className="text-green-600 mt-1">✓</span>
+                                            <span className="text-sm text-gray-700">
+                                              {typeof strength === 'string' ? strength : strength?.text || JSON.stringify(strength)}
+                                            </span>
+                                          </li>
+                                        );
+                                      })}
+                                    </ul>
+                                  </div>
+                                )}
+                                
+                                {/* Weaknesses */}
+                                {area.weaknesses && Array.isArray(area.weaknesses) && area.weaknesses.length > 0 && (
+                                  <div className="bg-red-50 border border-red-200 rounded p-3 mb-3">
+                                    <p className="text-sm text-red-800 font-medium mb-2">Areas to Improve:</p>
+                                    <ul className="space-y-1">
+                                      {area.weaknesses.map((weakness, weaknessIndex) => (
+                                        <li key={weaknessIndex} className="flex items-start space-x-2">
+                                          <span className="text-red-600 mt-1">•</span>
+                                          <span className="text-sm text-gray-700">
+                                            {typeof weakness === 'string' ? weakness : weakness?.text || JSON.stringify(weakness)}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                
+                                {/* Suggestions */}
+                                {area.suggestions && Array.isArray(area.suggestions) && area.suggestions.length > 0 && (
+                                  <div className="bg-orange-50 border border-orange-200 rounded p-3">
+                                    <p className="text-sm text-orange-800 font-medium mb-2">Suggestions:</p>
+                                    <ul className="space-y-1">
+                                      {area.suggestions.map((suggestion, suggestionIndex) => (
+                                        <li key={suggestionIndex} className="flex items-start space-x-2">
+                                          <span className="text-orange-600 mt-1">•</span>
+                                          <span className="text-sm text-gray-700">
+                                            {typeof suggestion === 'string' ? suggestion : suggestion?.text || JSON.stringify(suggestion)}
+                                          </span>
+                            </li>
+                          ))}
+                        </ul>
                               </div>
-                              <div className="bg-green-50 border border-green-200 rounded p-3">
-                                <p className="text-sm text-green-800 font-medium mb-2">Revised:</p>
-                                <p className="text-sm text-gray-700">{change.revised || 'No revised content'}</p>
+                                )}
                               </div>
-                            </div>
-                            <div className="mt-3 bg-white border border-indigo-200 rounded p-3">
-                              <p className="text-sm text-indigo-800 font-medium">Reason for Change:</p>
-                              <p className="text-sm text-gray-700">{change.reason || 'No reason provided'}</p>
-                            </div>
+                            );
+                          })}
                           </div>
-                        ))
                       ) : (
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-                          <p className="text-gray-600 italic mb-2">Change details are being analyzed...</p>
+                        <div className="text-center py-4">
+                          <p className="text-gray-600 italic mb-2">Areas of improvement are being analyzed...</p>
                           <div className="flex justify-center">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600"></div>
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
+
 
 
 
@@ -354,28 +450,42 @@ const SummaryPage: React.FC = () => {
                       <h3 className="text-xl font-bold text-black mb-3">📝 Sample Video Summary</h3>
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                         <p className="text-lg text-black leading-relaxed">
-                          This is a sample video summary. When you upload a video, our AI will analyze it and provide detailed insights including key points, suggested edits, and a revised script.
+                          This is a sample video summary. When you upload a video, our AI will analyze it and provide detailed insights including tone analysis, engagement metrics, and areas for improvement.
                         </p>
                       </div>
                     </div>
 
                     <div className="mb-6">
-                      <h3 className="text-xl font-bold text-black mb-3">📋 Sample Key Points</h3>
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                        <ul className="space-y-3">
-                          <li className="flex items-start space-x-3">
-                            <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1">1</div>
-                            <span className="text-gray-700">Upload your video to get started with AI analysis</span>
-                          </li>
-                          <li className="flex items-start space-x-3">
-                            <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1">2</div>
-                            <span className="text-gray-700">Our AI will transcribe and analyze your content</span>
-                          </li>
-                          <li className="flex items-start space-x-3">
-                            <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1">3</div>
-                            <span className="text-gray-700">Get detailed suggestions for improvement and optimization</span>
-                          </li>
-                        </ul>
+                      <h3 className="text-xl font-bold text-black mb-3">🎭 Sample Tone Analysis</h3>
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                        <p className="text-lg text-black leading-relaxed">
+                          The tone of your video appears to be professional yet approachable, maintaining audience engagement throughout the content.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mb-6">
+                      <h3 className="text-xl font-bold text-black mb-3">📊 Sample Engagement Analysis</h3>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                        <p className="text-lg text-black leading-relaxed">
+                          Your video shows good engagement potential with clear structure and compelling content that keeps viewers interested.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mb-6">
+                      <h3 className="text-xl font-bold text-black mb-3">🚀 Sample Areas of Improvement</h3>
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+                        <div className="space-y-4">
+                          <div className="bg-white border border-orange-200 rounded-lg p-4">
+                            <h4 className="font-semibold text-orange-900 mb-2">Content Structure</h4>
+                            <p className="text-gray-700 mb-3">Consider adding more visual elements to enhance viewer retention.</p>
+                          </div>
+                          <div className="bg-white border border-orange-200 rounded-lg p-4">
+                            <h4 className="font-semibold text-orange-900 mb-2">Audio Quality</h4>
+                            <p className="text-gray-700 mb-3">Improve audio clarity for better audience experience.</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

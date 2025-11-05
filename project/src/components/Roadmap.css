@@ -26,17 +26,17 @@
   margin: 0 auto;
   width: 100%;
   max-width: 80rem;
-  padding: 2rem 1.5rem;
+  padding: 4rem 2rem;
   min-height: 100vh;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .grid-container {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   width: 100%;
   height: 100%;
 }
@@ -45,28 +45,34 @@
 .text-content-container {
   display: flex;
   align-items: center;
-  justify-content: right;
-  margin-right: -50%;
+  justify-content: flex-end;
   width: 100%;
-  height: 150%;
-  position: absolute;
+  max-width: 500px;
+  position: relative;
+  z-index: 10;
+  margin-left: auto;
+  margin-right: 2rem;
 }
 
 .text-content-box {
   background-color: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px);
   border-radius: 1rem;
-  padding: 2rem;
+  padding: 2.5rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
+  margin: 1rem;
+  width: 100%;
+  max-width: 450px;
 }
 
 .main-heading {
   color: white;
   font-weight: bold;
-  line-height: 1.1;
-  margin-bottom: 1.5rem;
+  line-height: 1.3;
+  margin-bottom: 2rem;
   font-family: 'Inter', sans-serif;
-  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-size: clamp(1.8rem, 3.5vw, 3rem);
+  text-align: center;
 }
 
 .business-growth-text {
@@ -75,11 +81,12 @@
 
 .description-text {
   color: white;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
   font-family: 'Inter', sans-serif;
   line-height: 1.6;
   opacity: 0.9;
   font-size: clamp(1rem, 2vw, 1.25rem);
+  text-align: center;
 }
 
 .quiz-button {
