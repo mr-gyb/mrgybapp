@@ -10,6 +10,8 @@ import {
   Video,
   Plus,
   X,
+  Archive,
+  Trash2,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -34,12 +36,13 @@ import {
 import { db } from "../lib/firebase";
 
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../hooks/useToast";
 import { OpenAIMessage } from "../types/chat";
 import { AI_USERS } from "../types/user";
 import { generateAIResponse } from "../api/services";
 import ReactMarkdown from "react-markdown";
 import { useChat } from "../contexts/ChatContext";
-import { watchRoom, sendMessage, getRoom, ChatMessage as ChatServiceMessage, ensureDirectRoom } from "../services/chat";
+import { watchRoom, sendMessage, getRoom, ChatMessage as ChatServiceMessage, ensureDirectRoom, archiveChat, unarchiveChat, deleteChat } from "../services/chat";
 import { watchConnections } from "../services/friends";
 import ChatMessage from "./ChatMessage";
 import TypingIndicator from "./TypingIndicator";
@@ -792,7 +795,11 @@ const GYBTeamChat: React.FC = () => {
   // if user press the send button
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
-      handleSendMessage();
+      if (isDirectChat) {
+        handleDirectMessage();
+      } else {
+        handleSendMessage();
+      }
     }
   };
 
@@ -995,20 +1002,111 @@ const GYBTeamChat: React.FC = () => {
               <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">
-                    {teamChats.find((chat) => chat.id === selectedChat)?.name}
+                    {teamChats.find((chat) => chat.id === selectedChat)?.name || 
+                     (isDirectChat ? getOtherUserName(selectedChat || '', user?.uid || '') : 'Chat')}
                   </h2>
                   <div className="text-sm text-gray-500 mt-1">
                     Participants :{" "}
                     {chatParticipants[selectedChat]?.join(", ") || ""}
                   </div>
                 </div>
-                <button
-                  onClick={() => setshowInstruction(true)}
-                  className="bg-red-300 text-white px-3 py-1 rounded-full text-sm hover:underline"
-                >
-                  ❓How To Use
-                
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Archive Button */}
+                  <button
+                    onClick={async () => {
+                      if (!user?.uid || !selectedChat) return;
+                      try {
+                        if (isDirectChat) {
+                          // Direct chat (chatRooms collection)
+                          const room = await getRoom(selectedChat);
+                          const isArchived = room?.archivedBy?.[user.uid] || false;
+                          
+                          if (isArchived) {
+                            await unarchiveChat(selectedChat, user.uid);
+                            console.log('Direct chat unarchived');
+                          } else {
+                            await archiveChat(selectedChat, user.uid);
+                            console.log('Direct chat archived');
+                          }
+                        } else {
+                          // Team chat (dream_team_chat collection)
+                          const chatRef = doc(db, 'dream_team_chat', selectedChat);
+                          const chatDoc = await getDoc(chatRef);
+                          
+                          if (chatDoc.exists()) {
+                            const data = chatDoc.data();
+                            const archivedBy = data.archivedBy || {};
+                            const isArchived = archivedBy[user.uid] || false;
+                            
+                            if (isArchived) {
+                              delete archivedBy[user.uid];
+                              console.log('Team chat unarchived');
+                            } else {
+                              archivedBy[user.uid] = true;
+                              console.log('Team chat archived');
+                            }
+                            
+                            await updateDoc(chatRef, {
+                              archivedBy,
+                              updatedAt: serverTimestamp()
+                            });
+                          }
+                        }
+                      } catch (error: any) {
+                        console.error('Error toggling archive:', error);
+                      }
+                    }}
+                    className="p-2 text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                    title="Archive chat"
+                  >
+                    <Archive size={20} />
+                  </button>
+                  
+                  {/* Delete Button */}
+                  <button
+                    onClick={async () => {
+                      if (!user?.uid || !selectedChat) return;
+                      if (!window.confirm('Are you sure you want to permanently delete this chat and all its messages? This action cannot be undone.')) {
+                        return;
+                      }
+                      try {
+                        if (isDirectChat) {
+                          // Direct chat (chatRooms collection)
+                          await deleteChat(selectedChat, user.uid);
+                          console.log('Direct chat deleted');
+                        } else {
+                          // Team chat (dream_team_chat collection)
+                          const chatRef = doc(db, 'dream_team_chat', selectedChat);
+                          
+                          // Delete all messages in the chat
+                          const messagesCollection = collection(chatRef, 'messages');
+                          const messagesSnapshot = await getDocs(query(messagesCollection));
+                          const deletePromises = messagesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+                          await Promise.all(deletePromises);
+                          
+                          // Delete the chat document
+                          await deleteDoc(chatRef);
+                          console.log('Team chat deleted');
+                        }
+                        
+                        setSelectedChat(null);
+                      } catch (error: any) {
+                        console.error('Error deleting chat:', error);
+                      }
+                    }}
+                    className="p-2 text-gray-600 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                    title="Delete chat permanently"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                  
+                  <button
+                    onClick={() => setshowInstruction(true)}
+                    className="bg-red-300 text-white px-3 py-1 rounded-full text-sm hover:underline"
+                  >
+                    ❓How To Use
+                  </button>
+                </div>
                 {/* 
                 <div className="p-4">
                   <button onClick={handleClick} className="bg-blue-500 text-white px-4 py-2 rounded">
@@ -1173,15 +1271,10 @@ const GYBTeamChat: React.FC = () => {
                     className="voice-search-integration"
                   />
                   <button
-                    onClick={() => {
-                      const roomId = searchParams.get('room');
-                      if (roomId && roomId === selectedChat) {
-                        handleDirectMessage();
-                      } else {
-                        handleSendMessage();
-                      }
-                    }}
-                    className="p-2 text-blue-500 hover:text-blue-600"
+                    onClick={isDirectChat ? handleDirectMessage : handleSendMessage}
+                    disabled={!message.trim()}
+                    className="p-2 text-blue-500 hover:text-blue-600 disabled:opacity-50"
+                    title="Send message"
                   >
                     <Send size={20} />
                   </button>

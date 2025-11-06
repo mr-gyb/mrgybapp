@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run dev:https",
+    "dev": "npm run dev:http",
     "dev:http": "vite --port 3002",
     "dev:https": "node scripts/dynamic-https.js",
     "dev:windows": "scripts\\start-https.bat",
@@ -18,7 +18,12 @@
     "setup:env": "node scripts/setup-env.js",
     "setup:spotify": "node scripts/setup-spotify-api.js",
     "backfill:users": "tsx scripts/backfillUsers.ts",
-    "test:friendship": "tsx scripts/testFriendshipFlow.ts"
+    "test:friendship": "tsx scripts/testFriendshipFlow.ts",
+    "test:friend-requests": "tsx scripts/testFriendRequestsFlow.ts",
+    "test:enhanced-friend-requests": "tsx scripts/testEnhancedFriendRequests.ts",
+    "test:friend-requests-complete": "tsx scripts/testFriendRequestsComplete.ts",
+    "test:friend-request-flow": "tsx scripts/testFriendRequestFlow.ts",
+    "test:notification-flow": "tsx scripts/testNotificationFlow.ts"
   },
   "dependencies": {
     "axios": "^1.6.7",

@@ -5,8 +5,6 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile } from '../types/user';
 import { storage } from '../utils/storage';
 
-import { getInitials } from '../services/profile.service';
-
 interface AuthContextType {
   user: User | null;
   userData: UserProfile | null;
@@ -104,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (error.code === 'unavailable' || error.message?.includes('offline')) {
             console.warn('Firebase is offline, user data will be loaded when connection is restored');
             // Don't logout on offline errors, just set loading to false
-            setLoading(false);
+            setIsLoading(false);
             return;
           }
           
@@ -176,10 +174,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const result = await signInWithPopup(auth, facebookProvider);
       
-      // Check if this is a new user
-      if (result._tokenResponse?.isNewUser) {
+      // Check if this is a new user by checking if profile exists
+      const userDocRef = doc(db, 'profiles', result.user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (!userDoc.exists()) {
         // Create a new profile for Facebook user
-        const userDocRef = doc(db, 'profiles', result.user.uid);
         const defaultProfile: UserProfile = {
           id: result.user.uid,
           name: result.user.displayName || result.user.email?.split('@')[0] || 'Facebook User',

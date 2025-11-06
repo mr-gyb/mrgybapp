@@ -1,19 +1,17 @@
 import { 
   collection, 
   doc, 
-  addDoc, 
-  updateDoc, 
   onSnapshot, 
   query, 
   where, 
-  or,
   orderBy,
   serverTimestamp,
   getDoc,
   getDocs,
-  deleteDoc,
   writeBatch,
-  Timestamp
+  Timestamp,
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { 
@@ -66,10 +64,9 @@ export const sendFriendRequest = async (
     const fromUserRef = doc(usersCollection, fromUid);
     const fromUserDoc = await getDoc(fromUserRef);
     if (fromUserDoc.exists()) {
-      const fromUserData = fromUserDoc.data();
+      // Note: Using arrayUnion to avoid serverTimestamp() conflicts with arrays
       batch.update(fromUserRef, {
-        sentRequests: [...(fromUserData.sentRequests || []), requestRef.id],
-        updatedAt: serverTimestamp()
+        sentRequests: arrayUnion(requestRef.id)
       });
     }
     
@@ -77,26 +74,24 @@ export const sendFriendRequest = async (
     const toUserRef = doc(usersCollection, toUid);
     const toUserDoc = await getDoc(toUserRef);
     if (toUserDoc.exists()) {
-      const toUserData = toUserDoc.data();
+      // Add notification to receiver
+      // Note: Cannot use serverTimestamp() in notification when adding to array
+      // Use Timestamp.fromDate() instead
+      const notification: Notification = {
+        id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'friend_request',
+        fromUser: fromUid,
+        timestamp: Timestamp.fromDate(new Date()),
+        read: false
+      };
+      
+      // Update pendingRequests and notifications using arrayUnion
+      // Note: Using arrayUnion for all arrays to avoid serverTimestamp() conflicts
       batch.update(toUserRef, {
-        pendingRequests: [...(toUserData.pendingRequests || []), requestRef.id],
-        updatedAt: serverTimestamp()
+        pendingRequests: arrayUnion(requestRef.id),
+        notifications: arrayUnion(notification)
       });
     }
-    
-    // Add notification to receiver
-    const notification: Notification = {
-      id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type: 'friend_request',
-      fromUser: fromUid,
-      timestamp: serverTimestamp() as Timestamp,
-      read: false
-    };
-    
-    const toUserNotifications = toUserDoc.exists() ? toUserDoc.data().notifications || [] : [];
-    batch.update(toUserRef, {
-      notifications: [...toUserNotifications, notification]
-    });
     
     await batch.commit();
     
@@ -154,34 +149,37 @@ export const acceptFriendRequest = async (
     
     if (fromUserDoc.exists()) {
       const fromUserData = fromUserDoc.data();
+      // Note: Using arrayUnion for adding, arrayRemove for removing to avoid serverTimestamp() conflicts
       batch.update(fromUserRef, {
-        friends: [...(fromUserData.friends || []), toUid],
-        sentRequests: (fromUserData.sentRequests || []).filter((id: string) => id !== requestId),
-        updatedAt: serverTimestamp()
+        friends: arrayUnion(toUid),
+        sentRequests: arrayRemove(requestId)
       });
     }
     
     if (toUserDoc.exists()) {
       const toUserData = toUserDoc.data();
+      // Note: Using arrayUnion for adding, arrayRemove for removing to avoid serverTimestamp() conflicts
       batch.update(toUserRef, {
-        friends: [...(toUserData.friends || []), fromUid],
-        pendingRequests: (toUserData.pendingRequests || []).filter((id: string) => id !== requestId),
-        updatedAt: serverTimestamp()
+        friends: arrayUnion(fromUid),
+        pendingRequests: arrayRemove(requestId)
       });
     }
     
     // Add notification to sender
+    // Note: Cannot use serverTimestamp() in notification when adding to array
+    // Use Timestamp.fromDate() instead
     const notification: Notification = {
       id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: 'request_accepted',
       fromUser: toUid,
-      timestamp: serverTimestamp() as Timestamp,
+      timestamp: Timestamp.fromDate(new Date()),
       read: false
     };
     
-    const fromUserNotifications = fromUserDoc.exists() ? fromUserDoc.data().notifications || [] : [];
+    // Note: Using arrayUnion for notifications to avoid serverTimestamp() conflicts
+    // Note: Cannot use serverTimestamp() in same update as arrays
     batch.update(fromUserRef, {
-      notifications: [...fromUserNotifications, notification]
+      notifications: arrayUnion(notification)
     });
     
     await batch.commit();
@@ -238,18 +236,16 @@ export const declineFriendRequest = async (
     ]);
     
     if (fromUserDoc.exists()) {
-      const fromUserData = fromUserDoc.data();
+      // Note: Using arrayRemove to avoid serverTimestamp() conflicts with arrays
       batch.update(fromUserRef, {
-        sentRequests: (fromUserData.sentRequests || []).filter((id: string) => id !== requestId),
-        updatedAt: serverTimestamp()
+        sentRequests: arrayRemove(requestId)
       });
     }
     
     if (toUserDoc.exists()) {
-      const toUserData = toUserDoc.data();
+      // Note: Using arrayRemove to avoid serverTimestamp() conflicts with arrays
       batch.update(toUserRef, {
-        pendingRequests: (toUserData.pendingRequests || []).filter((id: string) => id !== requestId),
-        updatedAt: serverTimestamp()
+        pendingRequests: arrayRemove(requestId)
       });
     }
     
@@ -430,26 +426,33 @@ export const watchIncomingRequests = (
  */
 const checkExistingRequest = async (fromUid: string, toUid: string): Promise<boolean> => {
   try {
-    const q = query(
+    // Check for pending requests
+    const pendingQuery = query(
       friendRequestsCollection,
       where('fromUid', '==', fromUid),
       where('toUid', '==', toUid),
-      where('status', 'in', ['pending', 'accepted'])
+      where('status', '==', 'pending')
     );
     
-    const snapshot = await getDocs(q);
-    return !snapshot.empty;
+    const pendingSnapshot = await getDocs(pendingQuery);
+    if (!pendingSnapshot.empty) {
+      return true;
+    }
+    
+    // Check for accepted requests
+    const acceptedQuery = query(
+      friendRequestsCollection,
+      where('fromUid', '==', fromUid),
+      where('toUid', '==', toUid),
+      where('status', '==', 'accepted')
+    );
+    
+    const acceptedSnapshot = await getDocs(acceptedQuery);
+    return !acceptedSnapshot.empty;
   } catch (error) {
     console.error('❌ Error checking existing request:', error);
     return false;
   }
 };
 
-// Export all functions
-export {
-  sendFriendRequest,
-  acceptFriendRequest,
-  declineFriendRequest,
-  getFriendsList,
-  watchIncomingRequests
-};
+// Functions are already exported inline above

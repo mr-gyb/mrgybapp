@@ -174,10 +174,71 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({
               throw new Error('Unsupported audio format');
             }
             
-            const result = await handleWhisperTranscription(audioBlob);
-            handleTranscriptionComplete(result.text);
+            // Try Whisper API first
+            try {
+              const result = await handleWhisperTranscription(audioBlob);
+              handleTranscriptionComplete(result.text);
+            } catch (whisperError: any) {
+              // If Whisper API fails (429, quota exceeded, etc.), fall back to browser SpeechRecognition
+              if (whisperError?.message?.includes('429') || 
+                  whisperError?.message?.includes('quota') ||
+                  whisperError?.message?.includes('exceeded')) {
+                console.warn('Whisper API quota exceeded, falling back to browser SpeechRecognition');
+                
+                // Fallback to browser SpeechRecognition
+                if (isSpeechRecognitionSupported) {
+                  // Re-initialize speech recognition if needed
+                  if (!speechRecognitionRef.current) {
+                    speechRecognitionRef.current = initializeSpeechRecognition();
+                  }
+                  
+                  if (speechRecognitionRef.current) {
+                    // Set up handlers for fallback recognition
+                    const recognition = speechRecognitionRef.current;
+                    let finalText = '';
+                    
+                    recognition.onresult = (event: any) => {
+                      for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                          finalText += event.results[i][0].transcript;
+                        }
+                      }
+                      if (finalText) {
+                        handleTranscriptionComplete(finalText.trim());
+                      }
+                    };
+                    
+                    recognition.onend = () => {
+                      if (finalText) {
+                        handleTranscriptionComplete(finalText.trim());
+                      } else {
+                        setError('Could not transcribe audio. Please try again.');
+                        setIsProcessing(false);
+                      }
+                    };
+                    
+                    recognition.onerror = (event: any) => {
+                      console.error('SpeechRecognition fallback error:', event.error);
+                      setError('Speech recognition failed. Please try again.');
+                      setIsProcessing(false);
+                    };
+                    
+                    // Start browser speech recognition
+                    recognition.start();
+                    setIsListening(true);
+                  } else {
+                    throw new Error('Whisper API quota exceeded. Browser speech recognition not available.');
+                  }
+                } else {
+                  throw new Error('Whisper API quota exceeded. Browser speech recognition not available.');
+                }
+              } else {
+                // Re-throw other errors
+                throw whisperError;
+              }
+            }
           } catch (error) {
-            console.error('Whisper transcription error:', error);
+            console.error('Transcription error:', error);
             setError(error instanceof Error ? error.message : 'Failed to transcribe audio. Please try again.');
             setIsProcessing(false);
           }
@@ -234,13 +295,14 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({
     const hasPermission = await checkMicrophonePermission();
     if (!hasPermission) return;
 
-    // Choose transcription method
-    if (isMediaRecorderSupported && isWhisperApiAvailable()) {
-      // Use Whisper API if available
-      await startRecordingWithMediaRecorder();
-    } else if (isSpeechRecognitionSupported) {
-      // Fallback to browser SpeechRecognition
+    // Choose transcription method - prefer browser SpeechRecognition if available
+    // to avoid Whisper API quota issues
+    if (isSpeechRecognitionSupported) {
+      // Use browser SpeechRecognition first (no quota limits)
       startRecordingWithSpeechRecognition();
+    } else if (isMediaRecorderSupported && isWhisperApiAvailable()) {
+      // Fallback to Whisper API if browser SpeechRecognition not available
+      await startRecordingWithMediaRecorder();
     } else {
       setError('Voice search is not supported in this browser');
     }

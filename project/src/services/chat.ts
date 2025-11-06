@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   getDocs,
   getDoc,
+  deleteDoc,
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -21,6 +22,8 @@ export interface ChatRoom {
   createdAt: Timestamp;
   lastMessageAt?: Timestamp | null;
   pairKey?: string;
+  archivedBy?: { [uid: string]: boolean };
+  deletedBy?: { [uid: string]: boolean };
 }
 
 export interface ChatMessage {
@@ -267,6 +270,101 @@ const getRoom = async (roomId: string): Promise<ChatRoom | null> => {
   }
 };
 
+/**
+ * Archive a chat for a specific user (soft delete)
+ */
+const archiveChat = async (chatId: string, uid: string): Promise<void> => {
+  try {
+    const roomRef = doc(chatRoomsCollection, chatId);
+    const roomDoc = await getDoc(roomRef);
+    
+    if (!roomDoc.exists()) {
+      throw new Error('Chat room not found');
+    }
+    
+    const roomData = roomDoc.data();
+    if (!roomData.members.includes(uid)) {
+      throw new Error('User is not a member of this chat room');
+    }
+    
+    const archivedBy = roomData.archivedBy || {};
+    archivedBy[uid] = true;
+    
+    await updateDoc(roomRef, {
+      archivedBy,
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log(`✅ Chat ${chatId} archived for user ${uid}`);
+  } catch (error) {
+    console.error('❌ Error archiving chat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Unarchive a chat for a specific user
+ */
+const unarchiveChat = async (chatId: string, uid: string): Promise<void> => {
+  try {
+    const roomRef = doc(chatRoomsCollection, chatId);
+    const roomDoc = await getDoc(roomRef);
+    
+    if (!roomDoc.exists()) {
+      throw new Error('Chat room not found');
+    }
+    
+    const roomData = roomDoc.data();
+    const archivedBy = roomData.archivedBy || {};
+    delete archivedBy[uid];
+    
+    await updateDoc(roomRef, {
+      archivedBy,
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log(`✅ Chat ${chatId} unarchived for user ${uid}`);
+  } catch (error) {
+    console.error('❌ Error unarchiving chat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a chat completely (hard delete)
+ * Deletes all messages and the room document
+ */
+const deleteChat = async (chatId: string, uid: string): Promise<void> => {
+  try {
+    const roomRef = doc(chatRoomsCollection, chatId);
+    const roomDoc = await getDoc(roomRef);
+    
+    if (!roomDoc.exists()) {
+      throw new Error('Chat room not found');
+    }
+    
+    const roomData = roomDoc.data();
+    if (!roomData.members.includes(uid)) {
+      throw new Error('User is not a member of this chat room');
+    }
+    
+    // Delete all messages in the chat
+    const messagesSubcollection = collection(roomRef, 'messages');
+    const messagesSnapshot = await getDocs(query(messagesSubcollection));
+    
+    const deletePromises = messagesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+    
+    // Delete the chat room document
+    await deleteDoc(roomRef);
+    
+    console.log(`✅ Chat ${chatId} and all messages deleted permanently`);
+  } catch (error) {
+    console.error('❌ Error deleting chat:', error);
+    throw error;
+  }
+};
+
 // Export all functions
 export {
   ensureDirectRoom,
@@ -274,5 +372,8 @@ export {
   watchRoom,
   getUserChatRooms,
   watchUserChatRooms,
-  getRoom
+  getRoom,
+  archiveChat,
+  unarchiveChat,
+  deleteChat
 };
