@@ -148,7 +148,6 @@ export const acceptFriendRequest = async (
     ]);
     
     if (fromUserDoc.exists()) {
-      const fromUserData = fromUserDoc.data();
       // Note: Using arrayUnion for adding, arrayRemove for removing to avoid serverTimestamp() conflicts
       batch.update(fromUserRef, {
         friends: arrayUnion(toUid),
@@ -157,7 +156,6 @@ export const acceptFriendRequest = async (
     }
     
     if (toUserDoc.exists()) {
-      const toUserData = toUserDoc.data();
       // Note: Using arrayUnion for adding, arrayRemove for removing to avoid serverTimestamp() conflicts
       batch.update(toUserRef, {
         friends: arrayUnion(fromUid),

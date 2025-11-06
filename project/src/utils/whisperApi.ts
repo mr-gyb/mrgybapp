@@ -79,10 +79,18 @@ export const transcribeWithWhisper = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error?.message || response.statusText;
+      
+      // Handle quota exceeded error specifically
+      if (response.status === 429) {
+        const quotaError = new Error(`Whisper API quota exceeded: ${errorMessage}`);
+        (quotaError as any).code = 'QUOTA_EXCEEDED';
+        (quotaError as any).status = 429;
+        throw quotaError;
+      }
+      
       throw new Error(
-        `Whisper API error (${response.status}): ${
-          errorData.error?.message || response.statusText
-        }`
+        `Whisper API error (${response.status}): ${errorMessage}`
       );
     }
 

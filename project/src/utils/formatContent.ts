@@ -58,5 +58,3 @@ export const isValidImageUrl = (url: string): boolean => {
     return false;
   }
 };
-
-

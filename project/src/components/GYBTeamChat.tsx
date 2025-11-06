@@ -42,11 +42,12 @@ import { AI_USERS } from "../types/user";
 import { generateAIResponse } from "../api/services";
 import ReactMarkdown from "react-markdown";
 import { useChat } from "../contexts/ChatContext";
-import { watchRoom, sendMessage, getRoom, ChatMessage as ChatServiceMessage, ensureDirectRoom, archiveChat, unarchiveChat, deleteChat } from "../services/chat";
+import { watchRoom, sendMessage, getRoom, ChatMessage as ChatServiceMessage, ensureDirectRoom, archiveChat, unarchiveChat, deleteChat, deleteChatForEveryone } from "../services/chat";
 import { watchConnections } from "../services/friends";
 import ChatMessage from "./ChatMessage";
 import TypingIndicator from "./TypingIndicator";
 import VoiceSearch from "./VoiceSearch";
+import ChatMenu from "./chat/ChatMenu";
 
 interface ChatMessage {
   id: string;
@@ -65,6 +66,8 @@ interface TeamChat {
   participants: string[];
   messages: ChatMessage[];
   teamMembers: string[];
+  archivedBy?: { [uid: string]: boolean };
+  canHardDelete?: string[];
 }
 
 interface ChatInvitation {
@@ -252,13 +255,21 @@ const GYBTeamChat: React.FC = () => {
     // doc.data() => the field that inside the corresponding id
     // ...doc.data() list the data of the docs
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const rooms = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<TeamChat, "id" | "messages">),
-        messages: teamChats.find((c) => c.id === doc.id)?.messages || [],
-      }));
+      const rooms = snapshot.docs
+        .map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...(data as Omit<TeamChat, "id" | "messages" | "archivedBy" | "canHardDelete">),
+            messages: teamChats.find((c) => c.id === doc.id)?.messages || [],
+            archivedBy: data.archivedBy || {},
+            canHardDelete: data.canHardDelete || []
+          };
+        })
+        // Filter out archived chats for this user
+        .filter(room => !room.archivedBy?.[user.uid]);
 
-      setTeamChats(rooms); // update the all the rooms in the list
+      setTeamChats(rooms); // update the all the rooms in the list (non-archived only)
     });
 
     return () => unsubscribe();
@@ -605,11 +616,16 @@ const GYBTeamChat: React.FC = () => {
   };
 
   // Handle voice search transcription
+  // Algorithm: User taps mic → start recording → capture audio → send to Whisper/SpeechRecognition
+  // → receive transcribed text → feed text into message handler → display in UI
   const handleVoiceTranscription = (transcribedText: string) => {
+    console.log('🎤 Voice transcription received:', transcribedText);
+    
+    // Feed transcribed text into message input (ready to send)
     setMessage(transcribedText);
-    // Optionally auto-send the message
-    // You can uncomment the following lines if you want auto-send
-    // if (selectedChat && user?.uid) {
+    
+    // Optional: Auto-send the message (uncomment if desired)
+    // if (selectedChat && user?.uid && transcribedText.trim()) {
     //   if (isDirectChat) {
     //     handleDirectMessage();
     //   } else {
@@ -1107,16 +1123,9 @@ const GYBTeamChat: React.FC = () => {
                     ❓How To Use
                   </button>
                 </div>
-                {/* 
-                <div className="p-4">
-                  <button onClick={handleClick} className="bg-blue-500 text-white px-4 py-2 rounded">
-                    서버에서 인사받기
-                  </button>
-                  {message123 && <p className="mt-2 text-green-700">{message123}</p>}
-                </div>
-                */}
               </div>
 
+              {/* Messages area */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {/* Display messages based on chat type */}
                 {isDirectChat ? (
@@ -1265,10 +1274,12 @@ const GYBTeamChat: React.FC = () => {
                     placeholder="Type a message..."
                     className="flex-1 bg-transparent border-none focus:outline-none px-4 py-2 text-navy-blue"
                   />
+                  {/* Voice Chat Button - Visible Mic Icon */}
                   <VoiceSearch
                     onTranscriptionComplete={handleVoiceTranscription}
                     disabled={!selectedChat}
                     className="voice-search-integration"
+                    title={selectedChat ? "Click to start voice recording" : "Select a chat to use voice"}
                   />
                   <button
                     onClick={isDirectChat ? handleDirectMessage : handleSendMessage}

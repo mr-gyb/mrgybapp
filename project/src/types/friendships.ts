@@ -4,6 +4,7 @@ export interface Notification {
   id: string;
   type: 'friend_request' | 'request_accepted';
   fromUser: string;
+  message?: string;
   timestamp: Timestamp;
   read: boolean;
 }

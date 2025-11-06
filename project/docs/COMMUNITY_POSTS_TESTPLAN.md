@@ -1,130 +1,153 @@
-# Community Posts Test Plan
+# Community Posts Feature - Test Plan
 
 ## Overview
-This document outlines the testing steps for the Community Posts feature, including Create Post, Like, and Comment functionality with real-time updates.
+This document outlines the test plan for the Community Posts feature including Create Post, Like, and Comment functionality with real-time updates.
 
 ## Test Scenarios
 
-### 1. Two-Account Test: Post Creation and Visibility
-
-**Setup:**
-- User A and User B both logged in
-- User A on `/gyb-live-network` or Community tab
-- User B on separate browser/device
+### 1. Create Post
+**Prerequisites:**
+- User A and User B are both authenticated
+- Both users are on the Community tab (or `/gyb-live-network` route)
 
 **Steps:**
-1. User A creates a post with text content
-   - ✅ Verify post appears immediately in User A's feed
-   - ✅ Verify post appears in User B's feed (real-time update)
-   - ✅ Verify post shows correct author name and avatar
-   - ✅ Verify timestamp shows "Just now" or "X seconds ago"
+1. User A navigates to `/community` tab (or `/gyb-live-network`)
+2. User A clicks on "Feed" view (if not already selected)
+3. User A types a post in the composer: "Hello from User A!"
+4. User A optionally adds an image URL
+5. User A clicks "Post" button
 
-2. User A creates a post with image URL
-   - ✅ Verify image displays correctly in the post
-   - ✅ Verify post appears for both users
+**Expected Results:**
+- Post appears immediately in User A's feed
+- Post appears in User B's feed in real-time (within 1-2 seconds)
+- Post shows correct author name and avatar
+- Post shows "just now" or "X seconds ago" timestamp
+- Post has 0 likes and 0 comments initially
+- Image displays correctly if image URL was provided
 
-3. User B creates a post
-   - ✅ Verify post appears for User A immediately (real-time)
-
-### 2. Like Functionality
-
-**Steps:**
-1. User B likes User A's post
-   - ✅ Verify like count increments for User B
-   - ✅ Verify like count increments for User A (real-time)
-   - ✅ Verify heart icon fills in for User B
-   - ✅ Verify User B cannot like again (already liked)
-
-2. User B unlikes the post
-   - ✅ Verify like count decrements for both users
-   - ✅ Verify heart icon unfills for User B
-
-3. User A likes their own post
-   - ✅ Verify like count increments
-   - ✅ Verify heart icon fills
-
-### 3. Comment Functionality
+### 2. Like Post
+**Prerequisites:**
+- User A has created a post visible to User B
 
 **Steps:**
-1. User B comments on User A's post
-   - ✅ Verify comment appears immediately for User B
-   - ✅ Verify comment appears for User A (real-time)
-   - ✅ Verify comment count increments for both users
-   - ✅ Verify comment shows author name and timestamp
+1. User B sees User A's post in their feed
+2. User B clicks the like button (heart icon)
+3. User B observes the like count increment
+4. User A refreshes or observes their own post
 
-2. User A replies to User B's comment
-   - ✅ Verify comment appears in thread
-   - ✅ Verify comment count increments
+**Expected Results:**
+- Like button turns red (filled) for User B
+- Like count increments by 1 immediately (optimistic update)
+- Like count increments for User A in real-time
+- Like count persists after page refresh
+- User A sees the updated like count on their post in real-time
+- Double-clicking like button should unlike (toggle behavior)
+- User B cannot like again (already liked state)
 
-3. Multiple users comment on same post
-   - ✅ Verify all comments appear in chronological order
-   - ✅ Verify comment count matches number of comments
-
-### 4. Data Persistence
-
-**Steps:**
-1. User A creates a post
-2. Both users refresh the page
-   - ✅ Verify post still exists after refresh
-   - ✅ Verify like status persists for User B
-   - ✅ Verify all comments persist
-   - ✅ Verify counts are accurate
-
-### 5. Permissions and Validation
+### 3. Comment on Post
+**Prerequisites:**
+- User A has created a post visible to User B
 
 **Steps:**
-1. Try to create empty post
-   - ✅ Verify error message appears
-   - ✅ Verify post button is disabled
+1. User B clicks "Comments" button on User A's post
+2. Comments panel expands
+3. User B types a comment: "Great post!"
+4. User B clicks send/enter
+5. User A opens comments on their post
 
-2. Try to add empty comment
-   - ✅ Verify error message appears
-   - ✅ Verify send button is disabled
+**Expected Results:**
+- Comment appears immediately in User B's view
+- Comment count increments by 1
+- Comment appears in User A's view in real-time
+- Comments show author name, text, and timestamp
+- Comments are ordered chronologically (oldest first)
+- Comment count updates for both users
+- Multiple users can comment on the same post
 
-3. Logged-out user views feed
-   - ✅ Verify "Sign in to see the community feed" message
-   - ✅ Verify no posts are visible
-
-### 6. Real-Time Updates
+### 4. Real-Time Updates
+**Prerequisites:**
+- User A and User B both have Community tab open
 
 **Steps:**
-1. User A creates post
-   - ✅ User B sees it immediately without refresh
+1. User A creates a new post
+2. User B observes feed without refreshing
+3. User B likes the post
+4. User A observes their post
+5. User A comments on the post
+6. User B observes the comment
 
-2. User B likes post
-   - ✅ User A sees like count update immediately
+**Expected Results:**
+- Post appears in User B's feed automatically (within 1-2 seconds)
+- No manual refresh required
+- Like/comment updates appear in real-time for both users
+- User A sees like count update immediately when User B likes
+- User B sees comment appear immediately when User A comments
 
-3. User A comments on post
-   - ✅ User B sees comment appear immediately
+### 5. Persistence
+**Prerequisites:**
+- User A has created posts, User B has liked/commented
+
+**Steps:**
+1. Both users refresh the page
+2. Users navigate away and return to Community tab
+
+**Expected Results:**
+- All posts are still visible
+- Like status is preserved (liked posts show filled heart)
+- Comment counts are correct
+- All comments persist
+- Timestamps are accurate
+- Counts are accurate
+
+### 6. Permissions and Validation
+**Prerequisites:**
+- User A has created a post
+- User B is authenticated
+
+**Steps:**
+1. User B attempts to create a post
+2. User B attempts to like User A's post
+3. User B attempts to comment on User A's post
+4. Try to create empty post
+5. Try to add empty comment
+6. Logged-out user views feed
+
+**Expected Results:**
+- User B can create posts (authenticated users can post)
+- User B can like posts (authenticated users can like)
+- User B can comment (authenticated users can comment)
+- Empty post creation shows error message and disables post button
+- Empty comment shows error message and disables send button
+- Non-authenticated users see "Sign in to see the community feed" message
+- No posts are visible to non-authenticated users
 
 ## Known Limitations
 
-1. **Media Upload**: Currently only supports image URLs. Full file upload to Firebase Storage not implemented.
-
+1. **Media Upload**: Currently only supports image URLs. No direct file upload to Firebase Storage.
 2. **Notifications**: No push notifications for new posts, likes, or comments.
-
-3. **Moderation**: No admin moderation tools for deleting inappropriate posts.
-
-4. **Edit/Delete Posts**: Users cannot edit or delete their own posts (feature not implemented).
-
-5. **Nested Replies**: Comments are flat; no nested reply threads.
-
-6. **Post Pagination**: Feed shows last 50 posts; no infinite scroll or pagination.
-
-7. **Search/Filter**: No search or filter functionality for posts.
+3. **Moderation**: No admin moderation tools or content filtering.
+4. **Edit/Delete**: Users cannot edit or delete their posts/comments (future enhancement).
+5. **User Mentions**: No @mention functionality for tagging users.
+6. **Hashtags**: Tags are stored but not clickable/searchable yet.
+7. **Pagination**: All posts are loaded at once (no pagination for large feeds). Feed shows last 50 posts; no infinite scroll or pagination.
+8. **Nested Replies**: Comments are flat; no nested reply threads.
+9. **Search/Filter**: No search or filter functionality for posts.
 
 ## Next Steps
 
-1. Implement file upload for images (Firebase Storage)
-2. Add notification system for likes/comments
-3. Add edit/delete functionality for posts
-4. Add admin moderation tools
-5. Implement nested comment replies
-6. Add infinite scroll/pagination
-7. Add search and filter functionality
-8. Add post tags and categories
-9. Add post sharing functionality
-10. Add user mentions (@username)
+1. **Media Upload**: Integrate Firebase Storage for direct image/video uploads
+2. **Notifications**: Add real-time notifications for likes/comments
+3. **Edit/Delete**: Allow users to edit/delete their own posts and comments
+4. **Moderation**: Implement admin tools for content moderation
+5. **User Mentions**: Add @mention functionality with notifications
+6. **Hashtags**: Make tags clickable and searchable
+7. **Pagination**: Implement infinite scroll or pagination for large feeds
+8. **Rich Text**: Support markdown or rich text formatting
+9. **Post Sharing**: Allow sharing posts to other platforms
+10. **Post Reactions**: Add emoji reactions in addition to likes
+11. **Nested Replies**: Implement nested comment reply threads
+12. **Search/Filter**: Add search and filter functionality for posts
+13. **Post Tags and Categories**: Add post tags and categories
 
 ## Test Environment
 
@@ -139,3 +162,55 @@ This document outlines the testing steps for the Community Posts feature, includ
 - Error messages should be user-friendly
 - Loading states should be shown during async operations
 
+## Firestore Security Rules (For Maintainers)
+
+```javascript
+match /posts/{postId} {
+  // Anyone authenticated can read
+  allow read: if request.auth != null;
+  
+  // Anyone authenticated can create
+  allow create: if request.auth != null 
+    && request.resource.data.authorId == request.auth.uid;
+  
+  // Only owner can update/delete
+  allow update, delete: if request.auth != null 
+    && resource.data.authorId == request.auth.uid;
+  
+  // Likes subcollection
+  match /likes/{userId} {
+    allow read: if request.auth != null;
+    allow create: if request.auth != null 
+      && userId == request.auth.uid;
+    allow delete: if request.auth != null 
+      && (userId == request.auth.uid || 
+          get(/databases/$(database)/documents/posts/$(postId)).data.authorId == request.auth.uid);
+  }
+  
+  // Comments subcollection
+  match /comments/{commentId} {
+    allow read: if request.auth != null;
+    allow create: if request.auth != null;
+    allow delete: if request.auth != null 
+      && (resource.data.authorId == request.auth.uid || 
+          get(/databases/$(database)/documents/posts/$(postId)).data.authorId == request.auth.uid);
+  }
+}
+```
+
+## Testing Checklist
+
+- [ ] Create post works
+- [ ] Like post works (toggle)
+- [ ] Unlike post works
+- [ ] Comment on post works
+- [ ] Real-time updates work for new posts
+- [ ] Real-time updates work for likes
+- [ ] Real-time updates work for comments
+- [ ] Data persists after refresh
+- [ ] URLs in posts are auto-linked
+- [ ] Time formatting works correctly
+- [ ] Empty states show correctly
+- [ ] Loading states show correctly
+- [ ] Error handling works (network errors, validation errors)
+- [ ] Permissions work correctly (authenticated vs non-authenticated)

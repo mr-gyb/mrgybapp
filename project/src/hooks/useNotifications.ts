@@ -1,74 +1,60 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { 
-  watchNotifications, 
-  markNotificationAsRead, 
-  markAllNotificationsAsRead,
-  Notification 
-} from '../services/userFriendship.service';
+import { watchUserNotifications } from '../services/notifications';
+import { Notification } from '../types/friendships';
 
-export const useNotifications = () => {
+interface UseNotificationsReturn {
+  notifications: Notification[];
+  unreadCount: number;
+  isLoading: boolean;
+  error: Error | null;
+}
+
+/**
+ * Hook to manage user notifications with real-time subscriptions
+ */
+export function useNotifications(userId: string | null): UseNotificationsReturn {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { user, isAuthenticated } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  // Watch notifications
   useEffect(() => {
-    if (!isAuthenticated || !user?.uid) {
+    if (!userId) {
       setNotifications([]);
-      setLoading(false);
+      setIsLoading(false);
       return;
     }
 
-    console.log('🔔 Setting up notifications listener for user:', user.uid);
-    
-    const unsubscribe = watchNotifications(user.uid, (newNotifications) => {
-      console.log('🔔 Received notifications:', newNotifications.length);
-      setNotifications(newNotifications);
-      setLoading(false);
-    });
-
-    return () => {
-      console.log('🧹 Cleaning up notifications listener');
-      unsubscribe();
-    };
-  }, [isAuthenticated, user?.uid]);
-
-  const markAsRead = async (notificationId: string) => {
-    if (!user?.uid) return;
+    console.log('🔔 Setting up notification listener for:', userId);
+    setIsLoading(true);
 
     try {
-      await markNotificationAsRead(user.uid, notificationId);
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
+      const unsubscribe = watchUserNotifications(userId, (notifications) => {
+        console.log('🔔 Notifications received:', notifications.length);
+        console.log('🔔 Notifications state:', notifications);
+        console.log('🔔 Unread count:', notifications.filter(n => !n.read).length);
+        
+        setNotifications(notifications);
+        setIsLoading(false);
+        setError(null);
+      });
+
+      return () => {
+        console.log('🔔 Cleaning up notification listener');
+        unsubscribe();
+      };
+    } catch (err) {
+      console.error('❌ Error setting up notification listener:', err);
+      setError(err instanceof Error ? err : new Error('Unknown error'));
+      setIsLoading(false);
     }
-  };
+  }, [userId]);
 
-  const markAllAsRead = async () => {
-    if (!user?.uid) return;
-
-    try {
-      await markAllNotificationsAsRead(user.uid);
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-    }
-  };
-
-  const unreadCount = notifications.filter(notif => !notif.read).length;
-  const friendRequestCount = notifications.filter(
-    notif => !notif.read && notif.type === 'friend_request'
-  ).length;
-  const acceptedRequestCount = notifications.filter(
-    notif => !notif.read && notif.type === 'request_accepted'
-  ).length;
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return {
     notifications,
     unreadCount,
-    friendRequestCount,
-    acceptedRequestCount,
-    loading,
-    markAsRead,
-    markAllAsRead
+    isLoading,
+    error
   };
-};
+}

@@ -2,7 +2,6 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   sendPasswordResetEmail,
-  updatePassword as firebaseUpdatePassword,
   signOut
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
@@ -40,7 +39,7 @@ export const authService = {
     }
   },
 
-  async verifyEmail(token: string) {
+  async verifyEmail(_token: string) {
     // Firebase handles email verification through links
     // This method would be used for custom verification flows
     return { success: true };
@@ -56,7 +55,7 @@ export const authService = {
     }
   },
 
-  async resetPassword(token: string, password: string) {
+  async resetPassword(_token: string, _password: string) {
     // Firebase handles password reset through links
     // This method would be used for custom reset flows
     return { success: true };

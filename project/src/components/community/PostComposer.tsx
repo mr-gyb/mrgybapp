@@ -143,7 +143,6 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
   };
 
   const canPost = (text.trim().length > 0 || imageFile !== null) && !isPosting && !isUploading;
-
   if (!user) {
     return null;
   }

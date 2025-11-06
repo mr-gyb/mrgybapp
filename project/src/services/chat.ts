@@ -24,6 +24,7 @@ export interface ChatRoom {
   pairKey?: string;
   archivedBy?: { [uid: string]: boolean };
   deletedBy?: { [uid: string]: boolean };
+  canHardDelete?: string[];
 }
 
 export interface ChatMessage {
@@ -211,10 +212,10 @@ const watchUserChatRooms = (
   cb: (rooms: ChatRoom[]) => void
 ): (() => void) => {
   try {
+    // Query without orderBy to avoid index requirement - we'll sort client-side
     const q = query(
       chatRoomsCollection,
-      where('members', 'array-contains', userId),
-      orderBy('lastMessageAt', 'desc')
+      where('members', 'array-contains', userId)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -222,16 +223,31 @@ const watchUserChatRooms = (
       
       snapshot.forEach((doc) => {
         const data = doc.data();
-        rooms.push({
-          id: doc.id,
-          members: data.members,
-          createdAt: data.createdAt,
-          lastMessageAt: data.lastMessageAt,
-          pairKey: data.pairKey
-        });
+        const archivedBy = data.archivedBy || {};
+        
+        // Only include rooms that are NOT archived by this user
+        if (!archivedBy[userId]) {
+          rooms.push({
+            id: doc.id,
+            members: data.members,
+            createdAt: data.createdAt,
+            lastMessageAt: data.lastMessageAt,
+            pairKey: data.pairKey,
+            archivedBy: archivedBy,
+            canHardDelete: data.canHardDelete || []
+          });
+        }
       });
       
-      console.log(`📋 User chat rooms updated: ${rooms.length} rooms`);
+      // Sort client-side by lastMessageAt (newest first)
+      rooms.sort((a, b) => {
+        if (!a.lastMessageAt && !b.lastMessageAt) return 0;
+        if (!a.lastMessageAt) return 1;
+        if (!b.lastMessageAt) return -1;
+        return b.lastMessageAt.toMillis() - a.lastMessageAt.toMillis();
+      });
+      
+      console.log(`📋 User chat rooms updated: ${rooms.length} active rooms`);
       cb(rooms);
     }, (error) => {
       console.error('❌ Error watching user chat rooms:', error);
@@ -272,6 +288,7 @@ const getRoom = async (roomId: string): Promise<ChatRoom | null> => {
 
 /**
  * Archive a chat for a specific user (soft delete)
+ * Sets chatRooms/{id}.archivedBy.{uid} = true
  */
 const archiveChat = async (chatId: string, uid: string): Promise<void> => {
   try {
@@ -365,6 +382,92 @@ const deleteChat = async (chatId: string, uid: string): Promise<void> => {
   }
 };
 
+/**
+ * Delete a chat for everyone (hard delete)
+ * Only allowed if user is in canHardDelete array or if user is the only member
+ * Permanently removes the chat room and all its messages
+ */
+const deleteChatForEveryone = async (chatId: string, uid: string): Promise<void> => {
+  try {
+    const roomRef = doc(chatRoomsCollection, chatId);
+    const roomDoc = await getDoc(roomRef);
+    
+    if (!roomDoc.exists()) {
+      throw new Error('Chat room not found');
+    }
+    
+    const roomData = roomDoc.data();
+    
+    // Check if user has permission to hard delete
+    const canHardDelete = roomData.canHardDelete || [];
+    const isOnlyMember = roomData.members.length === 1 && roomData.members[0] === uid;
+    
+    if (!canHardDelete.includes(uid) && !isOnlyMember) {
+      throw new Error('User does not have permission to delete this chat');
+    }
+    
+    // Delete all messages in the chat room
+    const messagesSubcollection = collection(roomRef, 'messages');
+    const messagesSnapshot = await getDocs(query(messagesSubcollection));
+    
+    const deletePromises = messagesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+    
+    // Delete the chat room document
+    await deleteDoc(roomRef);
+    
+    console.log(`✅ Chat ${chatId} and all messages deleted permanently`);
+  } catch (error) {
+    console.error('❌ Error deleting chat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Watch archived chats for a user
+ */
+const watchArchivedChats = (
+  uid: string, 
+  cb: (rooms: ChatRoom[]) => void
+): (() => void) => {
+  try {
+    // Query without orderBy to avoid index requirement - we'll sort client-side
+    const q = query(
+      chatRoomsCollection,
+      where('members', 'array-contains', uid)
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const rooms: ChatRoom[] = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          members: doc.data().members,
+          createdAt: doc.data().createdAt as Timestamp,
+          lastMessageAt: doc.data().lastMessageAt as Timestamp | null,
+          pairKey: doc.data().pairKey,
+          archivedBy: doc.data().archivedBy || {},
+          canHardDelete: doc.data().canHardDelete || []
+        }))
+        .filter(room => room.archivedBy[uid]) // Only archived chats for this user
+        // Sort client-side by lastMessageAt (newest first)
+        .sort((a, b) => {
+          if (!a.lastMessageAt && !b.lastMessageAt) return 0;
+          if (!a.lastMessageAt) return 1;
+          if (!b.lastMessageAt) return -1;
+          return b.lastMessageAt.toMillis() - a.lastMessageAt.toMillis();
+        });
+      
+      cb(rooms);
+    }, (error) => {
+      console.error('❌ Error watching archived chat rooms:', error);
+    });
+    
+    return unsubscribe;
+  } catch (error) {
+    console.error('❌ Error setting up archived chat rooms listener:', error);
+    throw error;
+  }
+};
 // Export all functions
 export {
   ensureDirectRoom,
@@ -375,5 +478,7 @@ export {
   getRoom,
   archiveChat,
   unarchiveChat,
-  deleteChat
+  deleteChat,
+  deleteChatForEveryone,
+  watchArchivedChats
 };

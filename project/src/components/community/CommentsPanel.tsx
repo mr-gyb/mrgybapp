@@ -40,7 +40,7 @@ const CommentsPanel: React.FC<CommentsPanelProps> = ({ postId, initialCount = 0 
       await addComment(
         postId,
         { text: newCommentText.trim() },
-        { uid: user.uid, displayName: userData.name || 'Anonymous' }
+        { uid: user.uid, displayName: userData.name || 'Anonymous', photoURL: user.photoURL || undefined }
       );
       setNewCommentText('');
     } catch (error: unknown) {
@@ -62,11 +62,19 @@ const CommentsPanel: React.FC<CommentsPanelProps> = ({ postId, initialCount = 0 
         ) : (
           comments.map((comment) => (
             <div key={comment.id} className="flex items-start gap-2">
-              <img 
-                src={`https://api.dicebear.com/7.x/initials/svg?seed=${comment.authorName}`} 
-                alt={comment.authorName} 
-                className="w-7 h-7 rounded-full object-cover flex-shrink-0" 
-              />
+              <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                {comment.authorPhotoURL ? (
+                  <img 
+                    src={comment.authorPhotoURL} 
+                    alt={comment.authorName} 
+                    className="w-full h-full object-cover" 
+                  />
+                ) : (
+                  <span className="text-white font-semibold text-xs">
+                    {comment.authorName.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">{comment.authorName}</p>
                 <p className="text-sm text-gray-800 dark:text-gray-200">{comment.text}</p>
@@ -80,27 +88,29 @@ const CommentsPanel: React.FC<CommentsPanelProps> = ({ postId, initialCount = 0 
       </div>
 
       {/* Add Comment Input */}
-      <div className="flex items-center gap-2 border-t border-gray-200 dark:border-gray-600 pt-3">
-        <textarea
-          className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md resize-none text-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white"
-          placeholder="Add a comment..."
-          rows={1}
-          value={newCommentText}
-          onChange={(e) => setNewCommentText(e.target.value)}
-          disabled={isAddingComment}
-        />
-        <button
-          onClick={handleAddComment}
-          disabled={isAddingComment || !newCommentText.trim()}
-          className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 transition-colors flex items-center justify-center"
-        >
-          {isAddingComment ? (
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Send size={18} />
-          )}
-        </button>
-      </div>
+      {user && (
+        <div className="flex items-center gap-2 border-t border-gray-200 dark:border-gray-600 pt-3">
+          <textarea
+            className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md resize-none text-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white"
+            placeholder="Add a comment..."
+            rows={1}
+            value={newCommentText}
+            onChange={(e) => setNewCommentText(e.target.value)}
+            disabled={isAddingComment}
+          />
+          <button
+            onClick={handleAddComment}
+            disabled={isAddingComment || !newCommentText.trim()}
+            className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 transition-colors flex items-center justify-center"
+          >
+            {isAddingComment ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send size={18} />
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

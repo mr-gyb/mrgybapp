@@ -83,6 +83,13 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({
 
     recognition.onend = () => {
       setIsListening(false);
+      
+      // Clean up stream when recognition ends
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      
       if (transcription) {
         handleTranscriptionComplete(transcription);
       }
@@ -128,10 +135,17 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({
   };
 
   // Handle transcription completion
+  // Algorithm step: Receive transcribed text → Feed text into search/message handler
   const handleTranscriptionComplete = useCallback((text: string) => {
     if (text.trim()) {
+      console.log('🎤 Transcription complete:', text);
+      console.log('📤 Feeding text into handler:', text);
+      
+      // Feed transcribed text into the handler (ready to send/display)
       onTranscriptionComplete(text.trim());
       setTranscription('');
+      
+      console.log('✅ Text fed into handler successfully');
     }
     setIsProcessing(false);
     setIsListening(false);
@@ -179,11 +193,33 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({
               const result = await handleWhisperTranscription(audioBlob);
               handleTranscriptionComplete(result.text);
             } catch (whisperError: any) {
+              // Check if it's a quota exceeded error (429) - Multiple ways to detect
+              const isQuotaError = 
+                whisperError?.code === 'QUOTA_EXCEEDED' || 
+                whisperError?.status === 429 ||
+                whisperError?.message?.includes('429') ||
+                whisperError?.message?.includes('quota') ||
+                whisperError?.message?.includes('quota exceeded') ||
+                whisperError?.message?.includes('Too Many Requests') ||
+                whisperError?.message?.includes('exceeded') ||
+                (whisperError instanceof Error && (
+                  whisperError.message.includes('quota exceeded') ||
+                  whisperError.message.includes('429') ||
+                  whisperError.message.includes('Too Many Requests')
+                ));
+              
               // If Whisper API fails (429, quota exceeded, etc.), fall back to browser SpeechRecognition
-              if (whisperError?.message?.includes('429') || 
-                  whisperError?.message?.includes('quota') ||
-                  whisperError?.message?.includes('exceeded')) {
+              if (isQuotaError) {
                 console.warn('Whisper API quota exceeded, falling back to browser SpeechRecognition');
+                
+                // Store quota exceeded flag in localStorage
+                localStorage.setItem('whisper_quota_exceeded', 'true');
+                
+                // Clean up MediaRecorder stream
+                if (streamRef.current) {
+                  streamRef.current.getTracks().forEach(track => track.stop());
+                  streamRef.current = null;
+                }
                 
                 // Fallback to browser SpeechRecognition
                 if (isSpeechRecognitionSupported) {
@@ -193,44 +229,70 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({
                   }
                   
                   if (speechRecognitionRef.current) {
-                    // Set up handlers for fallback recognition
-                    const recognition = speechRecognitionRef.current;
-                    let finalText = '';
+                    setError(null);
+                    setIsProcessing(false);
                     
-                    recognition.onresult = (event: any) => {
-                      for (let i = event.resultIndex; i < event.results.length; i++) {
-                        if (event.results[i].isFinal) {
-                          finalText += event.results[i][0].transcript;
+                    // Get new microphone stream for SpeechRecognition
+                    try {
+                      const fallbackStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                      streamRef.current = fallbackStream;
+                      
+                      // Set up handlers for fallback recognition
+                      const recognition = speechRecognitionRef.current;
+                      let finalText = '';
+                      
+                      recognition.onresult = (event: any) => {
+                        for (let i = event.resultIndex; i < event.results.length; i++) {
+                          if (event.results[i].isFinal) {
+                            finalText += event.results[i][0].transcript;
+                          }
                         }
-                      }
-                      if (finalText) {
-                        handleTranscriptionComplete(finalText.trim());
-                      }
-                    };
-                    
-                    recognition.onend = () => {
-                      if (finalText) {
-                        handleTranscriptionComplete(finalText.trim());
-                      } else {
-                        setError('Could not transcribe audio. Please try again.');
+                        if (finalText) {
+                          handleTranscriptionComplete(finalText.trim());
+                        }
+                      };
+                      
+                      recognition.onend = () => {
+                        if (finalText) {
+                          handleTranscriptionComplete(finalText.trim());
+                        } else {
+                          setError('Could not transcribe audio. Please try again.');
+                          setIsProcessing(false);
+                        }
+                      };
+                      
+                      recognition.onerror = (event: any) => {
+                        console.error('SpeechRecognition fallback error:', event.error);
+                        setError('Speech recognition failed. Please try again.');
                         setIsProcessing(false);
-                      }
-                    };
-                    
-                    recognition.onerror = (event: any) => {
-                      console.error('SpeechRecognition fallback error:', event.error);
-                      setError('Speech recognition failed. Please try again.');
+                      };
+                      
+                      // Start browser speech recognition
+                      setTimeout(() => {
+                        if (speechRecognitionRef.current) {
+                          try {
+                            speechRecognitionRef.current.start();
+                            setIsListening(true);
+                            console.log('🎤 Using Web Speech API fallback...');
+                          } catch (startError) {
+                            console.error('Failed to start SpeechRecognition:', startError);
+                            setError('Failed to start browser speech recognition. Please try clicking the mic button again.');
+                            setIsProcessing(false);
+                          }
+                        }
+                      }, 100);
+                    } catch (streamError) {
+                      console.error('Failed to get microphone for fallback:', streamError);
+                      setError('OpenAI quota exceeded. Please allow microphone access to use browser speech recognition, or try again later.');
                       setIsProcessing(false);
-                    };
-                    
-                    // Start browser speech recognition
-                    recognition.start();
-                    setIsListening(true);
+                    }
                   } else {
-                    throw new Error('Whisper API quota exceeded. Browser speech recognition not available.');
+                    setError('Whisper API quota exceeded. Browser speech recognition not available.');
+                    setIsProcessing(false);
                   }
                 } else {
-                  throw new Error('Whisper API quota exceeded. Browser speech recognition not available.');
+                  setError('Whisper API quota exceeded. Browser speech recognition not available.');
+                  setIsProcessing(false);
                 }
               } else {
                 // Re-throw other errors
@@ -247,8 +309,8 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({
           setIsProcessing(false);
         }
 
-        // Clean up
-        if (streamRef.current) {
+        // Clean up MediaRecorder (but keep stream if falling back to SpeechRecognition)
+        if (streamRef.current && !isListening) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
         }
@@ -295,9 +357,15 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({
     const hasPermission = await checkMicrophonePermission();
     if (!hasPermission) return;
 
-    // Choose transcription method - prefer browser SpeechRecognition if available
-    // to avoid Whisper API quota issues
-    if (isSpeechRecognitionSupported) {
+    // Choose transcription method - Prefer SpeechRecognition if Whisper quota is likely exceeded
+    // You can check localStorage for a flag indicating quota issues
+    const whisperQuotaExceeded = localStorage.getItem('whisper_quota_exceeded') === 'true';
+    
+    if (whisperQuotaExceeded && isSpeechRecognitionSupported) {
+      // Skip Whisper if quota was exceeded previously, use SpeechRecognition directly
+      console.log('🎤 Using SpeechRecognition (Whisper quota previously exceeded)');
+      startRecordingWithSpeechRecognition();
+    } else if (isSpeechRecognitionSupported) {
       // Use browser SpeechRecognition first (no quota limits)
       startRecordingWithSpeechRecognition();
     } else if (isMediaRecorderSupported && isWhisperApiAvailable()) {

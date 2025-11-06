@@ -6,6 +6,7 @@ import SideMenu from './SideMenu';
 import { getProfile } from '../lib/firebase/profile';
 import { UserProfile } from '../types/user';
 import { useChat } from '../contexts/ChatContext';
+import NotificationBell from './common/NotificationBell';
 
 interface HeaderProps {
   getPageTitle: (pathname: string) => string;
@@ -101,9 +102,12 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
             {getPageTitle(location.pathname)}
           </h1>
 
-          <button onClick={handleLogoClick} className="h-8 sm:h-10">
-            <img src="/gyb-logo.svg" alt="GYB Logo" className="h-full" />
-          </button>
+          <div className="flex items-center gap-2">
+            {isAuthenticated && <NotificationBell />}
+            <button onClick={handleLogoClick} className="h-8 sm:h-10">
+              <img src="/gyb-logo.svg" alt="GYB Logo" className="h-full" />
+            </button>
+          </div>
         </div>
       </header>
 
