@@ -67,6 +67,7 @@ const LetsBegin = lazy(() => import('./components/LetsBegin'));
 const Assessment = lazy(() => import('./components/Assessment'));
 const TestImage = lazy(() => import('./components/TestImage'));
 const ChrisAIBusinessCoach = lazy(() => import('./components/ChrisAIBusinessCoach'));
+const ContentInspiration = lazy(() => import('./components/ContentInspiration'));
 
 // Loading spinner component
 const LoadingSpinner = () => (
@@ -184,6 +185,13 @@ const App: React.FC = () => {
               <Suspense fallback={<LoadingSpinner />}>
                 <ChrisAIBusinessCoach />
               </Suspense>
+            } />
+            <Route path="/content-inspiration" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ContentInspiration />
+                </Suspense>
+              </ProtectedRoute>
             } />
 
             {/* Protected App Routes - Require authentication */}

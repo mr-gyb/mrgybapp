@@ -185,79 +185,35 @@ const VideoUploadPage: React.FC = () => {
       <div className={`py-12 transition-all duration-500 ease-in-out ${showUploadSection ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center">
-            {/* Character Frame with Double Border */}
+            {/* Chris Illustration - background removed */}
             <div className="relative mb-8">
-              {/* Outer Blue Border */}
-              <div 
-                className="rounded-2xl p-2"
-                style={{
-                  backgroundColor: '#11335d',
-                  width: '400px',
-                  height: '400px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                {/* Inner Yellow Border */}
-                <div 
-                  className="rounded-xl p-2"
-                  style={{
-                    backgroundColor: '#D4AF37',
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  {/* Character Image */}
-                  <div 
-                    className="rounded-lg overflow-hidden"
-                    style={{
-                      width: '350px',
-                      height: '350px'
-                    }}
-                  >
-                    <img 
-                      src="/cropped_ai_image.png"
-                      alt="Chris - Your AI Business Coach"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                </div>
+              <div className="w-80 h-96 flex items-center justify-center relative overflow-hidden">
+                <img 
+                  src="/cropped_ai_image.png" 
+                  alt="Chris AI Business Coach" 
+                  className="w-full h-full object-contain"
+                />
               </div>
             </div>
 
-            {/* Introduction Text */}
+            {/* Text */}
             <div className="text-center mb-8">
-              <h1 
-                className="text-4xl font-bold mb-4"
-                style={{ color: '#11335d' }}
-              >
-                Hi, I'm Chris! Your AI Business Coach
-              </h1>
+              <h2 className="text-3xl font-bold mb-4" style={{ color: '#11335d' }}>
+                Hi, I'm Chris! Your AI Business coach.
+              </h2>
             </div>
 
-            {/* Call to Action Button */}
+            {/* Button */}
             <div className="text-center">
               <button
                 onClick={handleUploadClick}
-                className="px-8 py-4 text-white font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                style={{ 
-                  backgroundColor: '#11335d',
-                  fontSize: '18px'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#0f2a4a';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#11335d';
-                }}
+                className="text-white font-semibold py-4 px-8 rounded-xl text-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
+                style={{ backgroundColor: '#11335d' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0f2a4a'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#11335d'; }}
               >
                 Let's Get Started
               </button>
-              
             </div>
           </div>
         </div>
@@ -466,86 +422,6 @@ const VideoUploadPage: React.FC = () => {
         </div>
       )}
 
-      {/* Animated Video Icon Section - Shows after processing */}
-      {hasUploadedVideo && !showProcessingSteps && (
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-black mb-8">Video Processing Complete!</h3>
-              
-              {/* Video Camera Icon - Premium Animation System */}
-              <div className="flex justify-center mb-6">
-                <div className="relative group">
-                  {/* Multiple Animated Rings with Different Speeds */}
-                  <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-60" style={{ animationDuration: '2s' }}></div>
-                  <div className="absolute inset-0 rounded-full border-2 border-red-400 animate-ping opacity-40" style={{ animationDuration: '3s', animationDelay: '0.5s' }}></div>
-                  <div className="absolute inset-0 rounded-full border-2 border-red-300 animate-ping opacity-30" style={{ animationDuration: '4s', animationDelay: '1s' }}></div>
-                  
-                  {/* Rotating Background Circle */}
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-red-500/20 to-red-400/20 animate-spin" style={{ animationDuration: '8s' }}></div>
-                  
-                  {/* Video Icon with Up/Down Movement Animation */}
-                  <Video 
-                    size={64} 
-                    className="text-red-500 relative z-10 transform transition-all duration-700 group-hover:scale-125 group-hover:rotate-12 group-hover:text-red-600 group-hover:drop-shadow-lg" 
-                    style={{
-                      animation: 'upDownMove 2s ease-in-out infinite, videoGlow 2s ease-in-out infinite alternate'
-                    }}
-                  />
-                  
-                  {/* Glowing Effect on Hover */}
-                  <div className="absolute inset-0 rounded-full bg-red-500/20 scale-0 group-hover:scale-150 transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
-                </div>
-              </div>
-              
-              <p className="text-lg text-gray-600 mb-6">Your video has been successfully analyzed and is ready for review!</p>
-              
-              {/* Advanced CSS Animations */}
-              <style>{`
-                @keyframes upDownMove {
-                  0%, 100% { 
-                    transform: translateY(0px); 
-                  }
-                  25% { 
-                    transform: translateY(-12px); 
-                  }
-                  50% { 
-                    transform: translateY(-20px); 
-                  }
-                  75% { 
-                    transform: translateY(-12px); 
-                  }
-                }
-                
-                @keyframes videoGlow {
-                  0% { 
-                    filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.3));
-                  }
-                  100% { 
-                    filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.6)) drop-shadow(0 0 25px rgba(239, 68, 68, 0.4));
-                  }
-                }
-                
-                @keyframes pulseRing {
-                  0% { 
-                    transform: scale(0.8);
-                    opacity: 1;
-                  }
-                  100% { 
-                    transform: scale(2.4);
-                    opacity: 0;
-                  }
-                }
-                
-                .group:hover .animate-ping {
-                  animation: pulseRing 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-                }
-              `}</style>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Video Upload Section - Hidden by default, shown after button click */}
       {showUploadSection && (
         <div className="container mx-auto px-4 pb-12">
@@ -585,7 +461,7 @@ const VideoUploadPage: React.FC = () => {
                   <button
                     onClick={handleUploadClick}
                     disabled={isProcessing}
-                    className="inline-flex items-center px-6 py-3 text-white font-semibold rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-6 py-3 text-white font-semibold rounded-lg transition-colors duration-200 disabled:cursor-not-allowed"
                     style={{ 
                       backgroundColor: '#11335d'
                     }}

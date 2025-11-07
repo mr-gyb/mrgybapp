@@ -219,8 +219,20 @@ const ChrisAIBusinessCoach: React.FC = () => {
             <button
               onClick={handleVideoSubmit}
               disabled={!videoLink.trim() || isLoading}
-              className="text-white font-semibold py-2 px-6 rounded-lg text-sm disabled:opacity-50"
-              style={{ backgroundColor: '#11335d' }}
+              className="text-white font-semibold py-2 px-6 rounded-lg text-sm transition-colors duration-200"
+              style={{ 
+                backgroundColor: '#11335d',
+                border: 'none',
+                cursor: (!videoLink.trim() || isLoading) ? 'not-allowed' : 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                if (!isLoading && videoLink.trim()) {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0f2a4a';
+                }
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#11335d';
+              }}
             >
               {isLoading ? 'Analyzing...' : 'Done'}
             </button>
@@ -258,8 +270,20 @@ const ChrisAIBusinessCoach: React.FC = () => {
             <button
               onClick={() => { /* Placeholder for Pinterest handling */ }}
               disabled={!videoLink.trim()}
-              className="text-white font-semibold py-2 px-6 rounded-lg text-sm disabled:opacity-50"
-              style={{ backgroundColor: '#11335d' }}
+              className="text-white font-semibold py-2 px-6 rounded-lg text-sm transition-colors duration-200"
+              style={{ 
+                backgroundColor: '#11335d',
+                border: 'none',
+                cursor: !videoLink.trim() ? 'not-allowed' : 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                if (videoLink.trim()) {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0f2a4a';
+                }
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#11335d';
+              }}
             >
               Done
             </button>
@@ -407,7 +431,7 @@ const ChrisAIBusinessCoach: React.FC = () => {
             <div className="flex space-x-8 mb-8 relative">
               {/* Instagram */}
               <div 
-                className={`w-20 h-20 rounded-xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform bg-white shadow-lg relative`}
+                className={`w-20 h-20 rounded-xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform bg-transparent shadow-lg relative`}
                 onClick={() => handlePlatformSelect('instagram')}
               >
                 <img 
@@ -422,7 +446,7 @@ const ChrisAIBusinessCoach: React.FC = () => {
 
               {/* Facebook */}
               <div 
-                className={`w-20 h-20 rounded-xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform bg-white shadow-lg relative`}
+                className={`w-20 h-20 rounded-xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform bg-transparent shadow-lg relative`}
                 onClick={() => handlePlatformSelect('facebook')}
               >
                 <img 
@@ -437,7 +461,7 @@ const ChrisAIBusinessCoach: React.FC = () => {
 
               {/* YouTube */}
               <div 
-                className={`w-20 h-20 rounded-xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform bg-white shadow-lg relative`}
+                className={`w-20 h-20 rounded-xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform bg-transparent shadow-lg relative`}
                 onClick={() => handlePlatformSelect('youtube')}
               >
                 <svg className="w-12 h-12 text-red-600" fill="currentColor" viewBox="0 0 24 24">
@@ -450,7 +474,7 @@ const ChrisAIBusinessCoach: React.FC = () => {
 
               {/* Pinterest */}
               <div 
-                className={`w-20 h-20 rounded-xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform bg-white shadow-lg relative`}
+                className={`w-20 h-20 rounded-xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform bg-transparent shadow-lg relative`}
                 onClick={() => handlePlatformSelect('pinterest')}
               >
                 <img 

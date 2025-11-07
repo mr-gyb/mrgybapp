@@ -1827,11 +1827,16 @@ const GYBStudio: React.FC = () => {
         </div>
 
         {/* Creation Inspirations */}
-        <CreationInspirationsLazyWrapper 
-          limit={3} 
-          showRefreshButton={true}
-          onSuggestionsGenerated={handleSuggestionsGenerated}
-        />
+        <div 
+          onClick={() => navigate('/content-inspiration')}
+          className="cursor-pointer"
+        >
+          <CreationInspirationsLazyWrapper 
+            limit={3} 
+            showRefreshButton={true}
+            onSuggestionsGenerated={handleSuggestionsGenerated}
+          />
+        </div>
 
         {/* Content History */}
         <div className="bg-white p-6 rounded-lg shadow">
