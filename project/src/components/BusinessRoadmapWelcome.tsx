@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import roadmapImg from './images/roadmap.png';
-import gybLogo from './images/gyblogo.png';
 import './Roadmap.css';
 
 const BusinessRoadmapWelcome: React.FC = () => {
@@ -14,12 +13,6 @@ const BusinessRoadmapWelcome: React.FC = () => {
   return (
     <div className="roadmap-container">
       {/* GYB Logo - Top Left */}
-      <div className="gyb-logo">
-        <img 
-          src={gybLogo} 
-          alt="GYB Logo"
-        />
-      </div>
 
       <div className="content-wrapper">
         <div className="grid-container">
@@ -33,7 +26,7 @@ const BusinessRoadmapWelcome: React.FC = () => {
               </h1>
 
               <p className="description-text">
-                Take the quiz below to get started.
+                Click below to begin the assessment. Please note that this assessment is not meant to serve as legal business advice but rather to help you get a deeper understanding of your business and how to navigate the different milestones inspired by Chris&apos;s exclusive 4C&apos;s formula.
               </p>
 
               <button 
