@@ -137,7 +137,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // Validate inputs
+      if (!email || !password) {
+        return { error: { code: 'auth/missing-credentials', message: 'Please enter both email and password.' } };
+      }
+
+      // Check if Firebase is properly configured
+      if (!auth) {
+        return { error: { code: 'auth/config-error', message: 'Firebase authentication is not properly configured. Please check your environment variables.' } };
+      }
+
+      // Log attempt (without sensitive data)
+      console.log('Attempting sign in for email:', email.trim());
+      console.log('Firebase auth instance:', auth ? 'Initialized' : 'Not initialized');
+      console.log('Auth domain:', auth.app.options.authDomain);
+
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
       
       // Fetch user data immediately after sign in
       const userDocRef = doc(db, 'profiles', userCredential.user.uid);
@@ -148,9 +163,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       return { user: userCredential.user };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sign in error:', error);
-      return { error };
+      
+      // Handle Firebase API key expired error
+      if (error?.code === 'auth/api-key-expired' || error?.message?.includes('api-key-expired')) {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'Firebase API key has expired. Please update your VITE_FIREBASE_API_KEY in the .env file. See FIREBASE_API_KEY_TROUBLESHOOTING.md for instructions.' 
+          } 
+        };
+      }
+      
+      // Handle Firebase configuration errors
+      if (error?.code === 'auth/invalid-api-key' || error?.message?.includes('API key')) {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'Firebase API key is invalid. Please check your VITE_FIREBASE_API_KEY in the .env file.' 
+          } 
+        };
+      }
+      
+      // Provide user-friendly error messages based on Firebase error codes
+      let errorMessage = 'An error occurred during sign in. Please try again.';
+      
+      if (error?.code) {
+        switch (error.code) {
+          case 'auth/api-key-expired':
+          case 'auth/invalid-api-key':
+            errorMessage = 'Firebase API key has expired or is invalid. Please update your VITE_FIREBASE_API_KEY in the .env file. See FIREBASE_API_KEY_TROUBLESHOOTING.md for detailed instructions.';
+            break;
+          case 'auth/invalid-credential':
+          case 'auth/wrong-password':
+          case 'auth/user-not-found':
+            errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Invalid email address. Please enter a valid email.';
+            break;
+          case 'auth/user-disabled':
+            errorMessage = 'This account has been disabled. Please contact support.';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'Too many failed login attempts. Please try again later.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your internet connection and try again.';
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage = 'Email/password sign-in is not enabled. Please contact support.';
+            break;
+          default:
+            // Check if error message contains API key related text
+            if (error.message?.includes('api-key') || error.message?.includes('API key')) {
+              errorMessage = 'Firebase API key issue detected. Please check your VITE_FIREBASE_API_KEY in the .env file. See FIREBASE_API_KEY_TROUBLESHOOTING.md for help.';
+            } else {
+              errorMessage = error.message || 'An error occurred during sign in. Please try again.';
+            }
+        }
+      }
+      
+      return { error: { ...error, message: errorMessage } };
     }
   };
 
@@ -158,14 +233,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       return { user: userCredential.user };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sign up error:', error);
+      
+      // Handle Firebase API key expired error
+      if (error?.code === 'auth/api-key-expired' || error?.code === 'auth/invalid-api-key' || error?.message?.includes('api-key')) {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'Firebase API key has expired or is invalid. Please update your VITE_FIREBASE_API_KEY in the .env file. See FIREBASE_API_KEY_TROUBLESHOOTING.md for detailed instructions.' 
+          } 
+        };
+      }
+      
       return { error };
     }
   };
 
   const signInWithFacebook = async () => {
     try {
+      // Check if Firebase is properly configured
+      if (!auth) {
+        return { error: { code: 'auth/config-error', message: 'Firebase authentication is not properly configured. Please check your environment variables.' } };
+      }
+      
       const result = await signInWithPopup(auth, facebookProvider);
       
       // Check if this is a new user
@@ -197,8 +288,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       return { user: result.user };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Facebook sign in error:', error);
+      
+      // Handle Firebase API key expired error
+      if (error?.code === 'auth/api-key-expired' || error?.code === 'auth/invalid-api-key' || error?.message?.includes('api-key')) {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'Firebase API key has expired or is invalid. Please update your VITE_FIREBASE_API_KEY in the .env file. See FIREBASE_API_KEY_TROUBLESHOOTING.md for detailed instructions.' 
+          } 
+        };
+      }
+      
       return { error };
     }
   };

@@ -160,69 +160,141 @@ class OpenAIService {
   }
 
   /**
-   * Extract audio from video file using Web Audio API
+   * Extract audio from video file
+   * Note: Whisper API accepts video files directly, but has a 25MB limit
+   * For files larger than 25MB, we need to extract and compress audio
    */
   private async extractAudioFromVideo(videoFile: File): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      const video = document.createElement('video');
-      const canvas = document.createElement('canvas');
-      
-      video.src = URL.createObjectURL(videoFile);
-      video.crossOrigin = 'anonymous';
-      
-      video.onloadedmetadata = () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        
-        // For now, we'll use the original video file as audio
-        // In a real implementation, you'd use Web Audio API to extract audio
-        console.log('🎵 Audio extraction simulated (using original file)');
-        resolve(videoFile);
-      };
-      
-      video.onerror = (error) => {
-        console.error('❌ Error loading video:', error);
-        reject(error);
-      };
-      
-      video.load();
-    });
+    const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB limit for Whisper API
+    const fileSize = videoFile.size;
+    
+    console.log('🎵 Processing video file for audio extraction...');
+    console.log('📹 File size:', (fileSize / (1024 * 1024)).toFixed(2), 'MB');
+    console.log('📹 File type:', videoFile.type);
+    
+    // Check file size upfront
+    if (fileSize > MAX_FILE_SIZE) {
+      const errorMsg = `Video file is too large (${(fileSize / (1024 * 1024)).toFixed(2)}MB). Whisper API has a 25MB file size limit. Please compress your video or use a shorter video. You can use online tools like CloudConvert or HandBrake to compress your video before uploading.`;
+      console.error('❌', errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    // Whisper API accepts video files directly (mp4, webm, etc.)
+    // So we can send the video file as-is if it's under the size limit
+    console.log('✅ Video file is within size limit, will send directly to Whisper API');
+    console.log('ℹ️ Whisper API accepts video files and will extract audio automatically');
+    
+    return videoFile;
   }
 
   /**
-   * Transcribe audio using OpenAI Whisper API
+   * Transcribe audio using OpenAI Whisper API via backend proxy (to avoid CORS)
    */
   private async transcribeAudioWithWhisper(audioBlob: Blob): Promise<string> {
     try {
+      const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB limit for Whisper API
+      const fileSize = audioBlob.size;
+      
+      console.log('🎤 Preparing audio for Whisper API...');
+      console.log('📦 Audio file size:', (fileSize / (1024 * 1024)).toFixed(2), 'MB');
+      
+      // Check file size before sending
+      if (fileSize > MAX_FILE_SIZE) {
+        const errorMsg = `Audio file is too large (${(fileSize / (1024 * 1024)).toFixed(2)}MB). Whisper API has a 25MB limit. Please use a shorter video or compress the video file first.`;
+        console.error('❌', errorMsg);
+        throw new Error(errorMsg);
+      }
+      
+      // Determine file name based on blob type
+      // Whisper API accepts both audio and video files
+      let fileName = 'audio.mp4';
+      
+      if (audioBlob.type.includes('webm')) {
+        fileName = 'audio.webm';
+      } else if (audioBlob.type.includes('ogg')) {
+        fileName = 'audio.ogg';
+      } else if (audioBlob.type.includes('mp4')) {
+        fileName = 'video.mp4'; // Can be video or audio
+      } else if (audioBlob.type.includes('quicktime') || audioBlob.type.includes('mov')) {
+        fileName = 'video.mov';
+      } else if (audioBlob.type.includes('x-matroska') || audioBlob.type.includes('mkv')) {
+        fileName = 'video.mkv';
+      } else if (audioBlob.type.includes('mp3')) {
+        fileName = 'audio.mp3';
+      } else if (audioBlob.type.includes('wav')) {
+        fileName = 'audio.wav';
+      }
+      
+      // Use backend proxy to avoid CORS issues
+      const proxyUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
       const formData = new FormData();
-      formData.append('file', audioBlob, 'audio.mp3');
-      formData.append('model', 'whisper-1');
+      formData.append('file', audioBlob, fileName);
       formData.append('language', 'en');
       formData.append('response_format', 'text');
 
-      console.log('🎤 Sending audio to Whisper API...');
+      console.log('🎤 Sending audio to backend proxy for Whisper API...');
+      console.log('📤 File type:', audioBlob.type, 'Size:', (fileSize / (1024 * 1024)).toFixed(2), 'MB');
+      console.log('🔗 Proxy URL:', `${proxyUrl}/api/openai/transcribe`);
       
-      const response = await fetch(`${this.baseUrl}/audio/transcriptions`, {
+      const response = await fetch(`${proxyUrl}/api/openai/transcribe`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.videoApiKey}`,
-        },
         body: formData
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Whisper API error:', response.status, response.statusText, errorText);
-        throw new Error(`Whisper API error: ${response.status} ${response.statusText}`);
+        let errorMessage = `Transcription failed: ${response.status} ${response.statusText}`;
+        
+        // Try to parse error response
+        try {
+          const errorJson = await response.json();
+          if (errorJson.message) {
+            errorMessage = errorJson.message;
+          } else if (errorJson.error) {
+            errorMessage = errorJson.error;
+          }
+        } catch (e) {
+          // If not JSON, try text
+          try {
+            const errorText = await response.text();
+            if (errorText) {
+              errorMessage = errorText;
+            }
+          } catch (e2) {
+            // Use default error message
+          }
+        }
+        
+        console.error('❌ Transcription error:', response.status, errorMessage);
+        
+        // Provide user-friendly error messages
+        if (response.status === 413) {
+          errorMessage = `File too large (${(fileSize / (1024 * 1024)).toFixed(2)}MB). Whisper API has a 25MB limit. Please compress your video or use a shorter video.`;
+        } else if (response.status === 401 || response.status === 500) {
+          if (errorMessage.includes('API key')) {
+            errorMessage = 'OpenAI API key is invalid or expired. Please check your VITE_OPENAI_VIDEO_API_KEY in the .env file.';
+          } else {
+            errorMessage = 'Server configuration error. Please check that the backend server is running and OpenAI API key is configured.';
+          }
+        } else if (response.status === 429) {
+          errorMessage = 'Rate limit exceeded. Please try again in a few moments.';
+        } else if (response.status === 502 || response.status === 503) {
+          errorMessage = 'OpenAI service is temporarily unavailable. Please try again later.';
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const transcript = await response.text();
       console.log('✅ Whisper transcription completed');
+      console.log('📝 Transcript length:', transcript.length, 'characters');
       return transcript;
 
     } catch (error) {
       console.error('❌ Error transcribing audio:', error);
-      // Re-throw the error instead of using mock transcript
+      // Re-throw the error with helpful message
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        throw new Error('Failed to connect to transcription service. Please ensure the backend server is running on port 3000.');
+      }
       throw new Error(`Audio transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

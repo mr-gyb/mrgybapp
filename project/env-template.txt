@@ -17,6 +17,9 @@ VITE_SPOTIFY_REDIRECT_URI=http://localhost:3002/callback
 
 # YouTube API Configuration
 VITE_YOUTUBE_API_KEY=your_youtube_api_key_here
+VITE_YOUTUBE_CLIENT_ID=your_youtube_oauth_client_id_here
+VITE_YOUTUBE_CLIENT_SECRET=your_youtube_oauth_client_secret_here
+# VITE_YOUTUBE_ACCESS_TOKEN is optional - will be stored in localStorage after OAuth
 
 # Pinterest API Configuration
 VITE_PINTEREST_ACCESS_TOKEN=your_pinterest_access_token_here

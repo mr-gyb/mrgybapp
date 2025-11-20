@@ -22,6 +22,7 @@ import { fetchYouTubeViewCounts } from '../utils/platformUtils';
 import { getFacebookMetrics } from '../api/services/facebook.service';
 import ContentTypeDistribution from "./analytics/ContentTypeDistribution";
 import PlatformDistribution from "./analytics/PlatformDistribution";
+import YouTubeDemographics from "./analytics/YouTubeDemographics";
 import { saveUserContent } from '../services/userContent.service';
 import { useAuth } from '../contexts/AuthContext';
 import { useAnalytics } from '../hooks/useAnalytics';
@@ -1433,7 +1434,8 @@ const GYBStudio: React.FC = () => {
           </div>
         </div>
 
-
+        {/* YouTube Demographics Section */}
+        <YouTubeDemographics className="mb-8" />
 
         {/* Post Metrics Section */}
         <div className="p-6 rounded-lg shadow mb-8" style={{ backgroundColor: '#e0c472' }}>

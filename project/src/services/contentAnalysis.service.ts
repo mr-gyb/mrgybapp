@@ -78,23 +78,47 @@ export function detectPlatform(url: string): Platform | null {
 function buildAnalysisPrompt(items: ContentItem[]) {
   console.log('📝 Building analysis prompt for', items.length, 'items');
   
+  // Enhance items with video analysis data if available
+  const enhancedItems = items.map(item => {
+    // If this is a video with analysis data in generatedAssets, extract it
+    if (item.type === 'video' && item.generatedAssets) {
+      const analysisAsset = item.generatedAssets.find(asset => asset.type === 'analysis');
+      if (analysisAsset && analysisAsset.content) {
+        try {
+          const analysisData = JSON.parse(analysisAsset.content);
+          // Merge analysis data into the item for better analysis
+          return {
+            ...item,
+            videoAnalysis: analysisData
+          };
+        } catch (e) {
+          console.warn('Failed to parse video analysis data:', e);
+        }
+      }
+    }
+    return item;
+  });
+  
   return [
     {
       role: "system" as const,
-      content: `You are a content analyst for a social media "Content Hub." Summarize uploaded posts and return structured JSON following the provided schema. Extract themes, tones, keywords, hashtags, visual motifs, audience, and per-platform guidance. Do not fabricate platforms. Never include platforms that are not present in the uploads. Prefer concise, high-signal outputs.`
+      content: `You are a content analyst for a social media "Content Hub." Summarize uploaded posts and return structured JSON following the provided schema. Extract themes, tones, keywords, hashtags, visual motifs, audience, and per-platform guidance. Do not fabricate platforms. Never include platforms that are not present in the uploads. Prefer concise, high-signal outputs.
+
+IMPORTANT: For video content items that include videoAnalysis data (with summary, keyPoints, transcript, mainTheme), use this analysis data to provide more accurate and detailed insights. The videoAnalysis data contains AI-generated analysis of the video content that should be incorporated into your analysis.`
     },
     {
       role: "user" as const,
       content: `Analyze the following uploaded items. Output only valid JSON matching the ContentAnalysis schema you've been given.
 
 Uploaded items (JSON):
-${JSON.stringify(items, null, 2)}
+${JSON.stringify(enhancedItems, null, 2)}
 
 Constraints:
 - Identify which platforms are present across the uploads.
 - Provide a global summary, then per-platform chunks.
 - For each present platform, provide themes, tones, keywords, hashtags, content_types, and a recommended_time_window_days for finding similar high-performing inspiration.
 - If a platform is not present, set present: false and leave arrays empty.
+- For video items with videoAnalysis data, incorporate the analysis summary, keyPoints, mainTheme, and transcript insights into your analysis.
 
 Return only valid JSON.`
     }

@@ -4,6 +4,34 @@ import { useTheme } from './contexts/ThemeContext';
 import Header from './components/Header';
 import BottomMenu from './components/BottomMenu';
 
+/**
+ * Facebook Passport Strategy Configuration
+ * 
+ * Note: Passport is a server-side authentication middleware and cannot run in React components.
+ * The Facebook Passport strategy is configured in server.js (backend server file).
+ * 
+ * Backend Configuration (server.js):
+ * 
+ * const FacebookStrategy = require("passport-facebook").Strategy;
+ * // Or in ES modules: import { Strategy as FacebookStrategy } from 'passport-facebook';
+ * 
+ * passport.use(new FacebookStrategy({
+ *     clientID: process.env.VITE_FACEBOOK_APP_ID,
+ *     clientSecret: process.env.VITE_FACEBOOK_APP_SECRET,
+ *     callbackURL: "http://localhost:3000/auth/facebook/callback"
+ *   },
+ *   function(accessToken, refreshToken, profile, cb) {
+ *     User.findOrCreate({ facebookId: profile.id }, function (err, user) {
+ *       return cb(err, user);
+ *     });
+ *   }
+ * ));
+ * 
+ * See server.js for the complete implementation.
+ * 
+ * The frontend (this App.tsx) communicates with the backend server for Facebook authentication.
+ */
+
 // Lazy load components for code splitting
 const NewChat = lazy(() => import('./components/NewChat'));
 const Chat = lazy(() => import('./components/Chat'));
@@ -18,6 +46,7 @@ const Settings = lazy(() => import('./components/Settings'));
 const UserOnboarding = lazy(() => import('./components/UserOnboarding'));
 const GYBTeamChat = lazy(() => import('./components/GYBTeamChat'));
 const Analytics = lazy(() => import('./components/Analytics'));
+const YouTubeTokenGenerator = lazy(() => import('./components/YouTubeTokenGenerator'));
 const Upload = lazy(() => import('./components/Upload'));
 const GYBMedia = lazy(() => import('./components/NewPost'));
 const GYBStudio = lazy(() => import('./components/GYBStudio'));
@@ -285,6 +314,11 @@ const App: React.FC = () => {
                   <Analytics />
                 </Suspense>
               </ProtectedRoute>
+            } />
+            <Route path="/youtube-token-generator" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <YouTubeTokenGenerator />
+              </Suspense>
             } />
             <Route path="/upload" element={
               <ProtectedRoute>

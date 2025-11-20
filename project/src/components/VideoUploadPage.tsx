@@ -3,9 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Video, Upload } from 'lucide-react';
 import { openaiService } from '../services/openaiService';
 import { testOpenAIVideoConnection } from '../utils/testOpenAI';
+import { useAuth } from '../contexts/AuthContext';
+import { uploadMedia } from '../api/services/media.service';
+import { saveUserContent } from '../services/userContent.service';
+import { ContentItem } from '../types/content';
 
 const VideoUploadPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -127,13 +132,27 @@ const VideoUploadPage: React.FC = () => {
       const isLongVideo = analysisResult.duration > 120; // 2 minutes or longer
       const shouldAutoConvert = isLongVideo && analysisResult.suggestedShorts && analysisResult.suggestedShorts.length > 0;
       
-      // Store analysis result in sessionStorage for the summary page
-      console.log('💾 Storing analysis result in sessionStorage:', analysisResult);
+      // Clear old analysis data first to ensure fresh data
+      console.log('🧹 Clearing old video analysis data from sessionStorage...');
+      sessionStorage.removeItem('videoAnalysis');
+      sessionStorage.removeItem('uploadedVideoName');
+      sessionStorage.removeItem('uploadedVideoSize');
+      sessionStorage.removeItem('uploadedVideoType');
+      sessionStorage.removeItem('processingTimestamp');
+      sessionStorage.removeItem('isLongVideo');
+      sessionStorage.removeItem('shouldAutoConvert');
+      sessionStorage.removeItem('autoConvertShorts');
+      sessionStorage.removeItem('conversionTriggered');
+      
+      // Store new analysis result in sessionStorage for the summary page
+      const timestamp = new Date().toISOString();
+      console.log('💾 Storing new analysis result in sessionStorage:', analysisResult);
       sessionStorage.setItem('videoAnalysis', JSON.stringify(analysisResult));
       sessionStorage.setItem('uploadedVideoName', videoFile.name);
       sessionStorage.setItem('uploadedVideoSize', videoFile.size.toString());
       sessionStorage.setItem('uploadedVideoType', videoFile.type);
-      sessionStorage.setItem('processingTimestamp', new Date().toISOString());
+      sessionStorage.setItem('processingTimestamp', timestamp);
+      sessionStorage.setItem('analysisTimestamp', timestamp); // Add timestamp to detect new analysis
       sessionStorage.setItem('isLongVideo', isLongVideo.toString());
       sessionStorage.setItem('shouldAutoConvert', shouldAutoConvert.toString());
       
@@ -149,6 +168,63 @@ const VideoUploadPage: React.FC = () => {
         sessionStorage.setItem('conversionTriggered', 'true');
       }
 
+      // Upload video file to Firebase Storage and save as ContentItem
+      if (user?.uid) {
+        try {
+          console.log('📤 Uploading video file to Firebase Storage...');
+          
+          // Upload video file to Firebase Storage
+          const uploadResult = await uploadMedia(
+            videoFile,
+            user.uid,
+            ['youtube', 'instagram', 'tiktok'], // Default platforms for video
+            []
+          );
+          
+          console.log('✅ Video uploaded to Firebase Storage:', uploadResult);
+          
+          // Create ContentItem with analysis data included
+          const videoContentItem: ContentItem = {
+            id: uploadResult.id,
+            title: videoFile.name.replace(/\.[^/.]+$/, '') || 'Uploaded Video',
+            description: `${analysisResult.summary}\n\nKey Points:\n${analysisResult.keyPoints.map((point, idx) => `${idx + 1}. ${point}`).join('\n')}${analysisResult.transcript ? `\n\nTranscript:\n${analysisResult.transcript.substring(0, 500)}...` : ''}`,
+            type: 'video',
+            status: 'completed',
+            createdAt: new Date().toISOString(),
+            originalUrl: uploadResult.url,
+            thumbnail: uploadResult.url,
+            platforms: ['youtube', 'instagram', 'tiktok'],
+            generatedAssets: [
+              {
+                id: `${uploadResult.id}-analysis`,
+                type: 'analysis',
+                status: 'completed',
+                content: JSON.stringify({
+                  summary: analysisResult.summary,
+                  keyPoints: analysisResult.keyPoints,
+                  transcript: analysisResult.transcript,
+                  duration: analysisResult.duration,
+                  mainTheme: analysisResult.mainTheme,
+                  suggestedShorts: analysisResult.suggestedShorts
+                })
+              }
+            ]
+          };
+          
+          // Save ContentItem to database
+          console.log('💾 Saving video ContentItem to database...');
+          await saveUserContent(user.uid, videoContentItem);
+          console.log('✅ Video ContentItem saved to database successfully');
+          
+        } catch (uploadError) {
+          console.error('❌ Error uploading video or saving to database:', uploadError);
+          // Don't block navigation if upload fails, but log the error
+          setProcessingError('Video analysis completed, but there was an error saving the video to your library. The analysis is still available on the summary page.');
+        }
+      } else {
+        console.warn('⚠️ User not authenticated, skipping video upload to database');
+      }
+
       // Navigate to summary page to show analysis results
       console.log('🧭 Navigating to summary page...');
       navigate('/summary');
@@ -156,9 +232,16 @@ const VideoUploadPage: React.FC = () => {
       console.error('Error processing video:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       
-      // Check if it's an API key issue
+      // Check for specific error types and provide helpful messages
       if (errorMessage.includes('API key is invalid') || errorMessage.includes('401')) {
         setProcessingError('OpenAI API key is invalid or expired. Please check your API configuration in the .env file.');
+      } else if (errorMessage.includes('too large') || errorMessage.includes('413') || errorMessage.includes('25MB')) {
+        setProcessingError(
+          `Video file is too large. ${errorMessage.includes('25MB') ? errorMessage : 'Whisper API has a 25MB file size limit. '} ` +
+          'Please compress your video using tools like CloudConvert, HandBrake, or online video compressors before uploading.'
+        );
+      } else if (errorMessage.includes('Rate limit') || errorMessage.includes('429')) {
+        setProcessingError('OpenAI API rate limit exceeded. Please wait a few moments and try again.');
       } else {
         setProcessingError(`Video analysis failed: ${errorMessage}`);
       }

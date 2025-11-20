@@ -1,5 +1,6 @@
-import React, { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useRef, useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import YouTubeDemographics from './analytics/YouTubeDemographics';
 
 const ChrisAIBusinessCoach: React.FC = () => {
   const platformSectionRef = useRef<HTMLDivElement>(null);
@@ -8,6 +9,11 @@ const ChrisAIBusinessCoach: React.FC = () => {
   const [videoLink, setVideoLink] = useState<string>('');
   const [videoMetrics, setVideoMetrics] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [facebookConnected, setFacebookConnected] = useState<boolean>(false);
+  const [facebookUser, setFacebookUser] = useState<{ id: string; name: string; email?: string; photo?: string } | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showDeepDive, setShowDeepDive] = useState<boolean>(false);
+  const [videoId, setVideoId] = useState<string | null>(null);
 
   const handleGetStarted = () => {
     // Smooth scroll to platform selection section
@@ -15,6 +21,76 @@ const ChrisAIBusinessCoach: React.FC = () => {
       behavior: 'smooth',
       block: 'start'
     });
+  };
+
+  // Check for Facebook connection callback
+  useEffect(() => {
+    const connected = searchParams.get('facebook_connected');
+    const userId = searchParams.get('user_id');
+    const userName = searchParams.get('user_name');
+    
+    if (connected === 'true' && userId) {
+      setFacebookConnected(true);
+      setFacebookUser({
+        id: userId,
+        name: userName || 'Facebook User',
+        email: searchParams.get('user_email') || undefined,
+        photo: searchParams.get('user_photo') || undefined
+      });
+      
+      // Clear URL parameters
+      setSearchParams({});
+      
+      // Show success message
+      alert('Successfully connected to Facebook!');
+    }
+    
+    // Check existing connection status
+    checkFacebookStatus();
+  }, [searchParams, setSearchParams]);
+
+  const checkFacebookStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/facebook/status', {
+        credentials: 'include',
+        // Add timeout to prevent hanging
+        signal: AbortSignal.timeout(5000)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.connected) {
+          setFacebookConnected(true);
+          setFacebookUser(data.user);
+        }
+      }
+    } catch (error: any) {
+      // Only log if it's not a connection refused error (server not running)
+      if (error.name !== 'AbortError' && !error.message?.includes('Failed to fetch')) {
+        console.error('Error checking Facebook status:', error);
+      }
+      // Silently fail if server is not running - this is expected in development
+    }
+  };
+
+  const handleConnectFacebook = () => {
+    // Redirect to backend Facebook authentication endpoint
+    window.location.href = 'http://localhost:3000/auth/facebook';
+  };
+
+  const handleDisconnectFacebook = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/facebook/logout', {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        setFacebookConnected(false);
+        setFacebookUser(null);
+        alert('Disconnected from Facebook');
+      }
+    } catch (error) {
+      console.error('Error disconnecting Facebook:', error);
+      alert('Error disconnecting from Facebook');
+    }
   };
 
   const handlePlatformSelect = (platform: string) => {
@@ -32,17 +108,20 @@ const ChrisAIBusinessCoach: React.FC = () => {
     setIsLoading(true);
     try {
       // Extract video ID from YouTube URL
-      const videoId = extractVideoId(videoLink);
-      if (!videoId) {
+      const extractedVideoId = extractVideoId(videoLink);
+      if (!extractedVideoId) {
         alert('Please enter a valid YouTube video URL');
         setIsLoading(false);
         return;
       }
+      
+      // Store video ID for demographics
+      setVideoId(extractedVideoId);
 
       // Call YouTube Data API v3
       const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY || 'YOUR_YOUTUBE_API_KEY'; // Replace with your actual API key
       const response = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoId}&key=${apiKey}`
+        `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${extractedVideoId}&key=${apiKey}`
       );
       
       if (response.ok) {
@@ -287,6 +366,80 @@ const ChrisAIBusinessCoach: React.FC = () => {
             >
               Done
             </button>
+          </div>
+        </div>
+      );
+    }
+    
+    if (selectedPlatform === 'facebook') {
+      return (
+        <div className="w-full h-full bg-white rounded-lg flex flex-col items-center justify-center p-5">
+          <div className="w-full max-w-xs mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <img src="/facebook-logo.png" alt="Facebook" className="w-5 h-5 object-contain" />
+                <h3 className="text-base font-semibold" style={{ color: '#11335d' }}>Facebook Integration</h3>
+              </div>
+            </div>
+
+            {/* Account card */}
+            {facebookConnected && facebookUser ? (
+              <div className="rounded-xl border border-gray-200 bg-white p-3 mb-4">
+                <div className="flex items-start space-x-3">
+                  {facebookUser.photo ? (
+                    <img src={facebookUser.photo} alt={facebookUser.name} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <img src="/facebook-logo.png" alt="Facebook" className="w-10 h-10 object-contain" />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900">{facebookUser.name}</p>
+                    <p className="text-xs text-gray-500">Connected to Facebook</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-gray-200 bg-white p-3 mb-4">
+                <div className="flex items-start space-x-3">
+                  <img src="/facebook-logo.png" alt="Facebook" className="w-4 h-4 mt-0.5 object-contain" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Facebook Account</p>
+                    <p className="text-xs text-gray-500">Not connected to Facebook</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Connect/Disconnect button */}
+            {facebookConnected ? (
+              <button
+                className="w-full text-white font-semibold py-2 rounded-lg transition-colors duration-200"
+                style={{ backgroundColor: '#dc2626' }}
+                onClick={handleDisconnectFacebook}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#b91c1c';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#dc2626';
+                }}
+              >
+                Disconnect Facebook
+              </button>
+            ) : (
+              <button
+                className="w-full text-white font-semibold py-2 rounded-lg transition-colors duration-200"
+                style={{ backgroundColor: '#1877F2' }}
+                onClick={handleConnectFacebook}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#166FE5';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1877F2';
+                }}
+              >
+                Connect Facebook
+              </button>
+            )}
           </div>
         </div>
       );
@@ -631,14 +784,73 @@ const ChrisAIBusinessCoach: React.FC = () => {
 
             {/* Deep Dive Button */}
             <div className="mt-6 flex justify-center">
-              <Link
-                to="/analytics"
+              <button
+                onClick={() => {
+                  setShowDeepDive(true);
+                  // Scroll to demographics section
+                  setTimeout(() => {
+                    nextSectionRef.current?.scrollIntoView({ 
+                      behavior: 'smooth',
+                      block: 'start'
+                    });
+                  }, 100);
+                }}
                 className="text-white font-semibold py-2 px-6 rounded-lg shadow hover:shadow-md transition-all duration-200"
                 style={{ backgroundColor: '#11335d' }}
               >
                 Deep Dive
-              </Link>
+              </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deep Dive Demographics Section */}
+      {showDeepDive && videoId && videoMetrics && (
+        <div ref={nextSectionRef} className="min-h-screen bg-white flex items-center justify-center p-8">
+          <div className="max-w-6xl mx-auto w-full">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-3xl font-bold" style={{ color: '#11335d' }}>
+                Deep Dive Analytics
+              </h2>
+              <button
+                onClick={() => setShowDeepDive(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                aria-label="Close deep dive"
+              >
+                ×
+              </button>
+            </div>
+            
+            {/* Video Info Card */}
+            <div className="bg-white p-6 rounded-lg shadow mb-6 border-2" style={{ borderColor: '#e0c472' }}>
+              <div className="flex items-start gap-4">
+                {videoMetrics.thumbnail && (
+                  <img 
+                    src={videoMetrics.thumbnail} 
+                    alt={videoMetrics.title}
+                    className="w-48 h-36 object-cover rounded-lg"
+                  />
+                )}
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold mb-2" style={{ color: '#11335d' }}>
+                    {videoMetrics.title}
+                  </h3>
+                  <p className="text-gray-600 mb-2">{videoMetrics.channelTitle}</p>
+                  <div className="flex gap-4 text-sm text-gray-500">
+                    <span>👁️ {videoMetrics.views} views</span>
+                    <span>👍 {videoMetrics.likes} likes</span>
+                    <span>💬 {videoMetrics.comments} comments</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Demographics Component */}
+            <YouTubeDemographics 
+              videoId={videoId}
+              title="Subscriber Demographics"
+            />
           </div>
         </div>
       )}
