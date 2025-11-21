@@ -48,20 +48,21 @@ const Chat: React.FC = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [videoAvatar, setVideoAvatar] = useState(false);
-  const [typingParticipants, setTypingParticipants] = useState<Array<{ uid: string; displayName: string; type: 'user' | 'agent' }>>([]);
+  const [typingParticipants, setTypingParticipants] = useState<Array<{ uid: string; displayName: string; type: 'user' | 'agent'; isTyping?: boolean }>>([]);
   const showDiagnosticsBanner = import.meta.env.VITE_SHOW_DIAGNOSTIC_ERRORS === 'true';
   const { toasts, removeToast, showSuccess, showError } = useToast();
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const currentChat = chats.find((c) => c.id === chatId);
-  
+
   // Debug logging
   console.log('Chat component - selectedAgent:', selectedAgent);
   console.log('Chat component - currentChat:', currentChat);
-  const streamingState = currentChat ? streamingResponses[currentChat.id] : undefined;
-  const retryState = currentChat ? retryableChats[currentChat.id] : undefined;
+
+  const streamingState = currentChat ? streamingResponses?.[currentChat.id] : undefined;
+  const retryState = currentChat ? retryableChats?.[currentChat.id] : undefined;
 
   useEffect(() => {
     if (!showDiagnosticsBanner || !chatDiagnostics) return;
@@ -79,9 +80,7 @@ const Chat: React.FC = () => {
         if (chatData) {
           setEditedTitle(chatData.title);
           // Try to restore selectedAgent from chat messages
-          const lastAiMessage = chatData.messages?.find(
-            (m) => m.role === "assistant"
-          );
+          const lastAiMessage = chatData.messages?.find((m) => m.role === "assistant");
           if (lastAiMessage?.aiAgent) {
             setSelectedAgent(lastAiMessage.aiAgent);
           } else {
@@ -104,21 +103,18 @@ const Chat: React.FC = () => {
   // Restore selectedAgent from current chat messages when chat changes
   useEffect(() => {
     if (currentChat?.messages && currentChat.messages.length > 0) {
-      // Find the most recent assistant message with an aiAgent
       const aiMessages = currentChat.messages
         .filter((m) => m.role === "assistant" && m.aiAgent)
         .reverse();
-      
+
       if (aiMessages.length > 0 && aiMessages[0].aiAgent) {
-        // Restore selectedAgent from the chat
         if (selectedAgent !== aiMessages[0].aiAgent) {
           setSelectedAgent(aiMessages[0].aiAgent);
         }
       } else if (!selectedAgent) {
-        // Fallback to Chris if no agent found and selectedAgent is null
         setSelectedAgent('Chris');
       }
-      
+
       const lastMessage = currentChat.messages[currentChat.messages.length - 1];
       if (
         currentChat.messages.length > 1 &&
@@ -217,15 +213,15 @@ const Chat: React.FC = () => {
   ) => {
     console.log("handlesendmessage");
     console.log("image type is ", typeof content);
-    
+
     if (isProcessing || !chatId) return;
-    
+
     // Ensure selectedAgent is set (fallback to Chris if null)
     const activeAgent = selectedAgent || 'Chris';
     if (!selectedAgent) {
       setSelectedAgent(activeAgent);
     }
-    
+
     console.log("Setting isProcessing to true");
     setIsProcessing(true);
 
@@ -349,7 +345,7 @@ const Chat: React.FC = () => {
     console.log('Agent name type:', typeof agentName);
     console.log('Agent name length:', agentName?.length);
     console.log('AI_USERS object:', AI_USERS);
-    
+
     // Handle null/undefined agent names
     if (!agentName) {
       console.log('Agent name is null/undefined, using Mr.GYB AI image');
@@ -358,7 +354,7 @@ const Chat: React.FC = () => {
       url.searchParams.set('t', Date.now().toString());
       return url.toString();
     }
-    
+
     // First check if it's Mr.GYB AI with any variation
     const mrGybVariations = ["Mr.GYB AI", "mr.gyb ai", "mr gyb ai", "mrgyb ai"];
     if (mrGybVariations.includes(agentName)) {
@@ -368,7 +364,7 @@ const Chat: React.FC = () => {
       console.log('Using specific Mr.GYB AI URL:', url.toString());
       return url.toString();
     }
-    
+
     // Additional check for any variation containing "GYB" or "Mr"
     const lowerAgentName = agentName.toLowerCase();
     if (lowerAgentName.includes('gyb') || lowerAgentName.includes('mr')) {
@@ -378,17 +374,17 @@ const Chat: React.FC = () => {
       url.searchParams.set('t', Date.now().toString());
       return url.toString();
     }
-    
+
     let agentNewName = agentName.toLowerCase().trim();
-    
+
     // Handle various forms of Mr.GYB AI name
     if (agentNewName === "mr.gyb ai" || agentNewName === "mr gyb ai" || agentNewName === "mrgyb ai") {
       agentNewName = "mr-gyb-ai";
     }
-    
+
     console.log('Looking for AI user with id:', agentNewName);
     console.log('Available AI users:', Object.keys(AI_USERS));
-    
+
     const aiUser = Object.values(AI_USERS).find((ai) => ai.id === agentNewName);
     if (aiUser) {
       console.log('AI User found:', aiUser.name, 'Image URL:', aiUser.profile_image_url);
@@ -411,7 +407,7 @@ const Chat: React.FC = () => {
         }
       }
     }
-    
+
     console.log('AI User not found for:', agentName, 'fallback to Mr.GYB AI image');
     // Fallback to Mr.GYB AI image instead of generic logo
     const mrGybUrl = "https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58";
@@ -472,7 +468,7 @@ const Chat: React.FC = () => {
           // Not JSON, continue with normal rendering
         }
       }
-      
+
       if (message.fileType && message.fileName) {
         return (
           <div className="space-y-2">
@@ -704,7 +700,7 @@ const Chat: React.FC = () => {
                   </div>
                 </div>
               )}
-              
+
               {typingParticipants
                 .filter((typist) => typist.uid !== user?.uid)
                 .map((typist) => (
@@ -756,7 +752,7 @@ const Chat: React.FC = () => {
                   </div>
                 </div>
               )}
-              
+
               <div ref={messagesEndRef} />
             </div>
           </div>

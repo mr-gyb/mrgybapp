@@ -86,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               rating: 4.5,
               following: 0,
               followers: 0,
-              profile_image_url: getInitials(currentUser.displayName),
+              profile_image_url: currentUser.displayName ? currentUser.displayName.split(' ').map(n => n[0]).join('').toUpperCase() : 'U',
               cover_image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
@@ -95,10 +95,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await setDoc(userDocRef, defaultProfile);
             setUserData(defaultProfile);
           }
-        } catch (error: any) {
-          console.error('Error fetching user data:', error);
-          
-          // Check if it's an offline error
+          } catch (error: any) {
+            console.error('Error fetching user data:', error);
+            
+            // Check if it's an offline error
           if (error.code === 'unavailable' || error.message?.includes('offline')) {
             console.warn('Firebase is offline, user data will be loaded when connection is restored');
             // Don't logout on offline errors, just set loading to false

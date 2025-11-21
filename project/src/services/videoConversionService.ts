@@ -469,3 +469,5 @@ Respond with the complete script only.`;
 
 export const videoConversionService = new VideoConversionService();
 
+// Re-export types for convenience
+export type { ShortVideoSegment, VideoConversionResult, ConversionOptions };

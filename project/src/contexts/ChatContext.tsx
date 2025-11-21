@@ -864,7 +864,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     streamingResponses,
     retryableChats,
     retryLastPrompt,
-    quotaError,
+    quotaError
   };
 
   return (

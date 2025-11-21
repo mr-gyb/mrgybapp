@@ -20,7 +20,6 @@ Add your OpenAI API key to your `.env` file:
 # OpenAI API Configuration
 VITE_OPENAI_API_KEY=your_openai_api_key_here
 ```
-
 ### 1a. Chat Assistant Proxy (Mr.GYB AI)
 
 The chat experience now calls a server-side proxy before reaching OpenAI. Update both frontend and backend environment files:
@@ -54,18 +53,17 @@ On success you should see:
 
 ```json
 {
-  "success": true,
-  "data": {
-    "pong": "pong",
-    "latencyMs": 420,
-    "model": "gpt-4o-mini",
-    "requestId": "..."
-  }
+   "success": true,
+   "data": {
+      "pong": "pong",
+      "latencyMs": 420,
+      "model": "gpt-4o-mini",
+      "requestId": "..."
+   }
 }
 ```
 
 Failures include `{ code, status, source, detail, requestId }` so you can diagnose misconfiguration quickly.
-
 ### 2. Get OpenAI API Key
 
 1. Visit [OpenAI Platform](https://platform.openai.com/)

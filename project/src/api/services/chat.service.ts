@@ -509,7 +509,6 @@ export const generateAIResponse = async (
     // TODO: Add local agent support for image/file handling
     const assistantId = getAssistantId(aiAgent);
 
-
     // Handle messages with file content
     if (typeof lastMessage.content === 'object' && Array.isArray(lastMessage.content)) {
       // For image files, use GPT-4 Vision
@@ -842,13 +841,13 @@ export const generateAIResponse2 = async (
   // Use fallback for non-existent assistants
   if (assistantId === 'fallback') {
     // Use regular chat completions as fallback
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: getSystemPrompt(aiAgent),
-          },
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: getSystemPrompt(aiAgent),
+        },
           {
             role: 'user',
             content: content2,
