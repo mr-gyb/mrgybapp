@@ -6,6 +6,7 @@ import { toggleLike, watchComments, addComment, repostPost, sharePost, deletePos
 import { Post, Comment } from '../../types/community';
 import { useRelativeTime } from '../../hooks/useRelativeTime';
 import { formatContentWithLinks } from '../../utils/formatContent';
+import CommunityAvatar from './CommunityAvatar';
 
 interface PostCardProps {
   post: Post;
@@ -167,7 +168,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUserId }) => {
         {
           uid: authUser.uid,
           displayName: authUser.displayName || authUser.email || 'Anonymous',
-          photoURL: authUser.photoURL || undefined
+          photoURL: authUser.photoURL || undefined,
+          email: authUser.email
         }
       );
       setNewCommentText('');
@@ -218,19 +220,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUserId }) => {
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
           {/* Avatar */}
-          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
-            {post.authorPhotoURL ? (
-              <img 
-                src={post.authorPhotoURL} 
-                alt={post.authorName} 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-white font-semibold text-sm">
-                {post.authorName.charAt(0).toUpperCase()}
-              </span>
-            )}
-          </div>
+          <CommunityAvatar
+            name={post.authorName}
+            email={post.authorEmail}
+            photoURL={post.authorPhotoURL}
+            size={40}
+            className="flex-shrink-0"
+          />
 
           {/* Author Info */}
           <div className="flex-1 min-w-0">
@@ -388,19 +384,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUserId }) => {
             <div className="space-y-3 mb-3">
               {displayedComments.map((comment) => (
                 <div key={comment.id} className="flex gap-2">
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
-                    {comment.authorPhotoURL ? (
-                      <img
-                        src={comment.authorPhotoURL}
-                        alt={comment.authorName}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-white font-semibold text-xs">
-                        {comment.authorName.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
+                  <CommunityAvatar
+                    name={comment.authorName}
+                    email={comment.authorEmail}
+                    photoURL={comment.authorPhotoURL}
+                    size={32}
+                    className="flex-shrink-0"
+                  />
                   <div className="flex-1">
                     <p className="text-xs font-medium text-gray-900 dark:text-white">
                       {comment.authorName}

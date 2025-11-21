@@ -149,7 +149,13 @@ export class FacebookIntegrationService {
         throw new Error('Insufficient permissions to post to Facebook');
       }
 
-      const postParams: any = {
+      interface PostParams {
+        message: string;
+        access_token: string;
+        link?: string;
+      }
+
+      const postParams: PostParams = {
         message: postData.message,
         access_token: account.accessToken
       };
@@ -227,16 +233,21 @@ export class FacebookIntegrationService {
         }
       });
 
-      const permissions = response.data.data || [];
-      const canPost = permissions.some((perm: any) => 
+      interface Permission {
+        permission: string;
+        status: string;
+      }
+
+      const permissions: Permission[] = response.data.data || [];
+      const canPost = permissions.some((perm: Permission) => 
         perm.permission === 'publish_actions' && perm.status === 'granted'
-      ) || permissions.some((perm: any) => 
+      ) || permissions.some((perm: Permission) => 
         perm.permission === 'publish_pages' && perm.status === 'granted'
       );
 
       return {
         canPost,
-        permissions: permissions.map((perm: any) => perm.permission)
+        permissions: permissions.map((perm: Permission) => perm.permission)
       };
     } catch (error) {
       console.error('Error checking permissions:', error);

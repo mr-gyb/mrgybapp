@@ -1,12 +1,10 @@
 import OpenAI from 'openai';
 import { OpenAIMessage } from '../../types/chat';
-import FormData from 'form-data';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import {getFileType} from '../../utils/fileHandling'
 import { ChatCompletionContentPart  } from "openai/resources/chat/completions";
 import { MessageContentPartParam } from "openai/resources/beta/threads/messages";
 import { collection, doc, setDoc } from 'firebase/firestore';
-import { db, storage } from "../../lib/firebase";
+import { db } from "../../lib/firebase";
 
 
 

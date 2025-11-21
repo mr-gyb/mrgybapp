@@ -468,7 +468,7 @@ const GYBTeamChat: React.FC = () => {
         // if user tries to discuss with one of the aiagents
         if (trimmed.startsWith("@")) {
           setIsProcessing(true);
-          const validAgents = ["mr.gyb", "chris", "sherry", "charlotte", "jake", "rachel"];
+          const validAgents = ["mr.gyb", "chris", "charlotte", "alex", "devin", "jake"];
           const parts = trimmed.trim().split(" ");
           const aiAgent = parts[0].substring(1).toLowerCase(); // removing @ with aiagnetName
           const question = parts.slice(1).join(" ");
@@ -517,41 +517,44 @@ const GYBTeamChat: React.FC = () => {
             });
             let upperaiAgent = "";
             if (aiAgent === "mr.gyb") {
-              upperaiAgent = "Mr.GYB AI";
+              upperaiAgent = "MR.GYB AI";
             } else {
               if (aiAgent === "chris"){
                 upperaiAgent = "Chris"
               }
-              if (aiAgent === "sherry"){
-                upperaiAgent = "Sherry"
-              }
               if (aiAgent === "charlotte"){
                 upperaiAgent = "Charlotte"
+              }
+              if (aiAgent === "alex"){
+                upperaiAgent = "Alex"
+              }
+              if (aiAgent === "devin"){
+                upperaiAgent = "Devin"
               }
               if (aiAgent === "jake"){
                 upperaiAgent = "Jake"
               }
-              if (aiAgent === "rachel"){
-                upperaiAgent = "Rachel"
-              }
             }
             // 3.generate AI response
-            const aiResponse = await generateAIResponse(
+            const aiResult = await generateAIResponse(
               [...chatHistory, { content: question }],
               upperaiAgent
             );
+            const aiResponse = aiResult.content;
 
             // 4. Stores the response to the firebase
-            await addDoc(
-              collection(db, `dream_team_chat/${selectedChat}/messages`),
-              {
-                content: aiResponse,
-                senderId: "ai",
-                senderType: "assistant",
-                aiAgent: upperaiAgent,
-                timestamp: new Date().toISOString(),
-              }
-            );
+            if (aiResponse) {
+              await addDoc(
+                collection(db, `dream_team_chat/${selectedChat}/messages`),
+                {
+                  content: aiResponse,
+                  senderId: "ai",
+                  senderType: "assistant",
+                  aiAgent: upperaiAgent,
+                  timestamp: new Date().toISOString(),
+                }
+              );
+            }
             setIsProcessing(false);
             setIsProcessingAiAgent("");
             setMessage(""); //reset the text input area
@@ -1416,15 +1419,7 @@ const GYBTeamChat: React.FC = () => {
               <span className="text-xl">•</span>
               <span className="text-m font-medium text-black">Chris</span>
               <p className="text-sm text-gray-600">
-                Strategic Planning Assistant
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xl">•</span>
-              <span className="text-m font-medium text-black">Jake</span>
-              <p className="text-sm text-gray-600">
-                Technology Strategy Assistant
+                Strategic Planning Assistant (CEO)
               </p>
             </div>
 
@@ -1432,28 +1427,36 @@ const GYBTeamChat: React.FC = () => {
               <span className="text-xl">•</span>
               <span className="text-m font-medium text-black">Charlotte</span>
               <p className="text-sm text-gray-600">
-                Human Resources Management Assistant
+                Human Resources Management Assistant (CHRO)
               </p>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
-              <span className="text-m font-medium text-black">Rachel</span>
+              <span className="text-m font-medium text-black">Alex</span>
               <p className="text-sm text-gray-600">
-                Marketing Strategy Assistant
+                Business Strategy Assistant
               </p>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-xl">•</span>
-              <span className="text-m font-medium text-black">Sherry</span>
+              <span className="text-m font-medium text-black">Devin</span>
               <p className="text-sm text-gray-600">
-                Operations Management Assistant
+                Technology Development Assistant
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xl">•</span>
+              <span className="text-m font-medium text-black">Jake</span>
+              <p className="text-sm text-gray-600">
+                Technology Strategy Assistant (Tech Expert)
               </p>
             </div>
 
             <p className="text-sm text-gray-600 mb-4 mt-2">
-              ex. @Jake How can I grow my business?
+              ex. @Chris How can I grow my business?
             </p>
             <h3 className="text-md font-semibold mb-2">3. Leave the room</h3>
             <p className="mb-2">

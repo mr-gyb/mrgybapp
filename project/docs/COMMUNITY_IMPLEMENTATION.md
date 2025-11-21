@@ -263,3 +263,5 @@ match /posts/{postId} {
 - Hover effects: 1-2px lift on post cards
 - Transitions: 200ms duration for smooth interactions
 
+
+

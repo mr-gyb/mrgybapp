@@ -21,6 +21,51 @@ Add your OpenAI API key to your `.env` file:
 VITE_OPENAI_API_KEY=your_openai_api_key_here
 ```
 
+### 1a. Chat Assistant Proxy (Mr.GYB AI)
+
+The chat experience now calls a server-side proxy before reaching OpenAI. Update both frontend and backend environment files:
+
+```env
+# Frontend (.env)
+VITE_CHAT_API_BASE=http://localhost:8080
+VITE_SHOW_DIAGNOSTIC_ERRORS=false     # set to true in dev to surface exact failures
+VITE_CHAT_REQUEST_TIMEOUT_MS=25000
+
+# Backend (.env)
+OPENAI_API_KEY=sk-your-key
+OPENAI_MODEL_NAME=gpt-4o-mini         # or any enabled Chat Completions model
+OPENAI_CHAT_TIMEOUT_MS=25000          # optional override
+OPENAI_MAX_RETRIES=3                  # optional override
+OPENAI_RETRY_DELAY_MS=800             # optional override
+PROD_ORIGIN=https://app.yourdomain.com
+```
+
+With diagnostics enabled (`VITE_SHOW_DIAGNOSTIC_ERRORS=true`), the UI shows short failure reasons (rate limits, auth, etc.) and logs the proxy `requestId` in the browser console for easier tracing alongside server logs.
+
+### 1b. Chat Health Check
+
+The backend exposes `GET /api/chat/health`, which issues a 1-token “ping → pong” request against the configured model and reports latency, status code, and `requestId`. Use this to validate new model names, credentials, or connectivity before enabling the chat UI:
+
+```bash
+curl http://localhost:8080/api/chat/health | jq
+```
+
+On success you should see:
+
+```json
+{
+  "success": true,
+  "data": {
+    "pong": "pong",
+    "latencyMs": 420,
+    "model": "gpt-4o-mini",
+    "requestId": "..."
+  }
+}
+```
+
+Failures include `{ code, status, source, detail, requestId }` so you can diagnose misconfiguration quickly.
+
 ### 2. Get OpenAI API Key
 
 1. Visit [OpenAI Platform](https://platform.openai.com/)

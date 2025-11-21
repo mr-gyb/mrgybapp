@@ -320,6 +320,8 @@ const UserOnboarding: React.FC = () => {
             <h2 className="text-2xl font-bold mb-4">What's your name?</h2>
             <div className="space-y-4">
               <input
+                id="firstName"
+                name="firstName"
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
@@ -327,6 +329,8 @@ const UserOnboarding: React.FC = () => {
                 className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
               />
               <input
+                id="lastName"
+                name="lastName"
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
@@ -334,6 +338,8 @@ const UserOnboarding: React.FC = () => {
                 className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
               />
               <input
+                id="businessName"
+                name="businessName"
                 data-testid="onboard-businessName"
                 type="text"
                 value={businessName}
@@ -342,6 +348,8 @@ const UserOnboarding: React.FC = () => {
                 className="w-full bg-white border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-navy-blue dark:text-black"
               />
               <select
+                id="industry"
+                name="industry"
                 data-testid="onboard-industry"
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}

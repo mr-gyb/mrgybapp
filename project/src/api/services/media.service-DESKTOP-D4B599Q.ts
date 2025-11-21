@@ -1,5 +1,4 @@
 import axiosInstance from '../axios';
-import { v4 as uuidv4 } from 'uuid';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, doc, updateDoc, getDocs, getDoc } from 'firebase/firestore';
 import { storage, db } from '../../lib/firebase';
@@ -384,7 +383,7 @@ const generateContentDerivatives = async (
 
     // Content type specific derivatives
     switch (contentType) {
-      case ContentType.IMAGE:
+      case ContentType.IMAGE: {
         const imageDerivative = await addDoc(collection(db, 'media_derivatives'), {
           mediaId,
           derivativeType: 'image_analysis',
@@ -396,8 +395,9 @@ const generateContentDerivatives = async (
         derivatives.push(imageDerivative);
         console.log('📝 Generated image-specific derivative');
         break;
+      }
 
-      case ContentType.VIDEO:
+      case ContentType.VIDEO: {
         const videoDerivative = await addDoc(collection(db, 'media_derivatives'), {
           mediaId,
           derivativeType: 'video_analysis',
@@ -409,8 +409,9 @@ const generateContentDerivatives = async (
         derivatives.push(videoDerivative);
         console.log('📝 Generated video-specific derivative');
         break;
+      }
 
-      case ContentType.AUDIO:
+      case ContentType.AUDIO: {
         const audioDerivative = await addDoc(collection(db, 'media_derivatives'), {
           mediaId,
           derivativeType: 'audio_analysis',
@@ -422,8 +423,9 @@ const generateContentDerivatives = async (
         derivatives.push(audioDerivative);
         console.log('📝 Generated audio-specific derivative');
         break;
+      }
 
-      case ContentType.LINK:
+      case ContentType.LINK: {
         const linkDerivative = await addDoc(collection(db, 'media_derivatives'), {
           mediaId,
           derivativeType: 'link_analysis',
@@ -435,6 +437,7 @@ const generateContentDerivatives = async (
         derivatives.push(linkDerivative);
         console.log('📝 Generated link-specific derivative');
         break;
+      }
     }
 
   } catch (error) {

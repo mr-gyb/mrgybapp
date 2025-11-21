@@ -5,6 +5,7 @@ import { createPost } from '../../services/posts';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
 import { ImageIcon, Loader2 } from 'lucide-react';
+import CommunityAvatar from './CommunityAvatar';
 
 interface PostComposerProps {
   onPostCreated?: () => void;
@@ -18,6 +19,7 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isPosting, setIsPosting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [audience, setAudience] = useState<'anyone' | 'friends'>('anyone');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -117,12 +119,13 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
         {
           text: trimmedText,
           imageURL: mediaUrl,
-          visibility: 'anyone'
+          audience,
         },
         {
           uid: user.uid,
           displayName: authorName,
-          photoURL: authorPhotoURL
+          photoURL: authorPhotoURL,
+          email: user.email,
         }
       );
 
@@ -130,6 +133,7 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
       setText('');
       setImageFile(null);
       setImagePreview(null);
+      setAudience('anyone');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -151,19 +155,13 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
       <div className="flex gap-3">
         {/* Avatar */}
-        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
-          {userData?.profile_image_url ? (
-            <img 
-              src={userData.profile_image_url} 
-              alt={userData.name || 'User'} 
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <span className="text-white font-semibold text-sm">
-              {user.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
-            </span>
-          )}
-        </div>
+        <CommunityAvatar
+          name={user.displayName || userData?.name || null}
+          email={user.email}
+          photoURL={userData?.profile_image_url || user.photoURL}
+          size={40}
+          className="flex-shrink-0"
+        />
 
         {/* Composer Content */}
         <div className="flex-1 flex flex-col">
@@ -223,21 +221,37 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
               </button>
             </div>
 
-            {/* Post Button - Right aligned */}
-            <button
-              onClick={handlePost}
-              disabled={!canPost}
-              className="px-6 py-2 bg-blue-500 text-white font-semibold rounded-full hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              {isPosting || isUploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Posting...</span>
-                </>
-              ) : (
-                'Post'
-              )}
-            </button>
+            <div className="flex items-center gap-3">
+              <label htmlFor="post-audience" className="sr-only">
+                Post audience
+              </label>
+              <select
+                id="post-audience"
+                value={audience}
+                onChange={event => setAudience(event.target.value as 'anyone' | 'friends')}
+                disabled={isPosting || isUploading}
+                className="text-sm border border-gray-200 dark:border-gray-600 rounded-full px-3 py-1.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="anyone">Post to Anyone</option>
+                <option value="friends">Post to Friends</option>
+              </select>
+
+              {/* Post Button - Right aligned */}
+              <button
+                onClick={handlePost}
+                disabled={!canPost}
+                className="px-6 py-2 bg-blue-500 text-white font-semibold rounded-full hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                {isPosting || isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Posting...</span>
+                  </>
+                ) : (
+                  'Post'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

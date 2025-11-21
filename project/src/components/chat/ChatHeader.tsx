@@ -35,7 +35,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
     }
   }, [isEditing]);
 
-  const agents = ['Mr.GYB AI', 'Chris', 'Sherry', 'Charlotte', 'Jake', 'Rachel'];
+  // Dream Team agents - matches the actual team members in DreamTeam component
+  const agents = ['MR.GYB AI', 'Chris', 'Charlotte', 'Alex', 'Devin', 'Jake'];
 
   const handleAgentChange = (newAgent: string) => {
     setSelectedAgent(newAgent);

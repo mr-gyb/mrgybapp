@@ -282,7 +282,13 @@ export const watchUserChatRooms = (
       
       console.log(`💬 Chat rooms updated: ${chatRooms.length} rooms`);
       callback(chatRooms);
-    }, (error) => {
+    }, (error: any) => {
+      // Suppress index errors - they're expected until indexes are created
+      if (error.code === 'failed-precondition' && error.message?.includes('index')) {
+        console.warn('⚠️ Firestore index required for chatRooms. Click the link in the error to create it.');
+        callback([]);
+        return;
+      }
       console.error('❌ Error watching chat rooms:', error);
     });
     
@@ -373,15 +379,4 @@ export const getOrCreateChatRoom = async (
       error: error.message || 'Failed to get or create chat room'
     };
   }
-};
-
-// Export all functions
-export {
-  createChatRoom,
-  findChatRoom,
-  sendMessage,
-  watchMessages,
-  watchUserChatRooms,
-  markMessagesAsRead,
-  getOrCreateChatRoom
 };

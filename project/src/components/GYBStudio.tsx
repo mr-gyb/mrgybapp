@@ -7,6 +7,7 @@ import ContentSuggestions from './content/ContentSuggestions';
 import ContentCategorySelector from './content/ContentCategorySelector';
 import CategorySpecificUploader from './content/CategorySpecificUploader';
 import CreationInspirationsLazyWrapper from './content/CreationInspirationsLazyWrapper';
+import ContentInspiration from './content/ContentInspiration';
 import youtubeIcon from './images/y.png';
 import instagramIcon from './images/Instagram_icon.png.webp';
 import facebookIcon from './images/Facebook.png';
@@ -126,6 +127,7 @@ const GYBStudio: React.FC = () => {
   const [viewingContent, setViewingContent] = useState<ContentItem | null>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [isLoadingView, setIsLoadingView] = useState(false);
+  const [showContentInspiration, setShowContentInspiration] = useState(false);
   // YouTube view count state
   const [youtubeVideoViews, setYouTubeVideoViews] = useState<number>(0);
   const [youtubeChannelId, setYouTubeChannelId] = useState<string>('');
@@ -1756,6 +1758,47 @@ const GYBStudio: React.FC = () => {
           onSuggestionsGenerated={handleSuggestionsGenerated}
         />
 
+        {/* Analyze Section */}
+        <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold">Analyze</h2>
+          </div>
+          
+          {/* Past Uploads Section */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-navy-blue">Past Uploads</h3>
+              <button
+                onClick={() => setShowContentInspiration(!showContentInspiration)}
+                className="text-sm text-navy-blue hover:text-blue-800 flex items-center"
+              >
+                {showContentInspiration ? 'Hide' : 'Show'} Content Inspiration
+              </button>
+            </div>
+            
+            {/* Content Inspiration Panel */}
+            {showContentInspiration && (
+              <div className="mb-6">
+                <ContentInspiration 
+                  userContent={userContent}
+                  onClose={() => setShowContentInspiration(false)}
+                />
+              </div>
+            )}
+            
+            {/* Content List */}
+            <ContentList 
+              items={userContent}
+              onItemClick={handleContentClick}
+              showDefaults={true}
+              onUploadClick={handleUploadClick}
+              onDelete={handleContentDelete}
+              onView={handleViewContent}
+              onDeleteAll={handleDeleteAllContent}
+            />
+          </div>
+        </div>
+
         {/* Content History */}
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-4">
@@ -1781,15 +1824,6 @@ const GYBStudio: React.FC = () => {
               Upload content to begin tracking performance.
             </div>
           )}
-          <ContentList 
-            items={userContent}
-            onItemClick={handleContentClick}
-            showDefaults={true}
-            onUploadClick={handleUploadClick}
-            onDelete={handleContentDelete}
-            onView={handleViewContent}
-            onDeleteAll={handleDeleteAllContent}
-          />
         </div>
       </div>
 

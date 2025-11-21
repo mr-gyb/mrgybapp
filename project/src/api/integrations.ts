@@ -1,5 +1,3 @@
-import { IntegrationTile } from '../types/settings';
-
 export async function connectIntegration(integrationName: string): Promise<boolean> {
   try {
     // Simulated API call to connect integration

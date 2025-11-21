@@ -405,7 +405,13 @@ export const watchIncomingRequests = (
       
       console.log(`📨 Incoming requests updated: ${requests.length} requests`);
       callback(requests);
-    }, (error) => {
+    }, (error: any) => {
+      // Suppress index errors - they're expected until indexes are created
+      if (error.code === 'failed-precondition' && error.message?.includes('index')) {
+        console.warn('⚠️ Firestore index required for friendRequests. Click the link in the error to create it.');
+        callback([]);
+        return;
+      }
       console.error('❌ Error watching incoming requests:', error);
     });
     

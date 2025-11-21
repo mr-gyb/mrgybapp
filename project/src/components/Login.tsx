@@ -22,12 +22,37 @@ const Login: React.FC = () => {
     try {
       const result = await signIn(email, password);
       if (result.error) {
-        setError('Invalid email or password. Please try again.');
+        // Check for specific Firebase errors
+        const errorCode = result.error?.code || '';
+        const errorMessage = result.error?.message || '';
+        
+        if (errorCode === 'auth/api-key-expired' || errorMessage.includes('api-key-expired')) {
+          setError(
+            'Firebase API key has expired. Please contact the administrator or check your .env file. ' +
+            'See FIREBASE_API_KEY_FIX.md for instructions.'
+          );
+        } else if (errorCode === 'auth/invalid-email') {
+          setError('Invalid email address. Please check and try again.');
+        } else if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
+          setError('Invalid email or password. Please try again.');
+        } else if (errorCode === 'auth/too-many-requests') {
+          setError('Too many failed login attempts. Please try again later.');
+        } else {
+          setError(errorMessage || 'Invalid email or password. Please try again.');
+        }
       } else {
         navigate('/home');
       }
-    } catch (error) {
-      setError('An error occurred. Please try again.');
+    } catch (error: any) {
+      const errorMessage = error?.message || error?.code || 'An error occurred. Please try again.';
+      if (errorMessage.includes('api-key-expired')) {
+        setError(
+          'Firebase API key has expired. Please contact the administrator or check your .env file. ' +
+          'See FIREBASE_API_KEY_FIX.md for instructions.'
+        );
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }

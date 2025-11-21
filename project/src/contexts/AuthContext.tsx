@@ -154,8 +154,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       return { user: userCredential.user };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sign in error:', error);
+      
+      // Check for expired API key error
+      if (error?.code === 'auth/api-key-expired' || 
+          error?.message?.includes('api-key-expired') ||
+          error?.message?.includes('API key expired')) {
+        console.error('❌ Firebase API Key Expired:', {
+          message: 'Your Firebase API key has expired. Please update it in your .env file.',
+          steps: [
+            '1. Go to Firebase Console: https://console.firebase.google.com/project/mr-gyb-ai-app-108/settings/general',
+            '2. Copy the new API key from "Your apps" section',
+            '3. Update VITE_FIREBASE_API_KEY in project/.env file',
+            '4. Restart your development server (npm run dev)'
+          ],
+          help: 'See FIREBASE_API_KEY_FIX.md for detailed instructions'
+        });
+      }
+      
       return { error };
     }
   };

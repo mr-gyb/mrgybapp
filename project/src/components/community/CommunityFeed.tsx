@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import { watchFeed, listPostsPage } from '../../services/posts';
@@ -6,6 +6,7 @@ import { Post } from '../../types/community';
 import PostCard from './PostCard';
 import { Loader2, Users, ChevronDown } from 'lucide-react';
 import { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { watchConnections } from '../../services/friends';
 
 interface CommunityFeedProps {
   searchTerm?: string;
@@ -20,8 +21,35 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ searchTerm = '' }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const lastDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [friendIds, setFriendIds] = useState<string[] | null>(null);
+
+  const friendIdsKey = useMemo(() => {
+    if (!friendIds || friendIds.length === 0) {
+      return 'none';
+    }
+    const sorted = [...friendIds].sort();
+    return sorted.join(',');
+  }, [friendIds]);
 
   // Load initial posts and watch for real-time updates
+  // Keep friend ids cached for session
+  useEffect(() => {
+    if (!isAuthenticated || !user?.uid) {
+      setFriendIds(null);
+      return;
+    }
+
+    const unsubscribe = watchConnections(user.uid, friendUids => {
+      const uniqueIds = new Set(friendUids);
+      uniqueIds.add(user.uid);
+      setFriendIds(Array.from(uniqueIds));
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [isAuthenticated, user?.uid]);
+
   useEffect(() => {
     if (!isAuthenticated || !user?.uid) {
       setLoading(false);
@@ -30,28 +58,28 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ searchTerm = '' }) => {
 
     setLoading(true);
 
-    // Watch feed for real-time updates (this is the primary source of truth)
-    const unsubscribe = watchFeed(user.uid, (fetchedPosts) => {
-      console.log('📰 Feed updated via watchFeed:', fetchedPosts.length, 'posts');
-      
-      // Always update posts with fresh feed data (already sorted by createdAt desc)
-      setPosts(fetchedPosts);
-      
-      // Update pagination state
-      if (fetchedPosts.length > 4) {
-        setHasMore(true);
-      } else {
-        setHasMore(false);
-      }
-      
-      // Set loading to false once we have data
-      setLoading(false);
+    const friendIdSet = friendIds ? new Set(friendIds) : undefined;
+
+    const unsubscribe = watchFeed({
+      currentUserId: user.uid,
+      friendIds: friendIdSet,
+      onUpdate: fetchedPosts => {
+        console.log('📰 Feed updated via watchFeed:', fetchedPosts.length, 'posts');
+        setPosts(fetchedPosts);
+        setHasMore(fetchedPosts.length > 4);
+        setLoading(false);
+      },
     });
 
-    // Also do an initial load for faster initial render
     const loadInitialPosts = async () => {
       try {
-        const result = await listPostsPage(4, null, user.uid);
+        const result = await listPostsPage({
+          pageSize: 4,
+          lastDoc: null,
+          currentUserId: user.uid,
+          friendIds: friendIdSet,
+        });
+
         if (result.posts.length > 0) {
           setPosts(result.posts);
           setLoading(false);
@@ -59,14 +87,13 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ searchTerm = '' }) => {
         lastDocRef.current = result.lastDoc;
       } catch (error) {
         console.error('Error loading initial posts:', error);
-        // Don't show error here, let watchFeed handle it
       }
     };
 
     loadInitialPosts();
 
     return () => unsubscribe();
-  }, [isAuthenticated, user?.uid]);
+  }, [isAuthenticated, user?.uid, friendIdsKey]);
 
   // Load more posts (pagination) - now just shows all from feed
   const loadMorePosts = async () => {

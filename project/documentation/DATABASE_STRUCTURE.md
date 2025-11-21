@@ -387,4 +387,37 @@ All errors include:
 - Timestamp
 - Processing stage
 
+## Community posts (November 2025 update)
+
+- Collection: `posts/{postId}`
+  - `authorId`: UID of the author
+  - `authorName`: cached display name at publish time
+  - `authorEmail`: cached email at publish time (used for avatar fallbacks)
+  - `authorPhotoURL`: optional profile photo
+  - `text`, `imageURL`, engagement counters (`likeCount`, `likedBy`, `commentsCount`, `repostCount`, `shareCount`)
+  - `audience`: `"anyone"` (default) or `"friends"`
+  - `visibility`: legacy mirror of `audience` for backwards compatibility
+  - `createdAt`: server timestamp
+- Comments live in `posts/{postId}/comments/{commentId}` and now include `authorEmail` to support consistent avatar fallbacks.
+- Firestore rules only allow `audience: "friends"` posts to be read by the author or their confirmed friends (`users/{uid}.friends`), while `"anyone"` posts remain globally visible to authenticated users.
+
+## Chat participant model (February 2025 update)
+
+- `chats/{chatId}` stores:
+  - `participants`: array of `{ uid, type: 'user' | 'agent', displayName, photoURL?, joinedAt }`
+  - `participantIds`: parallel array of participant UIDs used for `array-contains` queries
+  - `createdBy`: UID of the user who opened the chat
+  - existing fields (`title`, `userId`, `AIAgent`, etc.) remain for backward compatibility
+- `messages/{messageId}` now includes an optional `senderType` (`'user' | 'agent' | 'system'`) in addition to the legacy `role` field.
+- Join announcements are persisted as system messages so every participant sees `"{name} just joined the chat"` in history.
+- Real‑time typing presence lives under `chats/{chatId}/typing/{participantUid}` documents with `{ uid, displayName, type, isTyping, updatedAt }`.
+
+### Seeding the AI expert catalog
+
+AI experts are defined in `src/types/user.ts` (`AI_USERS`). To add or adjust an agent:
+
+1. Append a new entry with a stable `id`, human‑readable `name`, and `profile_image_url`.
+2. Deploy the client; the catalog is read on load.
+3. The `id` value becomes the participant UID when the agent joins a chat.
+
 This structure ensures all content types are properly organized and trackable while maintaining a unified database schema. 

@@ -1,5 +1,4 @@
 import axiosInstance from '../axios';
-import { v4 as uuidv4 } from 'uuid';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, doc, updateDoc, getDocs, getDoc } from 'firebase/firestore';
 import { storage, db } from '../../lib/firebase';
@@ -19,7 +18,7 @@ export enum ContentType {
 export interface EnhancedMediaUploadResult extends MediaUploadResult {
   contentType: ContentType;
   storagePath: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export const uploadMedia = async (
@@ -213,8 +212,15 @@ export const processMediaLink = async (
         console.log('🎵 Detected Spotify playlist URL, fetching data...');
         const playlistResponse = await spotifyService.fetchPlaylistData(url);
         
+        interface SpotifyPlaylistData {
+          name: string;
+          description?: string;
+          followers?: { total: number };
+          [key: string]: unknown;
+        }
+
         if (playlistResponse.success && playlistResponse.data) {
-          const playlist = playlistResponse.data as any;
+          const playlist = playlistResponse.data as SpotifyPlaylistData;
           spotifyData = playlist;
           
           // Update title and description with playlist info
@@ -415,7 +421,7 @@ const generateContentDerivatives = async (
 
     // Content type specific derivatives
     switch (contentType) {
-      case ContentType.IMAGE:
+      case ContentType.IMAGE: {
         const imageDerivative = await addDoc(collection(db, 'media_derivatives'), {
           mediaId,
           derivativeType: 'image_analysis',
@@ -427,8 +433,9 @@ const generateContentDerivatives = async (
         derivatives.push(imageDerivative);
         console.log('📝 Generated image-specific derivative');
         break;
+      }
 
-      case ContentType.VIDEO:
+      case ContentType.VIDEO: {
         const videoDerivative = await addDoc(collection(db, 'media_derivatives'), {
           mediaId,
           derivativeType: 'video_analysis',
@@ -440,8 +447,9 @@ const generateContentDerivatives = async (
         derivatives.push(videoDerivative);
         console.log('📝 Generated video-specific derivative');
         break;
+      }
 
-      case ContentType.AUDIO:
+      case ContentType.AUDIO: {
         const audioDerivative = await addDoc(collection(db, 'media_derivatives'), {
           mediaId,
           derivativeType: 'audio_analysis',
@@ -453,8 +461,9 @@ const generateContentDerivatives = async (
         derivatives.push(audioDerivative);
         console.log('📝 Generated audio-specific derivative');
         break;
+      }
 
-      case ContentType.LINK:
+      case ContentType.LINK: {
         const linkDerivative = await addDoc(collection(db, 'media_derivatives'), {
           mediaId,
           derivativeType: 'link_analysis',
@@ -466,6 +475,7 @@ const generateContentDerivatives = async (
         derivatives.push(linkDerivative);
         console.log('📝 Generated link-specific derivative');
         break;
+      }
     }
 
   } catch (error) {
@@ -484,7 +494,8 @@ const determineContentType = (mimeType: string, fileName: string): ContentType =
   console.log('🔍 Determining content type...', { mimeType, fileName });
 
   const type = mimeType.split('/')[0];
-  const extension = fileName.split('.').pop()?.toLowerCase();
+  // Extension is determined but not currently used in logic
+  const _extension = fileName.split('.').pop()?.toLowerCase();
 
   switch (type) {
     case 'image':
@@ -505,15 +516,23 @@ const determineContentType = (mimeType: string, fileName: string): ContentType =
   }
 };
 
+interface ContentItem {
+  id: string;
+  userId: string;
+  title: string;
+  contentType: string;
+  [key: string]: unknown;
+}
+
 // Enhanced content retrieval with type filtering
 export const getContentByType = async (
   userId: string,
   contentType?: ContentType
-): Promise<any[]> => {
+): Promise<ContentItem[]> => {
   console.log('📥 Fetching content by type...', { userId, contentType });
 
   try {
-    let query = collection(db, 'new_content');
+    const query = collection(db, 'new_content');
     
     if (contentType) {
       console.log(`🔍 Filtering by content type: ${contentType}`);

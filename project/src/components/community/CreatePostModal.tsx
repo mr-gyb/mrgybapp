@@ -25,7 +25,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [visibility, setVisibility] = useState<'anyone' | 'friends'>('anyone');
+  const [audience, setAudience] = useState<'anyone' | 'friends'>('anyone');
   const [isPosting, setIsPosting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
@@ -39,7 +39,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       setImageUrlInput('');
       setImageFile(null);
       setImagePreview(null);
-      setVisibility('anyone');
+      setAudience('anyone');
       setError('');
     }
   }, [isOpen]);
@@ -209,12 +209,13 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
         {
           text: trimmedText,
           imageURL: finalImageUrl,
-          visibility
+          audience,
         },
         {
           uid: user.uid,
           displayName: authorName,
-          photoURL: authorPhotoURL
+          photoURL: authorPhotoURL,
+          email: user.email,
         }
       );
 
@@ -222,6 +223,13 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       console.log('📰 Feed should update automatically via Firestore listener');
       
       showSuccess('Post created successfully!');
+      
+      setText('');
+      setImageUrlInput('');
+      setImageFile(null);
+      setImagePreview(null);
+      setAudience('anyone');
+      setError('');
       
       // Call onPostCreated callback to trigger any refresh if needed
       onPostCreated?.();
@@ -388,14 +396,14 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
               </div>
             </div>
 
-            {/* Visibility Dropdown */}
+            {/* Audience Dropdown */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Visibility
+                Audience
               </label>
               <select
-                value={visibility}
-                onChange={(e) => setVisibility(e.target.value as 'anyone' | 'friends')}
+                value={audience}
+                onChange={(e) => setAudience(e.target.value as 'anyone' | 'friends')}
                 disabled={isPosting || isUploading}
                 className="w-full p-2.5 border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 style={{ fontSize: '14px', borderRadius: '10px' }}

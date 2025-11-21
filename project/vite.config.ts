@@ -7,6 +7,13 @@ export default defineConfig({
   server: {
     host: 'localhost',
     port: 3002,
+    proxy: {
+      '/api': {
+        target: process.env.VITE_CHAT_API_BASE || 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   build: {
     rollupOptions: {
@@ -59,5 +66,10 @@ export default defineConfig({
       'firebase/storage': 'firebase/storage',
       'firebase/analytics': 'firebase/analytics',
     },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.ts',
   },
 });

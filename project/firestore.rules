@@ -20,16 +20,37 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Chat rooms - members can read/write
+    function isChatParticipant(chatId) {
+      let chatDoc = get(/databases/$(database)/documents/chats/$(chatId));
+      return chatDoc.exists() &&
+        (
+          (chatDoc.data.participantIds != null && chatDoc.data.participantIds.hasAny([request.auth.uid])) ||
+          chatDoc.data.userId == request.auth.uid
+        );
+    }
+
+    // Chat rooms - members can read/write (legacy)
     match /chatRooms/{chatRoomId} {
       allow read, write: if request.auth != null && 
         request.auth.uid in resource.data.members;
     }
     
-    // Messages - users can read/write messages in rooms they're members of
+    // Messages - users can read/write messages in rooms they're members of (legacy support)
     match /messages/{messageId} {
       allow read, write: if request.auth != null && 
-        request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(resource.data.roomId)).data.members;
+        (
+          (resource.data.roomId != null &&
+            request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(resource.data.roomId)).data.members)
+          ||
+          (resource.data.chatId != null && isChatParticipant(resource.data.chatId))
+        );
+    }
+
+    // New chats collection - participants can read/update
+    match /chats/{chatId} {
+      allow read, update: if request.auth != null && isChatParticipant(chatId);
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.createdBy;
     }
     
     // Existing team chat rules (keep existing functionality)
@@ -78,17 +99,35 @@ service cloud.firestore {
     
     // Posts collection - for community posts
     match /posts/{postId} {
-      // Anyone authenticated can read posts
-      allow read: if request.auth != null;
+      function viewerIsFriend() {
+        let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+        return userDoc.exists() &&
+          userDoc.data.friends != null &&
+          userDoc.data.friends.hasAny([resource.data.authorId]);
+      }
+
+      function postAudience() {
+        return (resource.data.audience != null ? resource.data.audience : (resource.data.visibility != null ? resource.data.visibility : 'anyone'));
+      }
+
+      // Anyone authenticated can read posts if allowed by the audience rules
+      allow read: if request.auth != null &&
+        (
+          postAudience() == 'anyone' ||
+          resource.data.authorId == request.auth.uid ||
+          (postAudience() == 'friends' && viewerIsFriend())
+        );
       
       // Users can create their own posts
       allow create: if request.auth != null && 
-        request.auth.uid == request.resource.data.authorId;
+        request.auth.uid == request.resource.data.authorId &&
+        request.resource.data.audience in ['anyone', 'friends'];
       
       // Users can update their own posts (like, comment count)
       allow update: if request.auth != null && 
         (request.auth.uid == resource.data.authorId ||
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'likedBy', 'commentsCount']));
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'likedBy', 'commentsCount'])) &&
+        (request.resource.data.audience == null || request.resource.data.audience in ['anyone', 'friends']);
       
       // Users can delete their own posts
       allow delete: if request.auth != null && 

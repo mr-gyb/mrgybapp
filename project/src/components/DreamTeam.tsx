@@ -1,101 +1,139 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, MessageSquare, Send, Mic, Camera, Paperclip, Image as ImageIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronLeft, MessageSquare, Bot, Briefcase } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useChat } from '../contexts/ChatContext';
+import { getInitials } from '../utils/avatar';
 
 interface TeamMember {
   id: string;
   title: string;
+  role: string;
+  roleDescription: string;
   image: string;
   specializations: string[];
+  isAI?: boolean;
 }
 
 const DreamTeam: React.FC = () => {
-  const [selectedMember, setSelectedMember] = useState<string | null>(null);
-  const [input, setInput] = useState('');
+  const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const { createNewChat, addMessage, currentChatId, chats, setSelectedAgent } = useChat();
-  // For scrolling to bottom of the screen
-  const screenEndRef = useRef<HTMLDivElement>(null);
+
+  const handleImageError = (memberId: string) => {
+    setImageErrors((prev) => new Set(prev).add(memberId));
+  };
+
+  const toggleFlip = (memberId: string) => {
+    setFlippedCards((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(memberId)) {
+        newSet.delete(memberId);
+      } else {
+        newSet.add(memberId);
+      }
+      return newSet;
+    });
+  };
 
   const teamMembers: TeamMember[] = [
-    {
-      id: 'mrgyb',
-      title: 'Mr.GYB AI',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58',
-      specializations: [
-        'ALL-IN-ONE BUSINESS GROWTH ASSISTANT',
-        'DIGITAL MARKETING',
-        'MEDIA MANAGEMENT',
-        'BIZ OPERATIONS AND DEVELOPMENT',
-        'SYSTEMS FOR SCALING THROUGH AUTOMATIONS AND AI'
-      ]
-    },
+    // Top row: Chris, Charlotte, Alex
     {
       id: 'chris',
-      title: 'CHRIS',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FChris-ai.png?alt=media&token=83b2003d-04bf-422e-a0f7-26d148a4ff46',
+      title: 'Chris',
+      role: 'CEO',
+      roleDescription: 'Executive Leadership',
+      image: '/images/team/chris.jpg',
       specializations: [
         'STRATEGIC PLANNING',
         'BUSINESS DEVELOPMENT',
         'LEADERSHIP',
         'DECISION MAKING',
         'CORPORATE GOVERNANCE'
-      ]
-    },
-    {
-      id: 'sherry',
-      title: 'Sherry',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCOO.png?alt=media&token=d57a97eb-83f5-4e0d-903e-278dc2a4d9af',
-      specializations: [
-        'OPERATIONS MANAGEMENT',
-        'PROCESS OPTIMIZATION',
-        'SUPPLY CHAIN MANAGEMENT',
-        'QUALITY CONTROL',
-        'RESOURCE ALLOCATION'
-      ]
+      ],
+      isAI: false
     },
     {
       id: 'charlotte',
       title: 'Charlotte',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCHRO.png?alt=media&token=862bbf8c-373b-4996-89fe-8d867f378d9f',
+      role: 'CHRO',
+      roleDescription: 'Human Resources',
+      image: '/images/team/charlotte.jpg',
       specializations: [
         'HUMAN RESOURCES MANAGEMENT',
         'TALENT ACQUISITION',
         'EMPLOYEE DEVELOPMENT',
         'ORGANIZATIONAL CULTURE',
         'PERFORMANCE MANAGEMENT'
-      ]
+      ],
+      isAI: false
+    },
+    {
+      id: 'alex',
+      title: 'Alex',
+      role: 'Operations Expert',
+      roleDescription: 'Operations & Strategy',
+      image: '/images/team/alex.jpg',
+      specializations: [
+        'BUSINESS STRATEGY',
+        'OPERATIONS',
+        'CLIENT RELATIONS',
+        'PROJECT MANAGEMENT',
+        'GROWTH INITIATIVES'
+      ],
+      isAI: false
+    },
+    // Second row: Devin, Jake, MR.GYB AI
+    {
+      id: 'devin',
+      title: 'Devin',
+      role: 'Team Member',
+      roleDescription: 'Technology & Development',
+      image: '/images/team/devin.jpg',
+      specializations: [
+        'TECHNOLOGY DEVELOPMENT',
+        'SYSTEM ARCHITECTURE',
+        'INNOVATION',
+        'SOFTWARE ENGINEERING',
+        'TECHNICAL STRATEGY'
+      ],
+      isAI: false
     },
     {
       id: 'jake',
       title: 'Jake',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FJake-ai.png?alt=media&token=cf28a12b-f86a-4aed-b5af-32f5de16cfe9',
+      role: 'Tech Expert',
+      roleDescription: 'Technology',
+      image: '/images/team/jake.png',
       specializations: [
         'TECHNOLOGY STRATEGY',
         'INNOVATION MANAGEMENT',
         'SYSTEM ARCHITECTURE',
         'CYBERSECURITY',
         'DIGITAL TRANSFORMATION'
-      ]
+      ],
+      isAI: false
     },
     {
-      id: 'rachel',
-      title: 'Rachel',
-      image: 'https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FCMO.png?alt=media&token=4e9ddaee-c4b0-4b4d-aca8-6c4196a5dd1b',
+      id: 'mrgyb',
+      title: 'MR.GYB AI',
+      role: 'Business Growth Expert',
+      roleDescription: 'Business Growth',
+      image: '/images/team/mrgyb-ai.png',
       specializations: [
-        'MARKETING STRATEGY',
-        'BRAND MANAGEMENT',
-        'CUSTOMER EXPERIENCE',
-        'MARKET RESEARCH',
-        'DIGITAL MARKETING'
-      ]
+        'ALL-IN-ONE BUSINESS GROWTH ASSISTANT',
+        'DIGITAL MARKETING',
+        'MEDIA MANAGEMENT',
+        'BIZ OPERATIONS AND DEVELOPMENT',
+        'SYSTEMS FOR SCALING THROUGH AUTOMATIONS AND AI'
+      ],
+      isAI: true
     }
   ];
 
-  const handleMemberClick = (memberId: string) => {
-    setSelectedMember(memberId === selectedMember ? null : memberId);
-    screenEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Get back color based on index (alternating blue and gold)
+  const getBackColor = (index: number) => {
+    return index % 2 === 0 ? 'bg-navy-blue' : 'bg-gold';
   };
 
   const handleStartChat = async (newAgent: string) => {
@@ -116,11 +154,15 @@ const DreamTeam: React.FC = () => {
       });
 
       if (existingChat) {
+        // Set selectedAgent before navigating to ensure it persists
+        setSelectedAgent(newAgent);
         navigate(`/chat/${existingChat.id}`);
       } else {
         const newChatId = await createNewChat();
 
         if (newChatId) {
+          // Set selectedAgent before navigating
+          setSelectedAgent(newAgent);
           // Add initial message from the new agent
           const initialMessage = `Hello! I'm ${newAgent}. How can I help you today?`;
           await addMessage(
@@ -131,7 +173,6 @@ const DreamTeam: React.FC = () => {
             newAgent
           );
           navigate(`/chat/${newChatId}`);
-          setSelectedAgent(newAgent);
         }
       }
     } catch (error) {
@@ -149,56 +190,152 @@ const DreamTeam: React.FC = () => {
           <h1 className="text-3xl font-bold text-navy-blue">GYB AI Team Members</h1>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-          {teamMembers.map((member) => (
-            <div
-              key={member.id}
-              className={`relative cursor-pointer rounded-lg overflow-hidden shadow-md transition-transform duration-300 transform hover:scale-105 ${
-                selectedMember === member.id ? 'ring-4 ring-gold' : ''
-              }`}
-              onClick={() => handleMemberClick(member.id)}
-            >
-              <div className="aspect-w-1 aspect-h-1">
-                <img
-                  src={member.image}
-                  alt={member.title}
-                  className="w-full h-full object-cover object-center"
-                />
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 bg-navy-blue bg-opacity-75 p-2">
-                <h3 className="text-xl font-bold text-center text-white">{member.title}</h3>
-              </div>
-            </div>
-          ))}
-        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {teamMembers.map((member, index) => {
+            const hasImageError = imageErrors.has(member.id);
+            const initials = getInitials(member.title);
+            const altText = `${member.title} - ${member.role}`;
+            const isFlipped = flippedCards.has(member.id);
+            const backColor = getBackColor(index);
 
-        {selectedMember && (
-          <div className="bg-gray-100 rounded-lg p-6 shadow-md">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">
-                {teamMembers.find((m) => m.id === selectedMember)?.title}
-              </h2>
-              <button
-                onClick={() => handleStartChat(teamMembers.find((m) => m.id === selectedMember)?.title || '')}
-                className="bg-navy-blue text-white px-4 py-2 rounded-full flex items-center"
+            return (
+              <div
+                key={member.id}
+                className="flip-card-container"
+                style={{
+                  perspective: '1000px',
+                  width: '100%',
+                  height: '400px',
+                }}
+                onClick={() => toggleFlip(member.id)}
+                onMouseEnter={() => {
+                  if (!isFlipped) toggleFlip(member.id);
+                }}
+                onMouseLeave={() => {
+                  if (isFlipped) toggleFlip(member.id);
+                }}
               >
-                <MessageSquare size={20} className="mr-2" />
-                Start Chat
-              </button>
-            </div>
-            <ul className="list-disc list-inside mb-4">
-              {teamMembers
-                .find((m) => m.id === selectedMember)
-                ?.specializations.map((spec, index) => (
-                  <li key={index} className="mb-2">
-                    {spec}
-                  </li>
-                ))}
-            </ul>
-          </div>
-        )}
+                <div
+                  className="flip-card-inner relative w-full h-full"
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    transition: 'transform 0.6s',
+                    transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                  }}
+                >
+                  {/* Front of card */}
+                  <div
+                    className="flip-card-front absolute w-full h-full bg-white rounded-lg shadow-md overflow-hidden cursor-pointer"
+                    style={{
+                      backfaceVisibility: 'hidden',
+                      WebkitBackfaceVisibility: 'hidden',
+                    }}
+                  >
+                    {/* Cover image section */}
+                    <div className="h-32 bg-gradient-to-br from-navy-blue to-blue-600 bg-cover bg-center relative">
+                      {!hasImageError && (
+                        <img
+                          src={member.image}
+                          alt={altText}
+                          className="w-full h-32 object-cover opacity-30"
+                          loading="lazy"
+                          decoding="async"
+                          onError={() => handleImageError(member.id)}
+                        />
+                      )}
+                    </div>
+                    
+                    {/* Content section with overlapping avatar */}
+                    <div className="p-4 relative">
+                      {/* Profile avatar - overlapping the cover */}
+                      <div className="absolute -top-12 left-4">
+                        <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-white shadow-md">
+                          {hasImageError ? (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-navy-blue to-blue-600">
+                              <span className="text-white text-2xl font-bold">{initials}</span>
+                            </div>
+                          ) : (
+                            <img
+                              src={member.image}
+                              alt={altText}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                              decoding="async"
+                              onError={() => handleImageError(member.id)}
+                            />
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="mt-14">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center">
+                            <h3 className="font-bold text-xl">{member.title}</h3>
+                          </div>
+                          {member.isAI ? (
+                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center">
+                              <Bot size={16} className="mr-1" />
+                              AI
+                            </span>
+                          ) : (
+                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm flex items-center">
+                              <Briefcase size={16} className="mr-1" />
+                              {member.role}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center mb-2">
+                          <Briefcase size={16} className="text-gray-500 mr-2" />
+                          <span className="text-gray-600">{member.roleDescription}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Back of card */}
+                  <div
+                    className={`flip-card-back absolute w-full h-full ${backColor} rounded-lg shadow-md overflow-hidden cursor-pointer text-white p-6 flex flex-col justify-between`}
+                    style={{
+                      backfaceVisibility: 'hidden',
+                      WebkitBackfaceVisibility: 'hidden',
+                      transform: 'rotateY(180deg)',
+                    }}
+                  >
+                    <div>
+                      <h3 className="text-2xl font-bold mb-4">{member.title}</h3>
+                      <p className="text-lg mb-4 opacity-90">{member.role} • {member.roleDescription}</p>
+                      
+                      <div className="mb-4">
+                        <h4 className="text-sm font-semibold mb-2 opacity-80">SPECIALIZATIONS:</h4>
+                        <ul className="space-y-2">
+                          {member.specializations.map((spec, specIndex) => (
+                            <li key={specIndex} className="text-sm opacity-90">
+                              • {spec}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartChat(member.title);
+                      }}
+                      className="w-full bg-white text-navy-blue px-6 py-3 rounded-full font-semibold flex items-center justify-center hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <MessageSquare size={20} className="mr-2" />
+                      Start Chat
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <div ref={screenEndRef} />
     </div>
   );
 };

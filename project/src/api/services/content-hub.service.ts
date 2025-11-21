@@ -197,7 +197,7 @@ export class ContentHubService {
   /**
    * Get personalized content recommendations
    */
-  static async getPersonalizedRecommendations(userId: string): Promise<string[]> {
+  static async getPersonalizedRecommendations(_userId: string): Promise<string[]> {
     try {
       // Simulate personalized recommendations
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -218,10 +218,19 @@ export class ContentHubService {
     }
   }
 
+  interface ContentAnalytics {
+    timeframe: 'week' | 'month' | 'quarter';
+    totalViews: number;
+    totalEngagement: number;
+    averageEngagementRate: number;
+    topContent: Array<{ title: string; views: number }>;
+    platformBreakdown: Record<string, number>;
+  }
+
   /**
    * Get content performance analytics
    */
-  static async getContentAnalytics(timeframe: 'week' | 'month' | 'quarter' = 'week'): Promise<any> {
+  static async getContentAnalytics(timeframe: 'week' | 'month' | 'quarter' = 'week'): Promise<ContentAnalytics> {
     try {
       // Simulate analytics data
       await new Promise(resolve => setTimeout(resolve, 400));

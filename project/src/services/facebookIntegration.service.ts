@@ -3,7 +3,6 @@ import { getFacebookConfig } from '../utils/facebookConfig';
 
 class FacebookIntegrationService {
   private appId: string;
-  private appSecret: string;
   private redirectUri: string;
   private accessToken: string | null = null;
   private userId: string | null = null;
@@ -12,11 +11,10 @@ class FacebookIntegrationService {
     try {
       const config = getFacebookConfig();
       this.appId = config.appId;
-      this.appSecret = config.appSecret;
+      // appSecret is retrieved for config validation but not stored client-side for security
     } catch (error) {
       console.error('Facebook configuration error:', error);
       this.appId = '';
-      this.appSecret = '';
     }
     
     this.redirectUri = `${window.location.origin}/facebook-callback`;
@@ -55,7 +53,7 @@ class FacebookIntegrationService {
           });
           resolve();
         } catch (error) {
-          reject(new Error(`Failed to initialize Facebook SDK: ${error}`));
+          reject(new Error(`Failed to initialize Facebook SDK: ${error instanceof Error ? error.message : String(error)}`));
         }
       };
       
@@ -97,7 +95,7 @@ class FacebookIntegrationService {
     
     return new Promise((resolve) => {
       window.FB.getLoginStatus((response: FacebookAuthResponse) => {
-        if (response.status === 'connected') {
+        if (response.status === 'connected' && response.authResponse) {
           this.accessToken = response.authResponse.accessToken;
           this.userId = response.authResponse.userID;
           this.storeTokens();
@@ -131,7 +129,7 @@ class FacebookIntegrationService {
         window.FB.login((response: FacebookAuthResponse) => {
           console.log('📱 Facebook login response:', response);
           
-          if (response.status === 'connected') {
+          if (response.status === 'connected' && response.authResponse) {
             this.accessToken = response.authResponse.accessToken;
             this.userId = response.authResponse.userID;
             this.storeTokens();
@@ -190,8 +188,15 @@ class FacebookIntegrationService {
         throw new Error('Failed to fetch Facebook pages');
       }
 
+      interface FacebookPageData {
+        id: string;
+        name: string;
+        category?: string;
+        access_token: string;
+      }
+
       const data = await response.json();
-      return data.data.map((page: any) => ({
+      return (data.data as FacebookPageData[]).map((page: FacebookPageData) => ({
         id: page.id,
         name: page.name,
         category: page.category,
@@ -235,7 +240,18 @@ class FacebookIntegrationService {
         throw new Error(errorData.error?.message || 'Failed to fetch Facebook profile');
       }
 
-      const data = await response.json();
+      interface FacebookProfileResponse {
+        id: string;
+        name: string;
+        email?: string;
+        picture?: {
+          data?: {
+            url?: string;
+          };
+        };
+      }
+
+      const data = await response.json() as FacebookProfileResponse;
       console.log('✅ Facebook profile data received:', { id: data.id, name: data.name });
       
       return {
@@ -244,7 +260,7 @@ class FacebookIntegrationService {
         email: data.email,
         picture: data.picture?.data?.url,
         isPage: false,
-        accessToken: this.accessToken
+        accessToken: this.accessToken || undefined
       };
     } catch (error) {
       console.error('❌ Error fetching Facebook profile:', error);
@@ -269,10 +285,15 @@ class FacebookIntegrationService {
         throw new Error('Failed to fetch user permissions');
       }
 
+      interface PermissionData {
+        permission: string;
+        status: string;
+      }
+
       const data = await response.json();
-      const grantedPermissions = data.data
-        .filter((permission: any) => permission.status === 'granted')
-        .map((permission: any) => permission.permission);
+      const grantedPermissions = (data.data as PermissionData[])
+        .filter((permission: PermissionData) => permission.status === 'granted')
+        .map((permission: PermissionData) => permission.permission);
       
       console.log('✅ Granted permissions:', grantedPermissions);
       return grantedPermissions;
@@ -304,7 +325,7 @@ class FacebookIntegrationService {
       if (targetId && targetId !== this.userId) {
         const pages = await this.getUserPages();
         const targetPage = pages.find(page => page.id === targetId);
-        if (targetPage) {
+        if (targetPage && targetPage.accessToken) {
           accessToken = targetPage.accessToken;
           console.log('Using page access token for page:', targetPage.name);
         }
@@ -330,11 +351,19 @@ class FacebookIntegrationService {
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
+        interface ErrorResponse {
+          error?: {
+            message?: string;
+          };
+        }
+        const errorData = await response.json() as ErrorResponse;
         throw new Error(errorData.error?.message || 'Failed to upload post');
       }
 
-      const data = await response.json();
+      interface PostResponse {
+        id: string;
+      }
+      const data = await response.json() as PostResponse;
       return data.id;
     } catch (error) {
       console.error('Error uploading post to Facebook:', error);
@@ -386,12 +415,25 @@ class FacebookIntegrationService {
 // Export singleton instance
 export const facebookIntegrationService = new FacebookIntegrationService();
 
+interface FBInitParams {
+  appId: string;
+  cookie: boolean;
+  xfbml: boolean;
+  version: string;
+}
+
+interface FBLoginParams {
+  scope?: string;
+  return_scopes?: boolean;
+  auth_type?: string;
+}
+
 // Global Facebook SDK types
 declare global {
   interface Window {
     FB: {
-      init: (params: any) => void;
-      login: (callback: (response: FacebookAuthResponse) => void, params?: any) => void;
+      init: (params: FBInitParams) => void;
+      login: (callback: (response: FacebookAuthResponse) => void, params?: FBLoginParams) => void;
       logout: (callback: () => void) => void;
       getLoginStatus: (callback: (response: FacebookAuthResponse) => void) => void;
     };

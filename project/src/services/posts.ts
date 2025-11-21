@@ -4,7 +4,7 @@
  * Firestore Rules Required:
  * - Auth required to create posts/comments/likes
  * - Only owners can update/delete their posts
- * - Users can read posts where visibility='anyone' OR (visibility='friends' AND author is in their friends list)
+ * - Users can read posts where audience='anyone' OR (audience='friends' AND author is in their friends list)
  * - Comments allowed for any authed user to create; delete by author or post owner
  * - Likes are stored in likedBy array on post document
  */
@@ -31,33 +31,99 @@ import {
   DocumentData
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Post, Comment } from '../types/community';
-import { watchConnections } from './friends';
+import { Post, Comment, PostAudience } from '../types/community';
+import { getFriendsList } from './friends.service';
 
 // Collection references
 const postsCollection = collection(db, 'posts');
 
-/**
- * Helper: Check if two users are friends
- * @param userId - Current user ID
- * @param otherId - Other user ID to check
- * @returns Promise<boolean>
- */
-export const isFriend = async (userId: string, otherId: string): Promise<boolean> => {
-  return new Promise((resolve) => {
-    const unsubscribe = watchConnections(userId, (friends) => {
-      unsubscribe(); // Unsubscribe immediately after first callback
-      resolve(friends.includes(otherId));
-    });
-  });
+interface FriendCacheEntry {
+  ids: Set<string>;
+  timestamp: number;
+}
+
+const friendIdCache = new Map<string, FriendCacheEntry>();
+const FRIEND_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+const resolveAudience = (data: Record<string, unknown>): PostAudience => {
+  const raw = (data?.audience ?? data?.visibility ?? 'anyone') as string;
+  return raw === 'friends' ? 'friends' : 'anyone';
 };
+
+const mapPostDocument = (
+  docSnapshot: QueryDocumentSnapshot<DocumentData>,
+  data: DocumentData,
+  audience: PostAudience
+): Post => ({
+  id: docSnapshot.id,
+  authorId: data.authorId,
+  authorName: data.authorName || 'Anonymous',
+  authorEmail: data.authorEmail || undefined,
+  authorPhotoURL: data.authorPhotoURL || undefined,
+  text: data.text,
+  imageURL: data.imageURL || undefined,
+  audience,
+  visibility: data.visibility || audience,
+  likeCount: data.likeCount || 0,
+  likedBy: data.likedBy || [],
+  commentsCount: data.commentsCount || 0,
+  repostCount: data.repostCount || 0,
+  shareCount: data.shareCount || 0,
+  isAI: data.isAI || false,
+  createdAt: data.createdAt?.toDate() || null
+});
+
+const getFriendIdsForUser = async (
+  currentUserId?: string,
+  providedIds?: Set<string>
+): Promise<Set<string>> => {
+  if (!currentUserId) {
+    return new Set();
+  }
+
+  if (providedIds) {
+    friendIdCache.set(currentUserId, {
+      ids: new Set(providedIds),
+      timestamp: Date.now()
+    });
+    return new Set(providedIds);
+  }
+
+  const cached = friendIdCache.get(currentUserId);
+  if (cached && Date.now() - cached.timestamp < FRIEND_CACHE_TTL) {
+    return new Set(cached.ids);
+  }
+
+  const response = await getFriendsList(currentUserId);
+  const ids = response.success && response.data
+    ? new Set(response.data.map(profile => profile.uid))
+    : new Set<string>();
+
+  friendIdCache.set(currentUserId, { ids, timestamp: Date.now() });
+  return new Set(ids);
+};
+
+interface ListPostsPageParams {
+  pageSize?: number;
+  lastDoc?: QueryDocumentSnapshot<DocumentData> | null;
+  currentUserId?: string;
+  friendIds?: Set<string>;
+  audienceFilter?: PostAudience;
+}
+
+interface WatchFeedParams {
+  currentUserId?: string;
+  friendIds?: Set<string>;
+  audienceFilter?: PostAudience;
+  onUpdate: (posts: Post[]) => void;
+}
 
 /**
  * Create a new post
  */
 export const createPost = async (
-  params: { text: string; imageURL?: string; visibility?: 'anyone' | 'friends' },
-  currentUser: { uid: string; displayName?: string; photoURL?: string }
+  params: { text: string; imageURL?: string; audience?: 'anyone' | 'friends' },
+  currentUser: { uid: string; displayName?: string; photoURL?: string; email?: string | null }
 ): Promise<string> => {
   const trimmedText = params.text.trim();
   const trimmedImageURL = params.imageURL?.trim();
@@ -80,13 +146,17 @@ export const createPost = async (
     authorName = authorName || 'Anonymous';
   }
 
+  const postAudience: 'anyone' | 'friends' = params.audience || 'anyone';
+
   const postData = {
     authorId: currentUser.uid,
     authorName: authorName,
+    authorEmail: currentUser.email || null,
     authorPhotoURL: currentUser.photoURL || null,
     text: trimmedText,
     imageURL: trimmedImageURL || null,
-    visibility: params.visibility || 'anyone',
+    audience: postAudience,
+    visibility: postAudience, // legacy field for backward compatibility
     likeCount: 0,
     likedBy: [],
     commentsCount: 0,
@@ -101,209 +171,150 @@ export const createPost = async (
     authorName: postData.authorName,
     textLength: postData.text.length,
     hasImage: !!postData.imageURL,
-    visibility: postData.visibility
+    audience: postData.audience
   });
 
   const docRef = await addDoc(postsCollection, postData);
   console.log('✅ Post created successfully:', docRef.id);
   console.log('📰 Post should appear in feed via real-time listener');
+  console.log('[telemetry] community_post_created', {
+    postId: docRef.id,
+    audience: postAudience,
+    authorId: currentUser.uid
+  });
   return docRef.id;
 };
 
 /**
- * Fetch posts page with pagination (updated interface)
- * @param params - Pagination parameters
- * @param params.lastDoc - Last document from previous page (for pagination)
- * @param params.pageSize - Number of posts per page (default 10)
- * @param params.currentUserId - Current user ID for visibility filtering
- * @returns Promise<{ posts: Post[]; lastDoc: QueryDocumentSnapshot | null; hasMore: boolean }>
+ * Fetch posts page with pagination.
+ *
+ * @param params - Pagination parameters.
  */
-export const fetchPostsPage = async (params: {
-  lastDoc?: QueryDocumentSnapshot<DocumentData> | null;
-  pageSize?: number;
-  currentUserId?: string;
-}): Promise<{ posts: Post[]; lastDoc: QueryDocumentSnapshot<DocumentData> | null; hasMore: boolean }> => {
-  const pageSize = params.pageSize || 10;
-  const lastDoc = params.lastDoc || null;
-  const currentUserId = params.currentUserId;
-  
-  return listPostsPage(pageSize, lastDoc, currentUserId);
+export const fetchPostsPage = async (
+  params: ListPostsPageParams
+): Promise<{ posts: Post[]; lastDoc: QueryDocumentSnapshot<DocumentData> | null; hasMore: boolean }> => {
+  return listPostsPage(params);
 };
 
 /**
- * List posts with pagination
- * @param pageSize - Number of posts per page (default 4)
- * @param lastDoc - Last document from previous page (for pagination)
- * @param currentUserId - Current user ID for visibility filtering
- * @returns Promise<{ posts: Post[]; lastDoc: QueryDocumentSnapshot | null; hasMore: boolean }>
+ * List posts with pagination.
  */
 export const listPostsPage = async (
-  pageSize: number = 4,
-  lastDoc: QueryDocumentSnapshot<DocumentData> | null = null,
-  currentUserId?: string
+  params: ListPostsPageParams = {}
 ): Promise<{ posts: Post[]; lastDoc: QueryDocumentSnapshot<DocumentData> | null; hasMore: boolean }> => {
-  // Fetch one extra to check if there are more posts
-  let q = query(
-    postsCollection,
-    orderBy('createdAt', 'desc')
-  );
+  const {
+    pageSize = 4,
+    lastDoc = null,
+    currentUserId,
+    friendIds,
+    audienceFilter
+  } = params;
+
+  let q = query(postsCollection, orderBy('createdAt', 'desc'));
 
   if (lastDoc) {
     q = query(q, startAfter(lastDoc));
   }
 
-  q = query(q, limit(pageSize + 1)); // Fetch one extra to check hasMore
+  q = query(q, limit(pageSize + 1));
 
   const snapshot = await getDocs(q);
   const posts: Post[] = [];
   let newLastDoc: QueryDocumentSnapshot<DocumentData> | null = null;
   const hasMore = snapshot.docs.length > pageSize;
-
-  // Filter posts by visibility if user is signed in
-  // Only process up to pageSize documents
   const docsToProcess = snapshot.docs.slice(0, pageSize);
-  
+  const effectiveFriendIds = await getFriendIdsForUser(currentUserId, friendIds);
+
   for (const docSnapshot of docsToProcess) {
     const data = docSnapshot.data();
-    
-    // Check visibility
-    if (data.visibility === 'friends') {
+    const audience = resolveAudience(data);
+
+    if (audienceFilter && audience !== audienceFilter) {
+      continue;
+    }
+
+    if (audience === 'friends') {
       if (!currentUserId) {
-        // Skip friends-only posts if user not signed in
         continue;
       }
-      // Check if author is in user's friends list
-      const isAuthorFriend = await isFriend(currentUserId, data.authorId);
-      if (!isAuthorFriend && data.authorId !== currentUserId) {
-        // Skip if not friends and not own post
+
+      const isAuthorFriend = effectiveFriendIds.has(data.authorId) || data.authorId === currentUserId;
+      if (!isAuthorFriend) {
         continue;
       }
     }
 
-    posts.push({
-      id: docSnapshot.id,
-      authorId: data.authorId,
-      authorName: data.authorName || 'Anonymous',
-      authorPhotoURL: data.authorPhotoURL || undefined,
-      text: data.text,
-      imageURL: data.imageURL || undefined,
-      visibility: data.visibility || 'anyone',
-      likeCount: data.likeCount || 0,
-      likedBy: data.likedBy || [],
-    commentsCount: data.commentsCount || 0,
-    repostCount: data.repostCount || 0,
-    shareCount: data.shareCount || 0,
-    isAI: data.isAI || false,
-    createdAt: data.createdAt?.toDate() || null
-    });
-    
-    // Set lastDoc to the last processed document
+    posts.push(mapPostDocument(docSnapshot, data, audience));
     newLastDoc = docSnapshot;
   }
 
-  // If we didn't process any documents, set hasMore to false
   const finalHasMore = hasMore && posts.length > 0;
-
   return { posts, lastDoc: newLastDoc, hasMore: finalHasMore };
 };
 
 /**
- * Watch feed in real-time with visibility filtering
- * @param currentUserId - Current user ID for visibility filtering
- * @param cb - Callback function
- * @returns Unsubscribe function
+ * Watch feed in real-time with audience filtering.
  */
-export const watchFeed = (
-  currentUserId?: string,
-  cb?: (posts: Post[]) => void
-): (() => void) => {
-  const q = query(
-    postsCollection,
-    orderBy('createdAt', 'desc'),
-    limit(50) // Fetch more to filter by visibility
-  );
+export const watchFeed = ({
+  currentUserId,
+  friendIds,
+  audienceFilter,
+  onUpdate,
+}: WatchFeedParams): (() => void) => {
+  const q = query(postsCollection, orderBy('createdAt', 'desc'), limit(50));
 
-  const unsubscribe = onSnapshot(q, async (snapshot) => {
-    console.log(`📰 Feed snapshot received: ${snapshot.docs.length} documents`);
-    
-    const posts: Post[] = [];
-    const friendsCache = new Map<string, boolean>();
+  const unsubscribe = onSnapshot(
+    q,
+    async snapshot => {
+      console.log(`📰 Feed snapshot received: ${snapshot.docs.length} documents`);
 
-    // Helper to check if user is friend (with caching)
-    const checkIsFriend = async (userId: string, otherId: string): Promise<boolean> => {
-      if (userId === otherId) return true; // User is always their own friend
-      
-      const cacheKey = `${userId}_${otherId}`;
-      if (friendsCache.has(cacheKey)) {
-        return friendsCache.get(cacheKey)!;
-      }
-      
-      const result = await isFriend(userId, otherId);
-      friendsCache.set(cacheKey, result);
-      return result;
-    };
+      const posts: Post[] = [];
+      const effectiveFriendIds = await getFriendIdsForUser(currentUserId, friendIds);
 
-    // Process posts and filter by visibility
-    for (const docSnapshot of snapshot.docs) {
-      const data = docSnapshot.data();
-      
-      // Check visibility
-      if (data.visibility === 'friends') {
-        if (!currentUserId) {
-          // Skip friends-only posts if user not signed in
+      for (const docSnapshot of snapshot.docs) {
+        const data = docSnapshot.data();
+        const audience = resolveAudience(data);
+
+        if (audienceFilter && audience !== audienceFilter) {
           continue;
         }
-        // Check if author is in user's friends list
-        const isAuthorFriend = await checkIsFriend(currentUserId, data.authorId);
-        if (!isAuthorFriend && data.authorId !== currentUserId) {
-          // Skip if not friends and not own post
-          continue;
+
+        if (audience === 'friends') {
+          if (!currentUserId) {
+            continue;
+          }
+
+          const isAuthorFriend =
+            effectiveFriendIds.has(data.authorId) || data.authorId === currentUserId;
+
+          if (!isAuthorFriend) {
+            continue;
+          }
         }
+
+        posts.push(mapPostDocument(docSnapshot, data, audience));
       }
 
-      posts.push({
-        id: docSnapshot.id,
-        authorId: data.authorId,
-        authorName: data.authorName || 'Anonymous',
-        authorPhotoURL: data.authorPhotoURL || undefined,
-        text: data.text,
-        imageURL: data.imageURL || undefined,
-        visibility: data.visibility || 'anyone',
-        likeCount: data.likeCount || 0,
-        likedBy: data.likedBy || [],
-    commentsCount: data.commentsCount || 0,
-    repostCount: data.repostCount || 0,
-    shareCount: data.shareCount || 0,
-    isAI: data.isAI || false,
-    createdAt: data.createdAt?.toDate() || null
-      });
-    }
+      console.log(`📰 Feed updated: ${posts.length} posts (after audience filter)`);
 
-    console.log(`📰 Feed updated: ${posts.length} posts (after visibility filter)`);
-    if (cb) {
-      // Sort by createdAt desc (newest first)
       const sortedPosts = posts.sort((a, b) => {
         if (!a.createdAt || !b.createdAt) return 0;
         return b.createdAt.getTime() - a.createdAt.getTime();
       });
-      cb(sortedPosts);
+
+      onUpdate(sortedPosts);
+    },
+    error => {
+      console.error('❌ Error watching feed:', error);
+      onUpdate([]);
     }
-  }, (error) => {
-    console.error('❌ Error watching feed:', error);
-    // Call callback with empty array on error to prevent UI from breaking
-    if (cb) cb([]);
-  });
+  );
 
   return unsubscribe;
 };
 
 /**
- * Subscribe to recent posts for real-time updates
- * @param params - Subscription parameters
- * @param params.limit - Maximum number of posts to fetch (default 50)
- * @param params.currentUserId - Current user ID for visibility filtering
- * @param onAdd - Callback when new posts are added
- * @returns Unsubscribe function
+ * Subscribe to recent posts for real-time updates.
  */
 export const subscribeRecentPosts = (
   params: { limit?: number; currentUserId?: string },
@@ -322,53 +333,25 @@ export const subscribeRecentPosts = (
     console.log(`📰 Recent posts snapshot received: ${snapshot.docs.length} documents`);
     
     const posts: Post[] = [];
-    const friendsCache = new Map<string, boolean>();
+    const effectiveFriendIds = await getFriendIdsForUser(currentUserId);
 
-    // Helper to check if user is friend (with caching)
-    const checkIsFriend = async (userId: string, otherId: string): Promise<boolean> => {
-      if (userId === otherId) return true;
-      
-      const cacheKey = `${userId}_${otherId}`;
-      if (friendsCache.has(cacheKey)) {
-        return friendsCache.get(cacheKey)!;
-      }
-      
-      const result = await isFriend(userId, otherId);
-      friendsCache.set(cacheKey, result);
-      return result;
-    };
-
-    // Process posts and filter by visibility
+    // Process posts and filter by audience
     for (const docSnapshot of snapshot.docs) {
       const data = docSnapshot.data();
-      
-      // Check visibility
-      if (data.visibility === 'friends') {
+
+      const audience = resolveAudience(data);
+      if (audience === 'friends') {
         if (!currentUserId) {
           continue;
         }
-        const isAuthorFriend = await checkIsFriend(currentUserId, data.authorId);
-        if (!isAuthorFriend && data.authorId !== currentUserId) {
+        const isAuthorFriend =
+          effectiveFriendIds.has(data.authorId) || data.authorId === currentUserId;
+        if (!isAuthorFriend) {
           continue;
         }
       }
 
-      posts.push({
-        id: docSnapshot.id,
-        authorId: data.authorId,
-        authorName: data.authorName || 'Anonymous',
-        authorPhotoURL: data.authorPhotoURL || undefined,
-        text: data.text,
-        imageURL: data.imageURL || undefined,
-        visibility: data.visibility || 'anyone',
-        likeCount: data.likeCount || 0,
-        likedBy: data.likedBy || [],
-    commentsCount: data.commentsCount || 0,
-    repostCount: data.repostCount || 0,
-    shareCount: data.shareCount || 0,
-    isAI: data.isAI || false,
-    createdAt: data.createdAt?.toDate() || null
-      });
+      posts.push(mapPostDocument(docSnapshot, data, audience));
     }
 
     // Sort by createdAt desc (newest first)
@@ -506,6 +489,7 @@ export const watchComments = (
         id: docSnapshot.id,
         authorId: data.authorId,
         authorName: data.authorName || 'Anonymous',
+        authorEmail: data.authorEmail || undefined,
         authorPhotoURL: data.authorPhotoURL || undefined,
         text: data.text,
         createdAt: data.createdAt?.toDate() || null
@@ -527,7 +511,7 @@ export const watchComments = (
 export const addComment = async (
   postId: string,
   params: { text: string },
-  currentUser: { uid: string; displayName?: string; photoURL?: string }
+  currentUser: { uid: string; displayName?: string; photoURL?: string; email?: string | null }
 ): Promise<string> => {
   if (!params.text.trim()) {
     throw new Error('Comment text cannot be empty');
@@ -540,6 +524,7 @@ export const addComment = async (
   const commentData = {
     authorId: currentUser.uid,
     authorName: currentUser.displayName || 'Anonymous',
+    authorEmail: currentUser.email || null,
     authorPhotoURL: currentUser.photoURL || null,
     text: params.text.trim(),
     createdAt: serverTimestamp()

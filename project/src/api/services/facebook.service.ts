@@ -62,19 +62,35 @@ export const fetchFacebookPageInsights = async (
       }
     });
 
+    interface InsightValue {
+      value: number;
+    }
+
+    interface Insight {
+      name: string;
+      values?: InsightValue[];
+    }
+
+    interface PostWithInsights {
+      insights?: {
+        data?: Insight[];
+      };
+      [key: string]: unknown;
+    }
+
     // Process the data
-    const pageInsights = insightsResponse.data.data;
-    const posts = postsResponse.data.data;
+    const pageInsights: Insight[] = insightsResponse.data.data || [];
+    const posts: PostWithInsights[] = postsResponse.data.data || [];
 
     // Calculate totals
-    const totalImpressions = pageInsights.find((insight: any) => insight.name === 'page_impressions')?.values?.[0]?.value || 0;
-    const totalEngagements = pageInsights.find((insight: any) => insight.name === 'page_post_engagements')?.values?.[0]?.value || 0;
+    const totalImpressions = pageInsights.find((insight: Insight) => insight.name === 'page_impressions')?.values?.[0]?.value || 0;
+    const totalEngagements = pageInsights.find((insight: Insight) => insight.name === 'page_post_engagements')?.values?.[0]?.value || 0;
 
     // Process post metrics
-    const processedPosts: FacebookPostMetrics[] = posts.map((post: any) => {
-      const insights = post.insights?.data || [];
-      const impressions = insights.find((insight: any) => insight.name === 'post_impressions')?.values?.[0]?.value || 0;
-      const reactions = insights.find((insight: any) => insight.name === 'post_reactions_by_type_total')?.values?.[0]?.value || 0;
+    const processedPosts: FacebookPostMetrics[] = posts.map((post: PostWithInsights) => {
+      const insights: Insight[] = post.insights?.data || [];
+      const impressions = insights.find((insight: Insight) => insight.name === 'post_impressions')?.values?.[0]?.value || 0;
+      const reactions = insights.find((insight: Insight) => insight.name === 'post_reactions_by_type_total')?.values?.[0]?.value || 0;
       
       return {
         post_impressions: impressions,
@@ -85,9 +101,9 @@ export const fetchFacebookPageInsights = async (
         post_reactions_haha_total: Math.floor(reactions * 0.05),
         post_reactions_sorry_total: Math.floor(reactions * 0.03),
         post_reactions_anger_total: Math.floor(reactions * 0.02),
-        post_clicks: insights.find((insight: any) => insight.name === 'post_clicks')?.values?.[0]?.value || 0,
-        post_shares: insights.find((insight: any) => insight.name === 'post_shares')?.values?.[0]?.value || 0,
-        post_comments: insights.find((insight: any) => insight.name === 'post_comments')?.values?.[0]?.value || 0
+        post_clicks: insights.find((insight: Insight) => insight.name === 'post_clicks')?.values?.[0]?.value || 0,
+        post_shares: insights.find((insight: Insight) => insight.name === 'post_shares')?.values?.[0]?.value || 0,
+        post_comments: insights.find((insight: Insight) => insight.name === 'post_comments')?.values?.[0]?.value || 0
       };
     });
 
@@ -142,11 +158,29 @@ export const fetchFacebookPageInsightsMetrics = async (
     let totalImpressions = 0;
     let totalReactions = 0;
 
+    interface InsightValue {
+      value: number;
+    }
+
+    interface Insight {
+      name: string;
+      values?: InsightValue[];
+    }
+
+    interface PostWithInsights {
+      id: string;
+      created_time: string;
+      insights?: {
+        data?: Insight[];
+      };
+      [key: string]: unknown;
+    }
+
     // Process each post and extract metrics
-    const processedPosts = posts.map((post: any) => {
-      const insights = post.insights?.data || [];
-      const impressions = insights.find((insight: any) => insight.name === 'post_impressions')?.values?.[0]?.value || 0;
-      const reactions = insights.find((insight: any) => insight.name === 'post_reactions_by_type_total')?.values?.[0]?.value || 0;
+    const processedPosts = (posts as PostWithInsights[]).map((post: PostWithInsights) => {
+      const insights: Insight[] = post.insights?.data || [];
+      const impressions = insights.find((insight: Insight) => insight.name === 'post_impressions')?.values?.[0]?.value || 0;
+      const reactions = insights.find((insight: Insight) => insight.name === 'post_reactions_by_type_total')?.values?.[0]?.value || 0;
 
       // Add to totals
       totalImpressions += parseInt(impressions.toString());
@@ -202,9 +236,18 @@ export const getFacebookMetrics = async (pageId?: string): Promise<{
       }
     });
 
-    const insights = response.data.data;
-    const impressions = insights.find((insight: any) => insight.name === 'page_impressions')?.values?.[0]?.value || 0;
-    const engagements = insights.find((insight: any) => insight.name === 'page_post_engagements')?.values?.[0]?.value || 0;
+    interface InsightValue {
+      value: number;
+    }
+
+    interface Insight {
+      name: string;
+      values?: InsightValue[];
+    }
+
+    const insights: Insight[] = response.data.data || [];
+    const impressions = insights.find((insight: Insight) => insight.name === 'page_impressions')?.values?.[0]?.value || 0;
+    const engagements = insights.find((insight: Insight) => insight.name === 'page_post_engagements')?.values?.[0]?.value || 0;
 
     return {
       total_impressions: parseInt(impressions.toString()),
@@ -242,11 +285,20 @@ export const getFacebookPostMetrics = async (postId?: string): Promise<FacebookP
       }
     });
 
+    interface InsightValue {
+      value: number;
+    }
+
+    interface Insight {
+      name: string;
+      values?: InsightValue[];
+    }
+
     const data = response.data;
-    const insights = data.insights?.data || [];
+    const insights: Insight[] = data.insights?.data || [];
     
-    const impressions = insights.find((insight: any) => insight.name === 'post_impressions')?.values?.[0]?.value || 0;
-    const reactions = insights.find((insight: any) => insight.name === 'post_reactions_by_type_total')?.values?.[0]?.value || 0;
+    const impressions = insights.find((insight: Insight) => insight.name === 'post_impressions')?.values?.[0]?.value || 0;
+    const reactions = insights.find((insight: Insight) => insight.name === 'post_reactions_by_type_total')?.values?.[0]?.value || 0;
 
     return {
       post_impressions: impressions,

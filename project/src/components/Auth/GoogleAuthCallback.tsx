@@ -9,7 +9,7 @@ const GoogleAuthCallback: React.FC = () => {
       try {
         // API CALL (Verify the JWT in Spring Boot)
         const res = await fetch('http://localhost:8080/api/me', {
-          credentials: 'include',
+          credentials: 'omit', // Backend has credentials: false, so we should omit
         });
 
         if (res.ok) {

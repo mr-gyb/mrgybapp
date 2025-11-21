@@ -1,14 +1,52 @@
-import { collection, addDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy } from 'firebase/firestore';
+import { 
+  collection, 
+  addDoc, 
+  getDoc, 
+  getDocs, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  query, 
+  where, 
+  orderBy, 
+  arrayUnion, 
+  runTransaction 
+} from 'firebase/firestore';
 import { db } from '../firebase';
-import { Chat, Message } from '../../types/chat';
+import { Chat, ChatParticipant, Message } from '../../types/chat';
+import { AI_USERS } from '../../types/user';
 
-export const createChat = async (userId: string, title: string = 'New Chat'): Promise<Chat | null> => {
+const buildParticipantIds = (participants: ChatParticipant[] = []): string[] =>
+  participants.map((participant) => participant.uid);
+
+export const createChat = async (
+  userId: string, 
+  title: string = 'New Chat',
+  participants: ChatParticipant[] = []
+): Promise<Chat | null> => {
   try {
+    const ownerExists = participants.some(participant => participant.uid === userId);
+    const enrichedParticipants = ownerExists
+      ? participants
+      : [
+          ...participants,
+          {
+            uid: userId,
+            type: 'user',
+            displayName: 'You',
+            joinedAt: new Date().toISOString()
+          }
+        ];
+
     const chatData = {
       title,
       userId,
+      createdBy: userId,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      participants: enrichedParticipants,
+      participantIds: buildParticipantIds(enrichedParticipants),
+      agents: []
     };
     
     const chatRef = await addDoc(collection(db, 'chats'), chatData);
@@ -19,6 +57,7 @@ export const createChat = async (userId: string, title: string = 'New Chat'): Pr
       userId,
       createdAt: chatData.createdAt,
       updatedAt: chatData.updatedAt,
+      participants: enrichedParticipants,
       messages: []
     };
   } catch (error) {
@@ -56,6 +95,9 @@ export const getChat = async (chatId: string): Promise<Chat | null> => {
       userId: chatData.userId,
       createdAt: chatData.createdAt,
       updatedAt: chatData.updatedAt,
+      participants: chatData.participants || [],
+      agents: chatData.agents || [],
+      participantIds: chatData.participantIds || buildParticipantIds(chatData.participants || []),
       messages
     };
   } catch (error) {
@@ -97,6 +139,9 @@ export const getUserChats = async (userId: string): Promise<Chat[]> => {
         userId: chatData.userId,
         createdAt: chatData.createdAt,
         updatedAt: chatData.updatedAt,
+        participants: chatData.participants || [],
+        agents: chatData.agents || [],
+        participantIds: chatData.participantIds || buildParticipantIds(chatData.participants || []),
         messages
       });
     }
@@ -192,4 +237,78 @@ export const updateChatTitle = async (chatId: string, newTitle: string): Promise
     console.error('Error updating chat title:', error);
     return false;
   }
+};
+
+interface AddParticipantOptions {
+  chatId: string;
+  participant: ChatParticipant;
+  requesterId: string;
+}
+
+export const addChatParticipant = async ({
+  chatId,
+  participant,
+  requesterId,
+}: AddParticipantOptions): Promise<{ status: 'added' | 'exists' }> => {
+  const chatRef = doc(db, 'chats', chatId);
+
+  const participantWithMeta: ChatParticipant = {
+    ...participant,
+    joinedAt: participant.joinedAt || new Date().toISOString(),
+  };
+
+  const systemMessage = {
+    chatId,
+    content: `${participant.displayName} just joined the chat.`,
+    role: 'system' as const,
+    senderType: 'system' as const,
+    createdAt: new Date().toISOString(),
+  };
+
+  return runTransaction(db, async (transaction) => {
+    const chatSnap = await transaction.get(chatRef);
+
+    if (!chatSnap.exists()) {
+      throw new Error('Chat not found');
+    }
+
+    const chatData = chatSnap.data() as Chat;
+    const existingParticipants = chatData.participants || [];
+    const participantIds = chatData.participantIds || buildParticipantIds(existingParticipants);
+
+    const requesterIsParticipant = existingParticipants.some((p) => p.uid === requesterId);
+    if (!requesterIsParticipant) {
+      throw new Error('Only chat participants can add new members');
+    }
+
+    const alreadyExists = existingParticipants.some((p) => p.uid === participantWithMeta.uid);
+    if (alreadyExists) {
+      return { status: 'exists' as const };
+    }
+
+    const updatedParticipants = [...existingParticipants, participantWithMeta];
+    const updatedParticipantIds = Array.from(new Set([...participantIds, participantWithMeta.uid]));
+    const existingAgents = (chatData as any).agents || [];
+    const updatedAgents =
+      participantWithMeta.type === 'agent'
+        ? Array.from(new Set([...existingAgents, participantWithMeta.uid]))
+        : existingAgents;
+
+    const newMessageRef = doc(collection(db, 'messages'));
+
+    transaction.update(chatRef, {
+      participants: updatedParticipants,
+      participantIds: updatedParticipantIds,
+      updatedAt: new Date().toISOString(),
+      ...(participantWithMeta.type === 'agent'
+        ? { agents: updatedAgents }
+        : existingAgents.length
+        ? { agents: existingAgents }
+        : {})
+    });
+
+    transaction.set(newMessageRef, systemMessage);
+
+    return { status: 'added' as const };
+  });
 };

@@ -1,4 +1,4 @@
-import { openaiService, VideoAnalysisResult } from './openaiService';
+import { VideoAnalysisResult } from './openaiService';
 
 export interface ShortVideoSegment {
   id: string;
@@ -340,7 +340,7 @@ Respond with ONLY this JSON structure:
   /**
    * Generate generic script for fallback segments
    */
-  private generateGenericScript(analysisResult: VideoAnalysisResult, startTime: number, endTime: number): string {
+  private generateGenericScript(analysisResult: VideoAnalysisResult, _startTime: number, _endTime: number): string {
     return `🎬 Key Insights
 
 [Opening Hook - 0-3 seconds]
@@ -468,4 +468,4 @@ Respond with the complete script only.`;
 }
 
 export const videoConversionService = new VideoConversionService();
-export type { ShortVideoSegment, VideoConversionResult, ConversionOptions };
+
