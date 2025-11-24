@@ -14,37 +14,54 @@ const firebaseConfig = {
 };
 
 // Validate Firebase configuration
-const missingConfig = [];
-if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'your_firebase_api_key_here') {
-  missingConfig.push('VITE_FIREBASE_API_KEY');
-}
-if (!firebaseConfig.authDomain || firebaseConfig.authDomain.includes('your_project')) {
-  missingConfig.push('VITE_FIREBASE_AUTH_DOMAIN');
-}
-if (!firebaseConfig.projectId || firebaseConfig.projectId === 'your_project_id') {
-  missingConfig.push('VITE_FIREBASE_PROJECT_ID');
-}
+const validateFirebaseConfig = () => {
+  const requiredFields = [
+    'apiKey',
+    'authDomain',
+    'projectId',
+    'storageBucket',
+    'messagingSenderId',
+    'appId'
+  ];
 
-if (missingConfig.length > 0) {
-  console.error('❌ Firebase Configuration Error:', {
-    message: 'Missing or invalid Firebase environment variables',
-    missing: missingConfig,
-    help: 'Please create a .env file in the project/ directory with valid Firebase credentials.',
-    template: 'See env-template.txt for the required format.',
-    console: 'https://console.firebase.google.com/project/mr-gyb-ai-app-108/settings/general'
-  });
-}
+  const missingFields: string[] = [];
 
-// Check for expired API key pattern
-if (firebaseConfig.apiKey && firebaseConfig.apiKey.includes('AIzaSyDPvjv_Aa-7h7-TZkpJ94n3oigt0t8Z2xI')) {
-  console.error('❌ Firebase API Key Expired:', {
-    message: 'Your Firebase API key has expired. Please get a new one from Firebase Console.',
-    action: '1. Go to Firebase Console → Project Settings → Your apps',
-    action2: '2. Copy the new API key',
-    action3: '3. Update VITE_FIREBASE_API_KEY in your .env file',
-    action4: '4. Restart your development server',
-    console: 'https://console.firebase.google.com/project/mr-gyb-ai-app-108/settings/general'
+  requiredFields.forEach(field => {
+    const value = firebaseConfig[field as keyof typeof firebaseConfig];
+    if (!value || value === `your_${field.toLowerCase()}_here` || value.includes('your_')) {
+      missingFields.push(`VITE_FIREBASE_${field.toUpperCase()}`);
+    }
   });
+
+  if (missingFields.length > 0) {
+    console.error('❌ Firebase Configuration Error:', {
+      message: 'Missing or invalid Firebase environment variables',
+      missingFields,
+      instructions: 'Please check your .env file and ensure all VITE_FIREBASE_* variables are set correctly.'
+    });
+  } else {
+    console.log('✅ Firebase configuration loaded successfully');
+    
+    // Check for common API key issues
+    if (firebaseConfig.apiKey) {
+      // Check if API key looks expired or invalid
+      if (firebaseConfig.apiKey.length < 30) {
+        console.warn('⚠️ Firebase API key appears to be invalid (too short)');
+      }
+      
+      // Log first few characters for debugging (never log full key)
+      console.log('🔑 Firebase API Key loaded:', firebaseConfig.apiKey.substring(0, 10) + '...');
+    }
+  }
+
+  return missingFields.length === 0;
+};
+
+// Validate before initializing
+const isConfigValid = validateFirebaseConfig();
+
+if (!isConfigValid) {
+  console.warn('⚠️ Firebase configuration is incomplete. Authentication may not work properly.');
 }
 
 // Initialize Firebase
@@ -69,6 +86,12 @@ export const db = initializeFirestore(app, {
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
+
+// Log auth domain for debugging
+if (import.meta.env.DEV) {
+  console.log('Firebase Auth Domain:', firebaseConfig.authDomain);
+  console.log('Firebase Project ID:', firebaseConfig.projectId);
+}
 
 // Configure Facebook Auth Provider
 export const facebookProvider = new FacebookAuthProvider();
@@ -156,9 +179,37 @@ if (typeof window !== 'undefined') {
     
     // Filter out Firestore index errors (they're expected until indexes are created)
     if (message.includes('requires an index') || 
-        (message.includes('FirebaseError') && args[1]?.code === 'failed-precondition' && args[1]?.message?.includes('index'))) {
+        (message.includes('failed-precondition') && message.includes('index')) ||
+        (message.includes('FirebaseError') && args[1]?.code === 'failed-precondition' && args[1]?.message?.includes('index')) ||
+        (message.includes('Uncaught Error in snapshot listener') && message.includes('failed-precondition') && message.includes('index'))) {
       // These are expected - indexes need to be created in Firebase Console
       // The error object contains a link to create the index
+      // Index is already defined in firestore.indexes.json, needs to be deployed via: firebase deploy --only firestore:indexes
+      // Suppress the full error stack trace - we handle it in the component with a cleaner warning
+      return;
+    }
+    
+    // Filter out Firestore index warning messages (they're expected until indexes are deployed)
+    if (message.includes('Firestore index required') || message.includes('firestore.indexes.json')) {
+      // Suppress the warning - it's already shown once per page load in the component
+      return;
+    }
+    
+    // Filter out OpenAI quota errors (they're handled in the UI with user-friendly messages)
+    if (message.includes('quota') && (message.includes('exceeded') || message.includes('insufficient_quota'))) {
+      // These are handled in the UI - suppress console noise
+      return;
+    }
+    
+    // Filter out OpenAI Whisper API quota errors
+    if (message.includes('Whisper API error') && message.includes('429')) {
+      // Quota errors are displayed in UI - suppress console noise
+      return;
+    }
+    
+    // Filter out video processing quota errors
+    if (message.includes('Error processing video') && message.includes('quota')) {
+      // Quota errors are displayed in UI - suppress console noise
       return;
     }
     

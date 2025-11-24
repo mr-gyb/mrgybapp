@@ -75,14 +75,27 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
   return (
     <>
       <header className={`fixed top-0 left-0 right-0 z-10 bg-white dark:bg-navy-blue shadow-md transition-colors duration-200`}>
-        <div className="container mx-auto flex items-center justify-between p-2 sm:p-4">
+        <div className="container mx-auto flex items-center justify-between gap-2 p-2 sm:p-4">
+          <button onClick={handleLogoClick} className="flex-shrink-0 h-8 sm:h-10">
+            <img src="/gyb-logo.svg" alt="GYB Logo" className="h-full" />
+          </button>
+
+          <div className="flex-1 flex justify-center">
+            <h1 
+              onClick={handleTitleClick}
+              className="text-lg sm:text-xl font-bold text-navy-blue dark:text-white cursor-pointer hover:opacity-80 transition-opacity"
+            >
+              {getPageTitle(location.pathname)}
+            </h1>
+          </div>
+
           <button
             onClick={() => setIsSideMenuOpen(true)}
-            className={`w-10 h-10 rounded-full overflow-hidden border-2 ${
+            className={`flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 ${
               profileData ? getExperienceColor(profileData.experienceLevel) : 'border-navy-blue dark:border-gold'
             } focus:outline-none focus:ring-2 focus:ring-navy-blue dark:focus:ring-gold transition-colors`}
           >
-              {profileData?.profile_image_url.startsWith('http') ? (
+              {profileData?.profile_image_url?.startsWith('http') ? (
               <img
                 src={profileData?.profile_image_url}
                 alt={profileData?.name}
@@ -94,20 +107,6 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
                 </div>
               )}
           </button>
-
-          <h1 
-            onClick={handleTitleClick}
-            className="text-lg sm:text-xl font-bold text-navy-blue dark:text-white cursor-pointer hover:opacity-80 transition-opacity"
-          >
-            {getPageTitle(location.pathname)}
-          </h1>
-
-          <div className="flex items-center gap-2">
-            {isAuthenticated && <NotificationBell />}
-            <button onClick={handleLogoClick} className="h-8 sm:h-10">
-              <img src="/gyb-logo.svg" alt="GYB Logo" className="h-full" />
-            </button>
-          </div>
         </div>
       </header>
 

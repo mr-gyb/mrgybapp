@@ -164,7 +164,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
               className="flex items-center py-2 text-red-500 hover:text-red-600 w-full"
             >
               <LogOut size={20} className="mr-2" />
-              Logout {userData?.email ? `(${userData.email})` : ''}
+              Logout
             </button>
           </div>
         </nav>

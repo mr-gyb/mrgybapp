@@ -38,8 +38,20 @@ const VideoGenerationModal: React.FC<VideoGenerationModalProps> = ({
       setConversionResult(null);
       setSelectedSegment(null);
       setShowSegments(false);
+      
+      // Check if auto-conversion should be triggered
+      const autoConvert = sessionStorage.getItem('autoConvertShorts') === 'true';
+      const conversionTriggered = sessionStorage.getItem('conversionTriggered') === 'true';
+      
+      if (autoConvert && conversionTriggered && analysisResult) {
+        console.log('🎬 Auto-triggering short video conversion for long video...');
+        // Auto-trigger conversion after a short delay
+        setTimeout(() => {
+          handleCreateVideo();
+        }, 1000);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, analysisResult]);
 
   // Handle logo animation
   useEffect(() => {

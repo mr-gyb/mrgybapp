@@ -6,6 +6,7 @@ import { fetchYouTubeViewCounts } from '../utils/platformUtils';
 import { useUserContent } from '../hooks/useUserContent';
 import { platformApiService } from "../api/services/platform-apis.service";
 import { ContentItem } from '../types/content';
+import YouTubeDemographics from './analytics/YouTubeDemographics';
 
 
 // Helper to extract YouTube video ID from a URL
@@ -949,26 +950,29 @@ const Analytics: React.FC = () => {
            </div>
          </div>
 
-         <div className="bg-white p-6 rounded-lg shadow">
-           <h3 className="text-xl font-semibold mb-4">Top Converting Content</h3>
-           <ul className="space-y-2">
-             <li className="flex justify-between items-center">
-               <span>Email Marketing Campaign</span>
-               <span className="text-green-500 font-semibold">25% conversion</span>
-             </li>
-             <li className="flex justify-between items-center">
-               <span>Product Demo Video</span>
-               <span className="text-green-500 font-semibold">18% conversion</span>
-             </li>
-             <li className="flex justify-between items-center">
-               <span>Customer Success Story</span>
-               <span className="text-green-500 font-semibold">15% conversion</span>
-             </li>
-           </ul>
-         </div>
-       </div>
-     </div>
-   );
- };
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-xl font-semibold mb-4">Top Converting Content</h3>
+          <ul className="space-y-2">
+            <li className="flex justify-between items-center">
+              <span>Email Marketing Campaign</span>
+              <span className="text-green-500 font-semibold">25% conversion</span>
+            </li>
+            <li className="flex justify-between items-center">
+              <span>Product Demo Video</span>
+              <span className="text-green-500 font-semibold">18% conversion</span>
+            </li>
+            <li className="flex justify-between items-center">
+              <span>Customer Success Story</span>
+              <span className="text-green-500 font-semibold">15% conversion</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* YouTube Demographics Section */}
+        <YouTubeDemographics className="mb-8" />
+      </div>
+    </div>
+  );
+};
 
  export default Analytics;

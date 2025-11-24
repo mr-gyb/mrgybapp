@@ -17,6 +17,9 @@ VITE_SPOTIFY_REDIRECT_URI=http://localhost:3002/callback
 
 # YouTube API Configuration
 VITE_YOUTUBE_API_KEY=your_youtube_api_key_here
+VITE_YOUTUBE_CLIENT_ID=your_youtube_oauth_client_id_here
+VITE_YOUTUBE_CLIENT_SECRET=your_youtube_oauth_client_secret_here
+# VITE_YOUTUBE_ACCESS_TOKEN is optional - will be stored in localStorage after OAuth
 
 # Pinterest API Configuration
 VITE_PINTEREST_ACCESS_TOKEN=your_pinterest_access_token_here
@@ -24,11 +27,15 @@ VITE_PINTEREST_APP_ID=your_pinterest_app_id_here
 VITE_PINTEREST_APP_SECRET=your_pinterest_app_secret_here
 
 # OpenAI API Configuration
+# Note: VITE_OPENAI_VIDEO_API_KEY is optional - if not set, VITE_OPENAI_API_KEY will be used for video analysis
 VITE_OPENAI_API_KEY=your_openai_api_key_here
 VITE_OPENAI_VIDEO_API_KEY=your_openai_video_api_key_here
+
+# Descript API Configuration (Optional - for video editing and short generation)
+# If not set, the app will use OpenAI fallback for short generation
+VITE_DESCRIPT_API_KEY=your_descript_api_key_here
 
 # Chat proxy configuration
 VITE_CHAT_API_BASE=http://localhost:8080
 VITE_SHOW_DIAGNOSTIC_ERRORS=false
 VITE_CHAT_REQUEST_TIMEOUT_MS=25000
-

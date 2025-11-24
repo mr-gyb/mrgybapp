@@ -5,7 +5,6 @@ import { useAuth } from './AuthContext';
 import { Chat, ChatParticipant, Message, OpenAIMessage } from '../types/chat';
 import { generateAIResponse, generateAIResponse2, ChatDiagnostics } from '../api/services/chat.service';
 import { ChatCompletionContentPart } from "openai/resources/chat/completions";
-import { getAuth } from "firebase/auth"; // for firebase auth ID token
 import { addChatParticipant as addParticipantApi, updateChatAgent } from '../lib/firebase/chats';
 import { AI_USERS } from '../types/user';
 
@@ -273,6 +272,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           
           setIsLoading(false);
+        }, (error: any) => {
+          // Suppress index errors - they're expected until indexes are deployed
+          if (error.code === 'failed-precondition' && error.message?.includes('index')) {
+            // Suppress the warning - index errors are handled silently
+            // The index is defined in firestore.indexes.json and needs to be deployed
+            // Users can deploy via: firebase deploy --only firestore:indexes
+            return;
+          }
+          console.error('❌ Error watching chats:', error);
         });
       } catch (err) {
         console.error('Error setting up chat subscriptions:', err);
@@ -524,7 +532,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         [chatId]: {
           prompt,
           agent: agent || selectedAgent || 'Chris',
-          message: detail,
+          message: errorMessage,
         },
       }));
     } finally {
@@ -532,7 +540,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addMessage = async (chatId: string,   content: string | OpenAIMessage,   role: 'user' | 'assistant' | 'system',   senderId?: string,    aiAgent?: string) => {
+  const addMessage = async (chatId: string, content: string | OpenAIMessage, role: 'user' | 'assistant' | 'system', senderId?: string, aiAgent?: string | null) => {
     try {
       const messageContent = typeof content === 'string' ? content : JSON.stringify(content);
       console.log("add message aiagent is ", aiAgent);
@@ -668,7 +676,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       retryData.prompt
     );
   };
-  const addImage = async (chatId: string,   content: ChatCompletionContentPart[],   role: 'user' | 'assistant' | 'system',   senderId?: string,    aiAgent?: string) => {
+  const addImage = async (chatId: string, content: ChatCompletionContentPart[], role: 'user' | 'assistant' | 'system', senderId?: string, aiAgent?: string | null) => {
     try {
       // DEBUG: console.log("coming well");
       // To convert the content so that I can store to firebase and then render in the local page

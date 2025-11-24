@@ -50,6 +50,24 @@ export interface YouTubeAggregatedData {
   lastUpdated: string;
 }
 
+export interface YouTubeDemographics {
+  ageGroups: {
+    ageGroup: string;
+    viewerPercentage: number;
+  }[];
+  genders: {
+    gender: string;
+    viewerPercentage: number;
+  }[];
+  lastUpdated: string;
+}
+
+export interface YouTubeAnalyticsResponse {
+  success: boolean;
+  data?: YouTubeDemographics;
+  error?: string;
+}
+
 /**
  * Platform API Service
  * Handles real API integrations for content performance tracking
@@ -59,15 +77,49 @@ export class PlatformApiService {
 
   constructor() {
     this.loadConfigs();
+    
+    // Reload configs when localStorage changes (for OAuth tokens)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', () => {
+        this.loadConfigs();
+      });
+    }
+  }
+
+  /**
+   * Reload configurations (useful after OAuth token is set)
+   */
+  reloadConfigs() {
+    this.loadConfigs();
   }
 
   private loadConfigs() {
     // Load API configurations from environment variables
     const youtubeApiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+    const youtubeAccessToken = import.meta.env.VITE_YOUTUBE_ACCESS_TOKEN;
+    const youtubeClientId = import.meta.env.VITE_YOUTUBE_CLIENT_ID;
+    
+    // Try to get token from localStorage (set by OAuth service)
+    let accessToken = youtubeAccessToken;
+    if (typeof window !== 'undefined') {
+      // Check localStorage for OAuth token
+      const storedToken = localStorage.getItem('youtube_oauth_token');
+      if (storedToken) {
+        accessToken = storedToken;
+      }
+      // Also check window object (set by OAuth service)
+      if ((window as any).__YOUTUBE_ACCESS_TOKEN__) {
+        accessToken = (window as any).__YOUTUBE_ACCESS_TOKEN__;
+      }
+    }
+    
     console.log('Loading YouTube API key:', youtubeApiKey ? 'Present' : 'Missing');
+    console.log('Loading YouTube Access Token:', accessToken ? 'Present' : 'Missing');
     
     this.configs.set('youtube', {
-      apiKey: youtubeApiKey
+      apiKey: youtubeApiKey,
+      accessToken: accessToken,
+      clientId: youtubeClientId
     });
 
     this.configs.set('instagram', {
@@ -823,6 +875,228 @@ export class PlatformApiService {
     return Array.from(this.configs.keys()).filter(platform => 
       this.isPlatformConfigured(platform)
     );
+  }
+
+  /**
+   * YouTube Analytics API - Fetch demographics (age and gender)
+   * 
+   * Requirements:
+   * - OAuth 2.0 access token with yt-analytics.readonly scope
+   * - Channel ID or content owner ID
+   * - YouTube Analytics API enabled in Google Cloud Console
+   * 
+   * @param channelId - YouTube channel ID (optional, defaults to authenticated user's channel)
+   * @param startDate - Start date in YYYY-MM-DD format (defaults to 30 days ago)
+   * @param endDate - End date in YYYY-MM-DD format (defaults to today)
+   */
+  async fetchYouTubeDemographics(
+    channelId?: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<YouTubeAnalyticsResponse> {
+    const config = this.configs.get('youtube');
+    
+    if (!config?.accessToken) {
+      return {
+        success: false,
+        error: 'YouTube OAuth access token not configured. Please authenticate with YouTube Analytics API scope.'
+      };
+    }
+
+    // Default to last 30 days if dates not provided
+    const end = endDate || new Date().toISOString().split('T')[0];
+    const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    try {
+      // First, get the channel ID if not provided
+      let targetChannelId = channelId;
+      
+      if (!targetChannelId) {
+        // Get authenticated user's channel ID
+        const channelResponse = await fetch(
+          'https://www.googleapis.com/youtube/v3/channels?part=id&mine=true',
+          {
+            headers: {
+              'Authorization': `Bearer ${config.accessToken}`,
+              'Accept': 'application/json'
+            }
+          }
+        );
+
+        if (!channelResponse.ok) {
+          throw new Error(`Failed to get channel ID: ${channelResponse.status} ${channelResponse.statusText}`);
+        }
+
+        const channelData = await channelResponse.json();
+        if (!channelData.items || channelData.items.length === 0) {
+          throw new Error('No channel found for authenticated user');
+        }
+
+        targetChannelId = channelData.items[0].id;
+      }
+
+      // Fetch age group demographics
+      const ageGroupUrl = new URL('https://youtubeanalytics.googleapis.com/v2/reports');
+      ageGroupUrl.searchParams.append('ids', `channel==${targetChannelId}`);
+      ageGroupUrl.searchParams.append('startDate', start);
+      ageGroupUrl.searchParams.append('endDate', end);
+      ageGroupUrl.searchParams.append('metrics', 'viewerPercentage');
+      ageGroupUrl.searchParams.append('dimensions', 'ageGroup');
+
+      const ageGroupResponse = await fetch(ageGroupUrl.toString(), {
+        headers: {
+          'Authorization': `Bearer ${config.accessToken}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!ageGroupResponse.ok) {
+        const errorText = await ageGroupResponse.text();
+        throw new Error(`YouTube Analytics API error (age): ${ageGroupResponse.status} ${errorText}`);
+      }
+
+      const ageGroupData = await ageGroupResponse.json();
+
+      // Fetch gender demographics
+      const genderUrl = new URL('https://youtubeanalytics.googleapis.com/v2/reports');
+      genderUrl.searchParams.append('ids', `channel==${targetChannelId}`);
+      genderUrl.searchParams.append('startDate', start);
+      genderUrl.searchParams.append('endDate', end);
+      genderUrl.searchParams.append('metrics', 'viewerPercentage');
+      genderUrl.searchParams.append('dimensions', 'gender');
+
+      const genderResponse = await fetch(genderUrl.toString(), {
+        headers: {
+          'Authorization': `Bearer ${config.accessToken}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!genderResponse.ok) {
+        const errorText = await genderResponse.text();
+        throw new Error(`YouTube Analytics API error (gender): ${genderResponse.status} ${errorText}`);
+      }
+
+      const genderData = await genderResponse.json();
+
+      // Parse and format the data
+      const demographics: YouTubeDemographics = {
+        ageGroups: (ageGroupData.rows || []).map((row: any[]) => ({
+          ageGroup: row[0] || 'UNKNOWN',
+          viewerPercentage: parseFloat(row[1] || '0')
+        })),
+        genders: (genderData.rows || []).map((row: any[]) => ({
+          gender: row[0] || 'UNKNOWN',
+          viewerPercentage: parseFloat(row[1] || '0')
+        })),
+        lastUpdated: new Date().toISOString()
+      };
+
+      return {
+        success: true,
+        data: demographics
+      };
+    } catch (error) {
+      console.error('Error fetching YouTube demographics:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error fetching demographics'
+      };
+    }
+  }
+
+  /**
+   * Fetch demographics for a specific video
+   * Note: Video-level demographics require the video to be owned by the authenticated channel
+   */
+  async fetchYouTubeVideoDemographics(
+    videoId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<YouTubeAnalyticsResponse> {
+    const config = this.configs.get('youtube');
+    
+    if (!config?.accessToken) {
+      return {
+        success: false,
+        error: 'YouTube OAuth access token not configured. Please authenticate with YouTube Analytics API scope.'
+      };
+    }
+
+    const end = endDate || new Date().toISOString().split('T')[0];
+    const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    try {
+      // Fetch age group demographics for video
+      const ageGroupUrl = new URL('https://youtubeanalytics.googleapis.com/v2/reports');
+      ageGroupUrl.searchParams.append('ids', `channel==MINE`);
+      ageGroupUrl.searchParams.append('filters', `video==${videoId}`);
+      ageGroupUrl.searchParams.append('startDate', start);
+      ageGroupUrl.searchParams.append('endDate', end);
+      ageGroupUrl.searchParams.append('metrics', 'viewerPercentage');
+      ageGroupUrl.searchParams.append('dimensions', 'ageGroup');
+
+      const ageGroupResponse = await fetch(ageGroupUrl.toString(), {
+        headers: {
+          'Authorization': `Bearer ${config.accessToken}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!ageGroupResponse.ok) {
+        const errorText = await ageGroupResponse.text();
+        throw new Error(`YouTube Analytics API error (age): ${ageGroupResponse.status} ${errorText}`);
+      }
+
+      const ageGroupData = await ageGroupResponse.json();
+
+      // Fetch gender demographics for video
+      const genderUrl = new URL('https://youtubeanalytics.googleapis.com/v2/reports');
+      genderUrl.searchParams.append('ids', `channel==MINE`);
+      genderUrl.searchParams.append('filters', `video==${videoId}`);
+      genderUrl.searchParams.append('startDate', start);
+      genderUrl.searchParams.append('endDate', end);
+      genderUrl.searchParams.append('metrics', 'viewerPercentage');
+      genderUrl.searchParams.append('dimensions', 'gender');
+
+      const genderResponse = await fetch(genderUrl.toString(), {
+        headers: {
+          'Authorization': `Bearer ${config.accessToken}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!genderResponse.ok) {
+        const errorText = await genderResponse.text();
+        throw new Error(`YouTube Analytics API error (gender): ${genderResponse.status} ${errorText}`);
+      }
+
+      const genderData = await genderResponse.json();
+
+      // Parse and format the data
+      const demographics: YouTubeDemographics = {
+        ageGroups: (ageGroupData.rows || []).map((row: any[]) => ({
+          ageGroup: row[0] || 'UNKNOWN',
+          viewerPercentage: parseFloat(row[1] || '0')
+        })),
+        genders: (genderData.rows || []).map((row: any[]) => ({
+          gender: row[0] || 'UNKNOWN',
+          viewerPercentage: parseFloat(row[1] || '0')
+        })),
+        lastUpdated: new Date().toISOString()
+      };
+
+      return {
+        success: true,
+        data: demographics
+      };
+    } catch (error) {
+      console.error('Error fetching YouTube video demographics:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error fetching video demographics'
+      };
+    }
   }
 }
 

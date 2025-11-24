@@ -4,6 +4,34 @@ import { useTheme } from './contexts/ThemeContext';
 import Header from './components/Header';
 import BottomMenu from './components/BottomMenu';
 
+/**
+ * Facebook Passport Strategy Configuration
+ * 
+ * Note: Passport is a server-side authentication middleware and cannot run in React components.
+ * The Facebook Passport strategy is configured in server.js (backend server file).
+ * 
+ * Backend Configuration (server.js):
+ * 
+ * const FacebookStrategy = require("passport-facebook").Strategy;
+ * // Or in ES modules: import { Strategy as FacebookStrategy } from 'passport-facebook';
+ * 
+ * passport.use(new FacebookStrategy({
+ *     clientID: process.env.VITE_FACEBOOK_APP_ID,
+ *     clientSecret: process.env.VITE_FACEBOOK_APP_SECRET,
+ *     callbackURL: "http://localhost:3000/auth/facebook/callback"
+ *   },
+ *   function(accessToken, refreshToken, profile, cb) {
+ *     User.findOrCreate({ facebookId: profile.id }, function (err, user) {
+ *       return cb(err, user);
+ *     });
+ *   }
+ * ));
+ * 
+ * See server.js for the complete implementation.
+ * 
+ * The frontend (this App.tsx) communicates with the backend server for Facebook authentication.
+ */
+
 // Lazy load components for code splitting
 const CommunityTab = lazy(() => import('./components/content/CommunityTab'));
 const NewChat = lazy(() => import('./components/NewChat'));
@@ -19,12 +47,16 @@ const Settings = lazy(() => import('./components/Settings'));
 const UserOnboarding = lazy(() => import('./components/UserOnboarding'));
 const GYBTeamChat = lazy(() => import('./components/GYBTeamChat'));
 const Analytics = lazy(() => import('./components/Analytics'));
+const YouTubeTokenGenerator = lazy(() => import('./components/YouTubeTokenGenerator'));
 const Upload = lazy(() => import('./components/Upload'));
 const GYBMedia = lazy(() => import('./components/NewPost'));
 const GYBStudio = lazy(() => import('./components/GYBStudio'));
 const GYBStudioWelcome = lazy(() => import('./components/GYBStudioWelcome'));
 const VideoUploadPage = lazy(() => import('./components/VideoUploadPage'));
+const VideoUploadFlow = lazy(() => import('./components/video/VideoUploadFlow'));
+const CreatePage = lazy(() => import('./components/video/CreatePage'));
 const SummaryPage = lazy(() => import('./components/SummaryPage'));
+const CreatedShortsPage = lazy(() => import('./components/video/CreatedShortsPage'));
 const FacebookAPITester = lazy(() => import('./components/FacebookAPITester'));
 const FacebookPostsDisplay = lazy(() => import('./components/FacebookPostsDisplay'));
 const WorkHistory = lazy(() => import('./components/WorkHistory'));
@@ -67,6 +99,8 @@ const BusinessRoadmapWelcome = lazy(() => import('./components/BusinessRoadmapWe
 const LetsBegin = lazy(() => import('./components/LetsBegin'));
 const Assessment = lazy(() => import('./components/Assessment'));
 const TestImage = lazy(() => import('./components/TestImage'));
+const ChrisAIBusinessCoach = lazy(() => import('./components/ChrisAIBusinessCoach'));
+const ContentInspiration = lazy(() => import('./components/ContentInspiration'));
 
 // Loading spinner component
 const LoadingSpinner = () => (
@@ -103,7 +137,8 @@ const getPageTitle = (pathname: string): string => {
     '/reviews': 'Commerce',
     '/rewards': 'Commerce',
     '/payments': 'Commerce',
-    '/earnings': 'Commerce'
+    '/earnings': 'Commerce',
+    '/chris-ai-coach': 'Content'
   };
   
   // Check if pathname matches chat route pattern (/chat/:chatId)
@@ -179,6 +214,18 @@ const App: React.FC = () => {
               <Suspense fallback={<LoadingSpinner />}>
                 <TestImage />
               </Suspense>
+            } />
+            <Route path="/chris-ai-coach" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <ChrisAIBusinessCoach />
+              </Suspense>
+            } />
+            <Route path="/content-inspiration" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ContentInspiration />
+                </Suspense>
+              </ProtectedRoute>
             } />
 
             {/* Protected App Routes - Require authentication */}
@@ -280,6 +327,11 @@ const App: React.FC = () => {
                 </Suspense>
               </ProtectedRoute>
             } />
+            <Route path="/youtube-token-generator" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <YouTubeTokenGenerator />
+              </Suspense>
+            } />
             <Route path="/upload" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
@@ -311,7 +363,21 @@ const App: React.FC = () => {
             <Route path="/gyb-studio/create" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
-                  <VideoUploadPage />
+                  <VideoUploadFlow />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/gyb-studio/create-page" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <CreatePage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/gyb-studio/created-shorts" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <CreatedShortsPage />
                 </Suspense>
               </ProtectedRoute>
             } />

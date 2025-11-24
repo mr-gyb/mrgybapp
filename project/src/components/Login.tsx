@@ -19,40 +19,30 @@ const Login: React.FC = () => {
     setIsLoading(true);
     setError('');
 
+    // Basic validation
+    if (!email.trim()) {
+      setError('Please enter your email address.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!password) {
+      setError('Please enter your password.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const result = await signIn(email, password);
       if (result.error) {
-        // Check for specific Firebase errors
-        const errorCode = result.error?.code || '';
-        const errorMessage = result.error?.message || '';
-        
-        if (errorCode === 'auth/api-key-expired' || errorMessage.includes('api-key-expired')) {
-          setError(
-            'Firebase API key has expired. Please contact the administrator or check your .env file. ' +
-            'See FIREBASE_API_KEY_FIX.md for instructions.'
-          );
-        } else if (errorCode === 'auth/invalid-email') {
-          setError('Invalid email address. Please check and try again.');
-        } else if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
-          setError('Invalid email or password. Please try again.');
-        } else if (errorCode === 'auth/too-many-requests') {
-          setError('Too many failed login attempts. Please try again later.');
-        } else {
-          setError(errorMessage || 'Invalid email or password. Please try again.');
-        }
+        // Use the error message from AuthContext (which provides user-friendly messages)
+        const errorMessage = result.error.message || 'Invalid email or password. Please try again.';
+        setError(errorMessage);
       } else {
         navigate('/home');
       }
     } catch (error: any) {
-      const errorMessage = error?.message || error?.code || 'An error occurred. Please try again.';
-      if (errorMessage.includes('api-key-expired')) {
-        setError(
-          'Firebase API key has expired. Please contact the administrator or check your .env file. ' +
-          'See FIREBASE_API_KEY_FIX.md for instructions.'
-        );
-      } else {
-        setError(errorMessage);
-      }
+      setError(error?.message || 'An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -205,8 +195,19 @@ const Login: React.FC = () => {
 
             {/* Error Message */}
             {error && (
-              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg">
-                {error}
+              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg space-y-2">
+                <p className="font-medium">{error}</p>
+                {error.includes('Invalid email or password') && (
+                  <div className="text-xs text-gray-600 mt-2 pt-2 border-t border-red-200">
+                    <p className="font-semibold mb-1">Troubleshooting:</p>
+                    <ul className="list-disc list-inside space-y-1 text-left">
+                      <li>Make sure you're using the correct email and password</li>
+                      <li>Check if you have an account - if not, please sign up first</li>
+                      <li>Verify that email/password authentication is enabled in Firebase Console</li>
+                      <li>Try resetting your password if you've forgotten it</li>
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
 
