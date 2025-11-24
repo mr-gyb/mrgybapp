@@ -52,7 +52,10 @@ const GYBMedia = lazy(() => import('./components/NewPost'));
 const GYBStudio = lazy(() => import('./components/GYBStudio'));
 const GYBStudioWelcome = lazy(() => import('./components/GYBStudioWelcome'));
 const VideoUploadPage = lazy(() => import('./components/VideoUploadPage'));
+const VideoUploadFlow = lazy(() => import('./components/video/VideoUploadFlow'));
+const CreatePage = lazy(() => import('./components/video/CreatePage'));
 const SummaryPage = lazy(() => import('./components/SummaryPage'));
+const CreatedShortsPage = lazy(() => import('./components/video/CreatedShortsPage'));
 const FacebookAPITester = lazy(() => import('./components/FacebookAPITester'));
 const FacebookPostsDisplay = lazy(() => import('./components/FacebookPostsDisplay'));
 const WorkHistory = lazy(() => import('./components/WorkHistory'));
@@ -351,7 +354,21 @@ const App: React.FC = () => {
             <Route path="/gyb-studio/create" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
-                  <VideoUploadPage />
+                  <VideoUploadFlow />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/gyb-studio/create-page" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <CreatePage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/gyb-studio/created-shorts" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <CreatedShortsPage />
                 </Suspense>
               </ProtectedRoute>
             } />

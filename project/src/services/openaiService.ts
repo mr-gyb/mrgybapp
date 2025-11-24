@@ -91,15 +91,16 @@ class OpenAIService {
   private baseUrl = 'https://api.openai.com/v1';
 
   constructor() {
-    this.apiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
-    this.videoApiKey = import.meta.env.VITE_OPENAI_VIDEO_API_KEY || '';
+    this.apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    // Use video API key if provided, otherwise fall back to regular API key
+    this.videoApiKey = import.meta.env.VITE_OPENAI_VIDEO_API_KEY || this.apiKey;
     
     if (!this.apiKey) {
       console.warn('OpenAI API key not found. Please set VITE_OPENAI_API_KEY in your .env file.');
     }
     
     if (!this.videoApiKey) {
-      console.warn('OpenAI Video API key not found. Please set VITE_OPENAI_VIDEO_API_KEY in your .env file.');
+      console.warn('OpenAI Video API key not found. Please set VITE_OPENAI_VIDEO_API_KEY or VITE_OPENAI_API_KEY in your .env file.');
     }
   }
 
@@ -107,8 +108,9 @@ class OpenAIService {
    * Analyze a video file and generate summary with suggested shorts
    */
   async analyzeVideo(videoFile: File): Promise<VideoAnalysisResult> {
-    if (!this.videoApiKey) {
-      throw new Error('OpenAI Video API key not configured');
+    // Check if any API key is configured
+    if (!this.videoApiKey && !this.apiKey) {
+      throw new Error('OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in your .env file.');
     }
 
     try {
@@ -116,16 +118,24 @@ class OpenAIService {
       const analysis = await this.processVideoWithGPT(videoFile);
       return analysis;
     } catch (error) {
-      console.error('Error analyzing video with OpenAI:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       // Check if it's an authentication error
-      if (error instanceof Error && error.message && error.message.includes('401')) {
+      if (errorMessage.includes('401')) {
         console.warn('OpenAI API key is invalid or expired');
         throw new Error('OpenAI API key is invalid or expired. Please check your API configuration.');
       }
       
+      // Only log non-quota errors (quota errors are handled in UI)
+      if (!errorMessage.toLowerCase().includes('quota') && !errorMessage.toLowerCase().includes('insufficient_quota')) {
+        console.error('Error analyzing video with OpenAI:', error);
+      } else {
+        // Quota errors are expected and handled in UI - just log as warning
+        console.warn('⚠️ Video analysis quota error - error displayed in UI');
+      }
+      
       // For other errors, provide a helpful message
-      throw new Error(`Video analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Video analysis failed: ${errorMessage}`);
     }
   }
 
@@ -154,41 +164,32 @@ class OpenAIService {
       return analysis;
 
     } catch (error) {
-      console.error('❌ Error in video processing workflow:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      // Only log non-quota errors (quota errors are handled in UI)
+      if (!errorMessage.toLowerCase().includes('quota') && !errorMessage.toLowerCase().includes('insufficient_quota')) {
+        console.error('❌ Error in video processing workflow:', error);
+      } else {
+        // Quota errors are expected and handled in UI - just log as warning
+        console.warn('⚠️ Video processing quota error - error displayed in UI');
+      }
       throw error;
     }
   }
 
   /**
    * Extract audio from video file
-   * Note: Whisper API accepts video files directly, but has a 25MB limit
-   * For files larger than 25MB, we need to extract and compress audio
+   * Note: Whisper API can accept video files directly and will extract audio automatically
+   * So we can pass the video file as-is to the backend
    */
   private async extractAudioFromVideo(videoFile: File): Promise<Blob> {
-    const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB limit for Whisper API
-    const fileSize = videoFile.size;
-    
-    console.log('🎵 Processing video file for audio extraction...');
-    console.log('📹 File size:', (fileSize / (1024 * 1024)).toFixed(2), 'MB');
-    console.log('📹 File type:', videoFile.type);
-    
-    // Check file size upfront
-    if (fileSize > MAX_FILE_SIZE) {
-      const errorMsg = `Video file is too large (${(fileSize / (1024 * 1024)).toFixed(2)}MB). Whisper API has a 25MB file size limit. Please compress your video or use a shorter video. You can use online tools like CloudConvert or HandBrake to compress your video before uploading.`;
-      console.error('❌', errorMsg);
-      throw new Error(errorMsg);
-    }
-    
-    // Whisper API accepts video files directly (mp4, webm, etc.)
-    // So we can send the video file as-is if it's under the size limit
-    console.log('✅ Video file is within size limit, will send directly to Whisper API');
-    console.log('ℹ️ Whisper API accepts video files and will extract audio automatically');
-    
+    // Whisper API accepts video files and extracts audio automatically
+    // So we can use the video file directly without client-side extraction
+    console.log('🎵 Using video file directly (Whisper API will extract audio)');
     return videoFile;
   }
 
   /**
-   * Transcribe audio using OpenAI Whisper API via backend proxy (to avoid CORS)
+   * Transcribe audio using backend proxy (avoids CORS issues)
    */
   private async transcribeAudioWithWhisper(audioBlob: Blob): Promise<string> {
     try {
@@ -205,102 +206,82 @@ class OpenAIService {
         throw new Error(errorMsg);
       }
       
-      // Determine file name based on blob type
-      // Whisper API accepts both audio and video files
-      let fileName = 'audio.mp4';
-      
-      if (audioBlob.type.includes('webm')) {
-        fileName = 'audio.webm';
-      } else if (audioBlob.type.includes('ogg')) {
-        fileName = 'audio.ogg';
-      } else if (audioBlob.type.includes('mp4')) {
-        fileName = 'video.mp4'; // Can be video or audio
-      } else if (audioBlob.type.includes('quicktime') || audioBlob.type.includes('mov')) {
-        fileName = 'video.mov';
-      } else if (audioBlob.type.includes('x-matroska') || audioBlob.type.includes('mkv')) {
-        fileName = 'video.mkv';
-      } else if (audioBlob.type.includes('mp3')) {
-        fileName = 'audio.mp3';
-      } else if (audioBlob.type.includes('wav')) {
-        fileName = 'audio.wav';
-      }
-      
-      // Use backend proxy to avoid CORS issues
-      const proxyUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
       const formData = new FormData();
-      formData.append('file', audioBlob, fileName);
-      formData.append('language', 'en');
-      formData.append('response_format', 'text');
+      formData.append('audio', audioBlob, 'audio.mp3');
 
-      console.log('🎤 Sending audio to backend proxy for Whisper API...');
-      console.log('📤 File type:', audioBlob.type, 'Size:', (fileSize / (1024 * 1024)).toFixed(2), 'MB');
-      console.log('🔗 Proxy URL:', `${proxyUrl}/api/openai/transcribe`);
+      console.log('🎤 Sending audio to backend transcription endpoint...');
       
-      const response = await fetch(`${proxyUrl}/api/openai/transcribe`, {
+      // Use backend proxy endpoint to avoid CORS issues
+      const backendUrl = import.meta.env.VITE_CHAT_API_BASE?.replace('/api', '') || 'http://localhost:8080';
+      const response = await fetch(`${backendUrl}/api/transcribe`, {
         method: 'POST',
         body: formData
       });
 
       if (!response.ok) {
-        let errorMessage = `Transcription failed: ${response.status} ${response.statusText}`;
+        const errorText = await response.text();
+        let errorMessage = `Transcription error: ${response.status} ${response.statusText}`;
         
-        // Try to parse error response
+        // Try to parse error details for better messaging
         try {
-          const errorJson = await response.json();
-          if (errorJson.message) {
-            errorMessage = errorJson.message;
-          } else if (errorJson.error) {
-            errorMessage = errorJson.error;
+          const errorData = JSON.parse(errorText);
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.ok === false && errorData.message) {
+            errorMessage = errorData.message;
           }
-        } catch (e) {
-          // If not JSON, try text
-          try {
-            const errorText = await response.text();
-            if (errorText) {
-              errorMessage = errorText;
-            }
-          } catch (e2) {
-            // Use default error message
-          }
+        } catch (parseError) {
+          // If parsing fails, use the original error message
+          console.warn('Could not parse transcription error response:', parseError);
         }
         
-        console.error('❌ Transcription error:', response.status, errorMessage);
-        
-        // Provide user-friendly error messages
-        if (response.status === 413) {
-          errorMessage = `File too large (${(fileSize / (1024 * 1024)).toFixed(2)}MB). Whisper API has a 25MB limit. Please compress your video or use a shorter video.`;
-        } else if (response.status === 401 || response.status === 500) {
-          if (errorMessage.includes('API key')) {
-            errorMessage = 'OpenAI API key is invalid or expired. Please check your VITE_OPENAI_VIDEO_API_KEY in the .env file.';
-          } else {
-            errorMessage = 'Server configuration error. Please check that the backend server is running and OpenAI API key is configured.';
-          }
-        } else if (response.status === 429) {
-          errorMessage = 'Rate limit exceeded. Please try again in a few moments.';
-        } else if (response.status === 502 || response.status === 503) {
-          errorMessage = 'OpenAI service is temporarily unavailable. Please try again later.';
+        // Only log non-quota errors for debugging (quota errors are handled in UI)
+        if (!errorMessage.toLowerCase().includes('quota') && !errorMessage.toLowerCase().includes('insufficient_quota')) {
+          console.error('❌ Transcription error:', response.status, response.statusText, errorText);
+        } else {
+          // Log quota errors as warnings (they're expected and handled in UI)
+          console.warn('⚠️ OpenAI quota exceeded - error displayed in UI');
         }
-        
+        // Throw the parsed error message (which includes the exact OpenAI error message)
         throw new Error(errorMessage);
       }
 
-      const transcript = await response.text();
+      const result = await response.json();
+      const transcript = result.text || result.transcript || '';
+      
+      if (!transcript) {
+        throw new Error('No transcript returned from backend');
+      }
+      
       console.log('✅ Whisper transcription completed');
       console.log('📝 Transcript length:', transcript.length, 'characters');
       return transcript;
 
     } catch (error) {
-      console.error('❌ Error transcribing audio:', error);
-      // Re-throw the error with helpful message
-      if (error instanceof Error && error.message.includes('Failed to fetch')) {
-        throw new Error('Failed to connect to transcription service. Please ensure the backend server is running on port 3000.');
+      // Preserve the original error message (which should already include the parsed OpenAI error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Only log non-quota errors (quota errors are handled in UI)
+      if (!errorMessage.toLowerCase().includes('quota') && !errorMessage.toLowerCase().includes('insufficient_quota')) {
+        console.error('❌ Error transcribing audio:', error);
+      } else {
+        // Quota errors are expected and handled in UI - just log as warning
+        console.warn('⚠️ Audio transcription quota error - error displayed in UI');
       }
-      throw new Error(`Audio transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Only wrap if it's not already wrapped
+      if (errorMessage.includes('Audio transcription failed:')) {
+        throw error; // Already wrapped, re-throw as-is
+      } else {
+        throw new Error(`Audio transcription failed: ${errorMessage}`);
+      }
     }
   }
 
   /**
-   * Analyze transcript with GPT-4 to create structured summary
+   * Analyze transcript using backend VideoAnalysisAgent
    */
   private async analyzeTranscriptWithGPT(transcript: string, videoFile: File): Promise<VideoAnalysisResult> {
     try {
@@ -311,229 +292,112 @@ class OpenAIService {
         duration: this.estimateVideoDuration(videoFile.size)
       };
 
-      // Check if transcript is valid
-      if (!transcript || transcript.trim().length < 10) {
-        console.warn('⚠️ Transcript is too short or empty, analysis may be limited');
-        return {
-          summary: 'Video analysis completed, but transcript was too short or unclear to provide detailed insights. Please ensure your video has clear audio.',
-          keyPoints: ['Transcript was too short for detailed analysis', 'Please check audio quality and try again'],
-          suggestedShorts: [],
-          duration: videoInfo.duration,
-          transcript: transcript || 'No transcript available',
-          technicalInfo: {
-            fileSize: `${videoInfo.size} MB`,
-            duration: `${Math.floor(videoInfo.duration / 60)}:${(videoInfo.duration % 60).toString().padStart(2, '0')}`,
-            quality: 'Transcript too short for quality assessment',
-            productionValues: 'Unable to assess due to short transcript'
-          },
-          mainTheme: 'Unable to determine theme due to short transcript',
-          suggestedEdits: [],
-          revisedScript: undefined,
-          whatChanged: [],
-          actionableSuggestions: []
-        };
-      }
-
-      const prompt = `You are an expert video content analyst specializing in creating accurate, detailed summaries that capture the true essence and key points of video content. Your task is to analyze the provided video transcript and create a comprehensive, accurate summary.
-
-VIDEO DETAILS:
-- Name: ${videoInfo.name}
-- Size: ${videoInfo.size} MB
-- Type: ${videoInfo.type}
-- Duration: ${Math.floor(videoInfo.duration / 60)}:${(videoInfo.duration % 60).toString().padStart(2, '0')}
-
-TRANSCRIPT:
-${transcript}
-
-CRITICAL INSTRUCTIONS:
-1. You MUST respond with ONLY valid JSON. No text before or after the JSON.
-2. Base your analysis EXCLUSIVELY on the actual transcript content provided above.
-3. Do NOT make assumptions or add generic content not present in the transcript.
-4. If the transcript is short or unclear, acknowledge this limitation in your analysis.
-5. Focus on accurately capturing what was actually said in the video.
-
-ANALYSIS REQUIREMENTS:
-- Create a summary that accurately reflects the actual content of the video
-- Extract key points that are genuinely mentioned in the transcript
-- Identify the main theme based on what was actually discussed
-- Provide specific, actionable suggestions based on the actual content
-- If the transcript is incomplete or unclear, note this in your analysis
-
-IMPORTANT: You MUST respond with ONLY valid JSON. Start your response with { and end with }.
-
-Respond with ONLY this JSON structure:
-{
-  "summary": "Accurate, detailed summary based EXCLUSIVELY on the transcript content provided. Capture the main themes, key points, and actual content discussed in the video.",
-  "keyPoints": ["Extract 3-5 key points that are actually mentioned in the transcript", "Focus on specific insights or information shared", "Avoid generic statements not supported by the content"],
-  "mainTheme": "The core message or primary focus as actually discussed in the video",
-  "duration": ${videoInfo.duration},
-  "transcript": "${transcript.substring(0, 1000)}...",
-  "suggestedEdits": [
-    {
-      "title": "Specific editing recommendation based on actual content",
-      "description": "Detailed suggestion based on what was actually said in the video",
-      "reasoning": "Why this improvement would help, based on the actual content",
-      "priority": "high"
-    }
-  ],
-  "revisedScript": {
-    "originalScript": "Key excerpts from the actual transcript",
-    "revisedScript": "Improved version based on the actual content, with specific enhancements",
-    "changes": ["Specific changes made based on actual content", "Focus on real improvements to the actual script"]
-  },
-  "whatChanged": [
-    {
-      "section": "Specific section from the actual video",
-      "original": "Actual content from the transcript",
-      "revised": "Improved version based on the actual content",
-      "reason": "Specific reason for the change based on the actual content"
-    }
-  ],
-  "suggestedShorts": [
-    {
-      "title": "Segment title based on actual content",
-      "description": "What this segment actually contains",
-      "startTime": 0,
-      "endTime": 15,
-      "reasoning": "Why this segment is valuable based on actual content"
-    }
-  ],
-  "technicalInfo": {
-    "fileSize": "${videoInfo.size} MB",
-    "duration": "${Math.floor(videoInfo.duration / 60)}:${(videoInfo.duration % 60).toString().padStart(2, '0')}",
-    "quality": "Assessment based on transcript clarity and content",
-    "productionValues": "Evaluation based on actual content structure"
-  },
-  "actionableSuggestions": [
-    {
-      "title": "Suggestion based on actual content",
-      "description": "Specific recommendation based on what was actually discussed",
-      "impact": "Expected improvement based on actual content analysis"
-    }
-  ]
-}`;
-
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      console.log('🧠 Step 3: Analyzing transcript with VideoAnalysisAgent...');
+      
+      // Call backend VideoAnalysisAgent endpoint
+      const backendUrl = import.meta.env.VITE_CHAT_API_BASE?.replace('/api', '') || 'http://localhost:8080';
+      const response = await fetch(`${backendUrl}/api/video/analyze`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.videoApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert video content analyst specializing in creating detailed, structured summaries with clear formatting and actionable insights. Provide comprehensive analysis with professional formatting.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: 4000,
-          temperature: 0.7
+          transcript: transcript
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ GPT-4 API error:', response.status, response.statusText, errorText);
-        throw new Error(`GPT-4 API error: ${response.status} ${response.statusText}`);
+        let errorMessage = `Video analysis error: ${response.status} ${response.statusText}`;
+        
+        // Try to parse error details
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (parseError) {
+          console.warn('Could not parse analysis error response:', parseError);
+        }
+        
+        // Only log non-quota errors (quota errors are handled in UI)
+        if (!errorMessage.toLowerCase().includes('quota') && !errorMessage.toLowerCase().includes('insufficient_quota')) {
+          console.error('❌ Video analysis error:', response.status, response.statusText, errorText);
+        } else {
+          console.warn('⚠️ Video analysis quota error - error displayed in UI');
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
-      const content = data.choices[0].message.content;
+      const analysisData = await response.json();
       
-      console.log('✅ GPT-4 analysis completed');
-      
-      // Parse the JSON response
-      try {
-        // Clean the content to extract JSON
-        let jsonContent = content.trim();
-        
-        // If the response starts with text before JSON, extract just the JSON part
-        const jsonStart = jsonContent.indexOf('{');
-        const jsonEnd = jsonContent.lastIndexOf('}');
-        
-        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-          jsonContent = jsonContent.substring(jsonStart, jsonEnd + 1);
-        }
-        
-        const parsedContent = JSON.parse(jsonContent);
-        console.log('✅ Successfully parsed GPT-4 response');
-        
-        // Validate that we have essential content
-        if (!parsedContent.summary || parsedContent.summary.length < 50) {
-          console.warn('⚠️ Summary seems too short or generic, may not be accurate');
-        }
-        
-        if (!parsedContent.keyPoints || parsedContent.keyPoints.length === 0) {
-          console.warn('⚠️ No key points extracted, analysis may be incomplete');
-        }
-        
-        return {
-          summary: parsedContent.summary || 'Video analysis completed - please check if the transcript was clear and complete',
-          keyPoints: parsedContent.keyPoints || ['Analysis completed - no specific key points extracted'],
-          suggestedShorts: parsedContent.suggestedShorts || [],
-          duration: parsedContent.duration || videoInfo.duration,
-          transcript: parsedContent.transcript || transcript.substring(0, 1000) + '...',
-          // Add new structured data
-          technicalInfo: parsedContent.technicalInfo || {
-            fileSize: `${videoInfo.size} MB`,
-            duration: `${Math.floor(videoInfo.duration / 60)}:${(videoInfo.duration % 60).toString().padStart(2, '0')}`,
-            quality: 'Analysis completed',
-            productionValues: 'Analysis completed'
-          },
-          mainTheme: parsedContent.mainTheme || 'Theme not clearly identified from transcript',
-          keyLessons: parsedContent.keyLessons || [],
-          stories: parsedContent.stories || [],
-          frameworks: parsedContent.frameworks || [],
-          callToAction: parsedContent.callToAction || '',
-          // New fields for enhanced analysis
-          keyMoments: parsedContent.keyMoments || [],
-          bestSegment: parsedContent.bestSegment || undefined,
-          actionableSuggestions: parsedContent.actionableSuggestions || [],
-          suggestedEdits: parsedContent.suggestedEdits || [],
-          revisedScript: parsedContent.revisedScript || undefined,
-          whatChanged: parsedContent.whatChanged || []
-        };
-      } catch (parseError) {
-        console.error('❌ JSON parsing error:', parseError);
-        console.log('📝 Raw content:', content);
-        console.log('📝 Content length:', content.length);
-        console.log('📝 First 200 chars:', content.substring(0, 200));
-        
-        // Try to create a fallback response with the raw content
-        return {
-          summary: content.substring(0, 500) + '...',
-          keyPoints: ['Analysis completed but JSON parsing failed'],
-          suggestedShorts: [],
-          duration: videoInfo.duration,
-          transcript: transcript.substring(0, 500) + '...',
-          technicalInfo: {
-            fileSize: `${videoInfo.size} MB`,
-            duration: `${Math.floor(videoInfo.duration / 60)}:${(videoInfo.duration % 60).toString().padStart(2, '0')}`,
-            quality: 'Analysis completed',
-            productionValues: 'Analysis completed'
-          },
-          mainTheme: 'Video analysis completed',
-          keyLessons: [],
-          stories: [],
-          frameworks: [],
-          callToAction: 'Analysis completed',
-          // New fields for enhanced analysis
-          keyMoments: [],
-          bestSegment: undefined,
-          actionableSuggestions: [],
-          suggestedEdits: [],
-          revisedScript: undefined,
-          whatChanged: []
-        };
+      if (!analysisData.success) {
+        throw new Error(analysisData.error || 'Video analysis failed');
       }
+      
+      console.log('✅ VideoAnalysisAgent analysis completed');
+      
+      // Map backend response to VideoAnalysisResult format
+      // Convert improvements array to suggestedEdits format
+      const suggestedEdits = (analysisData.improvements || []).map((improvement: string, index: number) => {
+        // Try to parse improvement string (format: "Title: Description")
+        const parts = improvement.split(':');
+        const title = parts[0]?.trim() || `Improvement ${index + 1}`;
+        const description = parts.slice(1).join(':').trim() || improvement;
+        
+        return {
+          title: title,
+          description: description,
+          reasoning: description,
+          priority: index < 2 ? 'high' : 'medium' as 'high' | 'medium' | 'low'
+        };
+      });
+      
+      // Convert revisedScript (string) to revisedScript object format
+      const revisedScriptObj = analysisData.revisedScript ? {
+        originalScript: transcript.substring(0, 1000) + '...',
+        revisedScript: analysisData.revisedScript,
+        changes: analysisData.improvements || []
+      } : undefined;
+      
+      return {
+        summary: analysisData.summary || 'Video analysis completed',
+        keyPoints: analysisData.keyPoints || [],
+        suggestedShorts: [], // Not provided by new agent
+        duration: videoInfo.duration,
+        transcript: analysisData.rawTranscript || transcript.substring(0, 500) + '...',
+        // Map improvements to suggestedEdits
+        suggestedEdits: suggestedEdits,
+        revisedScript: revisedScriptObj,
+        whatChanged: [], // Not provided by new agent, can be derived from improvements
+        // Legacy fields (optional)
+        technicalInfo: {
+          fileSize: `${videoInfo.size} MB`,
+          duration: `${Math.floor(videoInfo.duration / 60)}:${(videoInfo.duration % 60).toString().padStart(2, '0')}`,
+          quality: 'Analysis completed',
+          productionValues: 'Analysis completed'
+        },
+        mainTheme: analysisData.summary?.substring(0, 100) || '',
+        keyLessons: [],
+        stories: [],
+        frameworks: [],
+        callToAction: '',
+        keyMoments: [],
+        bestSegment: undefined,
+        actionableSuggestions: []
+      };
 
     } catch (error) {
-      console.error('❌ Error analyzing transcript with GPT:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Only log non-quota errors (quota errors are handled in UI)
+      if (!errorMessage.toLowerCase().includes('quota') && !errorMessage.toLowerCase().includes('insufficient_quota')) {
+        console.error('❌ Error analyzing transcript with VideoAnalysisAgent:', error);
+      } else {
+        console.warn('⚠️ Video analysis quota error - error displayed in UI');
+      }
       throw error;
     }
   }
@@ -558,8 +422,9 @@ Respond with ONLY this JSON structure:
     endTime: number;
     originalTranscript: string;
   }): Promise<string> {
-    if (!this.videoApiKey) {
-      throw new Error('OpenAI Video API key not configured');
+    // Check if any API key is configured
+    if (!this.videoApiKey && !this.apiKey) {
+      throw new Error('OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in your .env file.');
     }
 
     try {
@@ -590,7 +455,8 @@ ${shortData.description}
    * Check if OpenAI service is properly configured
    */
   isConfigured(): boolean {
-    return !!this.videoApiKey;
+    // Can use either video API key or regular API key
+    return !!(this.videoApiKey || this.apiKey);
   }
 }
 

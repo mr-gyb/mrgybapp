@@ -7,6 +7,8 @@ import ContentSuggestions from './content/ContentSuggestions';
 import ContentCategorySelector from './content/ContentCategorySelector';
 import CategorySpecificUploader from './content/CategorySpecificUploader';
 import CreationInspirationsLazyWrapper from './content/CreationInspirationsLazyWrapper';
+import ContentInspiration from './content/ContentInspiration';
+import CreatedShortsSection from './content/CreatedShortsSection';
 import youtubeIcon from './images/y.png';
 import instagramIcon from './images/Instagram_icon.png.webp';
 import facebookIcon from './images/Facebook.png';
@@ -1837,6 +1839,13 @@ const GYBStudio: React.FC = () => {
             limit={3} 
             showRefreshButton={true}
             onSuggestionsGenerated={handleSuggestionsGenerated}
+          />
+        </div>
+
+        {/* Created Shorts Section */}
+        <div className="mb-6">
+          <CreatedShortsSection
+            onNavigateToFullPage={() => navigate('/gyb-studio/created-shorts')}
           />
         </div>
 
