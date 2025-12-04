@@ -1,8 +1,13 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { useTheme } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext'; // Import AuthProvider
+import { ThemeProvider } from './contexts/ThemeContext'; // Import ThemeProvider
+import { ChatProvider } from './contexts/ChatContext'; // Import ChatProvider
+// import ErrorBoundary from './components/ErrorBoundary'; // Removed ErrorBoundary import
+// import { useTheme } from './contexts/ThemeContext';
 import Header from './components/Header';
 import BottomMenu from './components/BottomMenu';
+import MainLayout from './components/MainLayout'; // Import MainLayout
 
 // Lazy load components for code splitting
 const NewChat = lazy(() => import('./components/NewChat'));
@@ -53,6 +58,7 @@ const PrivacyPolicy = lazy(() => import('./components/settings/PrivacyPolicy'));
 const AIVideoAvatar = lazy(() => import('./components/AIVideoAvatar'));
 const CreateGroup = lazy(() => import('./components/group/CreateGroup'));
 const GroupProfile = lazy(() => import('./components/group/GroupProfile'));
+const LandingPage = lazy(() => import('./components/LandingPage'));
 const HomePage = lazy(() => import('./components/HomePage'));
 const AboutPage = lazy(() => import('./components/AboutPage'));
 const ContactUs = lazy(() => import('./components/ContactUs'));
@@ -75,7 +81,6 @@ const LoadingSpinner = () => (
     <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
   </div>
 );
-
 
 // Get page title based on current route
 const getPageTitle = (pathname: string): string => {
@@ -126,9 +131,10 @@ const getPageTitle = (pathname: string): string => {
 };
 
 const App: React.FC = () => {
-  const { isDarkMode } = useTheme();
+  // const { isDarkMode } = useTheme(); // Removed from App component
 
   return (
+<<<<<<< HEAD
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className={`flex flex-col min-h-screen ${isDarkMode ? 'dark bg-navy-blue text-white' : 'bg-white text-navy-blue'}`}>
         <Header getPageTitle={getPageTitle} />
@@ -531,13 +537,402 @@ const App: React.FC = () => {
                 </Suspense>
               </ProtectedRoute>
             } />
+=======
+    <Router>
+      <AuthProvider>
+        <ThemeProvider>
+          <MainLayout getPageTitle={getPageTitle}>
+            <Routes>
+              {/* Public Routes - Redirect to home if already authenticated */}
+              <Route path="/" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <LandingPage />
+                </Suspense>
+              } />
 
-            {/* Catch-all route - redirect to home for any unmatched routes */}
-            <Route path="*" element={<Navigate to="/home" replace />} />
-          </Routes>
-        </main>
-        <BottomMenu />
-      </div>
+              <Route path="/login" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <Login />
+                </Suspense>
+              } />
+              <Route path="/onboarding" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <UserOnboarding />
+                </Suspense>
+              } />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactUs />} />
+              <Route path="/what-to-expect" element={<WhatToExpect />} />
+              <Route path="/trial-signup" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <TrialSignupPage />
+                </Suspense>
+              } />
+              <Route path="/trial-signup-step2" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <TrialSignupStep2 />
+                </Suspense>
+              } />
+              <Route path="/trial-signup-confirmation" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <TrialSignupConfirmation />
+                </Suspense>
+              } />
+              <Route path="/business-roadmap-welcome" element={<BusinessRoadmapWelcome />} />
+              <Route path="/lets-begin" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <LetsBegin />
+                </Suspense>
+              } />
+              <Route path="/assessment" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <Assessment />
+                </Suspense>
+              } />
+              <Route path="/test-image" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <TestImage />
+                </Suspense>
+              } />
+
+              {/* Protected App Routes - Require authentication */}
+              <Route path="/home" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <HomePage />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Dashboard />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/commerce" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Commerce />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/new-chat" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <NewChat />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/chat/:chatId" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Chat />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/chat-history" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ChatHistory />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/dream-team" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <DreamTeam />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/gyb-live-network" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <GYBLiveNetwork />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/user-profile" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <UserProfile />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Profile />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Settings />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/gyb-team-chat" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <GYBTeamChat />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/analytics" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Analytics />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/upload" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Upload />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/gyb-media" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <GYBMedia />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/gyb-studio" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <GYBStudio />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/gyb-studio-welcome" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <GYBStudioWelcome />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/gyb-studio/create" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <VideoUploadPage />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/facebook-api-tester" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <FacebookAPITester />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/facebook-posts-display" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <FacebookPostsDisplay />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/work-history" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <WorkHistory />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/invites" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Invites />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/reviews" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Reviews />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/rewards" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Rewards />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/payments" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Payments />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/earnings" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Earnings />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/roadmap" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <RoadMap />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/portfolio" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Portfolio />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/resume" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Resume />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/bookmarks" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <BookmarksPage />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/email-settings" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <EmailSettings />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/subscription-settings" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SubscriptionSettings />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/personalization-settings" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PersonalizationSettings />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/data-controls" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <DataControls />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/archived-chats" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ArchivedChats />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/language-settings" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <LanguageSettings />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/spelling-settings" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SpellingSettings />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/updates-settings" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <UpdatesSettings />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/voice-settings" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <VoiceSettings />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/main-language-settings" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <MainLanguageSettings />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/integrations" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Integrations />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/help-center" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <HelpCenter />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/terms-of-use" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <TermsOfUse />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/privacy-policy" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PrivacyPolicy />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/ai-video-avatar" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AIVideoAvatar />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/create-group" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <CreateGroup />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+              <Route path="/group-profile" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <GroupProfile />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
+>>>>>>> 820a1ed (updates for landing page)
+
+              {/* Catch-all route - redirect to home for any unmatched routes */}
+              <Route path="*" element={<Navigate to="/home" replace />} />
+            </Routes>
+          </MainLayout>
+        </ThemeProvider>
+      </AuthProvider>
     </Router>
   );
 };

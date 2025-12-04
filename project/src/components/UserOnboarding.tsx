@@ -6,6 +6,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { createProfile } from '../services/profile.service';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { UserProfile } from '../types/user'; // Import UserProfile
 
 
 const UserOnboarding: React.FC = () => {
@@ -127,7 +128,7 @@ const UserOnboarding: React.FC = () => {
         notificationsEnabled,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      });
+      } as Partial<UserProfile>); // Explicitly cast to Partial<UserProfile>
 
       console.log('Profile created successfully');
       navigate('/home');

@@ -22,6 +22,9 @@ export interface UserProfile {
   isAI?: boolean;
   isPlaceholder?: boolean;
   darkMode?: boolean;
+  phoneNumber?: string; // Added phone number
+  country?: string; // Added country
+  notificationsEnabled?: boolean; // Added notificationsEnabled
   content?: {
     posts?: { id: number; title: string; date: string; likes: number; comments: number; }[];
     subs?: { id: number; name: string; tier: string; since: string; amount: number; }[];

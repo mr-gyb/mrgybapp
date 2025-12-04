@@ -12,7 +12,7 @@ interface IntegrationTile {
 const integrations: IntegrationTile[] = [
   {
     name: 'GYB CRM',
-    logo: '/gyb-logo.svg',
+    logo: '/gyb-logo.png',
     description: 'Connect to GYB CRM to manage your customer relationships and sales pipeline.',
     connectUrl: '#',
   },

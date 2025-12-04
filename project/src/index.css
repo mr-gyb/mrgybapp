@@ -39,6 +39,7 @@
 :root {
   --navy-blue: #0f2a4a;
   --gold: #d4af37;
+  --brand-gradient: linear-gradient(90deg, #3B4371 0%, #b29958 100%);
 }
 
 .dark {
@@ -158,4 +159,22 @@
 
 .bg-gold .prose pre {
   @apply bg-white/30 text-navy-blue;
+}
+
+@keyframes gradient-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background: var(--brand-gradient);
+  background-size: 200% 200%;
+  animation: gradient-animation 10s ease infinite;
 }

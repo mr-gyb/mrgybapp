@@ -21,7 +21,6 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
   const navigate = useNavigate();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const { setSelectedAgent } = useChat();
-  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node) && isOpen) {
@@ -35,8 +34,6 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
     };
   }, [isOpen, onClose]);
 
-  if (!isAuthenticated) return null;
-
   const handleLogout = async () => {
     try {
       await logout();
@@ -48,28 +45,15 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userData }) => {
     }
   };
 
-  const handleRoadmapClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleRoadmapClick = () => {
+    navigate('/roadmap');
     onClose();
-    
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    try {
-      const userIsNew = await isNewUser(user.uid);
-      if (userIsNew) {
-        navigate('/business-roadmap-welcome');
-      } else {
-        navigate('/roadmap');
-      }
-    } catch (error) {
-      console.error('Error checking user status:', error);
-      // If there's an error, default to the welcome page to be safe
-      navigate('/business-roadmap-welcome');
-    }
   };
+
+  // Conditionally render the menu content based on isAuthenticated
+  if (!isAuthenticated) {
+    return null; // Return null if not authenticated, after all hooks are called
+  }
 
   return (
     <div

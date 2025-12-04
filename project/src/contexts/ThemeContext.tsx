@@ -6,6 +6,7 @@ import { db } from '../lib/firebase';
 interface ThemeContextType {
   isDarkMode: boolean;
   toggleDarkMode: () => Promise<void>;
+  isLoading: boolean; // Re-added isLoading
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -15,7 +16,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { user } = useAuth();
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Re-added isLoading state
 
   useEffect(() => {
     const loadThemePreference = async () => {
@@ -73,7 +74,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
+    <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode, isLoading }}> {/* Re-added isLoading */}
       {children}
     </ThemeContext.Provider>
   );

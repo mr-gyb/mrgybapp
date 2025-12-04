@@ -94,7 +94,7 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
           </h1>
 
           <button onClick={handleLogoClick} className="h-8 sm:h-10">
-            <img src="/gyb-logo.svg" alt="GYB Logo" className="h-full" />
+            <img src="/gyb-logo.png" alt="GYB Logo" className="h-full" />
           </button>
         </div>
       </header>
