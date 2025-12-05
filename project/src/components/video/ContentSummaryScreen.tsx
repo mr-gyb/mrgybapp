@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { VideoAnalysisResult } from '../../services/openaiService';
 import { generateScript } from '../../services/scriptGeneration.service';
 import ShortVideoPlayer from './ShortVideoPlayer';
+import VideoShortsList from './VideoShortsList';
 
 interface ContentSummaryScreenProps {
   analysisResult: VideoAnalysisResult;
@@ -19,6 +20,7 @@ const ContentSummaryScreen: React.FC<ContentSummaryScreenProps> = ({
   const [revisedScript, setRevisedScript] = useState<string | null>(null);
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [showShortPlayer, setShowShortPlayer] = useState(false);
+  const [showShortsList, setShowShortsList] = useState(false);
   const [avatarPosition, setAvatarPosition] = useState<'left' | 'top'>('left');
   const [hasGeneratedOnce, setHasGeneratedOnce] = useState(false);
 
@@ -58,9 +60,20 @@ const ContentSummaryScreen: React.FC<ContentSummaryScreenProps> = ({
 
   const handleCreateShortClick = () => {
     setAvatarPosition('top');
-    setShowShortPlayer(true);
+    // Show the new shorts list component instead of the old player
+    setShowShortsList(true);
   };
 
+  if (showShortsList) {
+    return (
+      <VideoShortsList
+        analysisResult={analysisResult}
+        onBack={() => setShowShortsList(false)}
+      />
+    );
+  }
+
+  // Keep old player for backward compatibility if needed
   if (showShortPlayer) {
     return (
       <ShortVideoPlayer

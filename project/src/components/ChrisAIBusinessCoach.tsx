@@ -51,42 +51,92 @@ const ChrisAIBusinessCoach: React.FC = () => {
 
   const checkFacebookStatus = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/facebook/status', {
-        credentials: 'include',
-        // Add timeout to prevent hanging
-        signal: AbortSignal.timeout(5000)
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.connected) {
-          setFacebookConnected(true);
-          setFacebookUser(data.user);
+      // Check if Facebook token exists in localStorage (from our OAuth flow)
+      const facebookToken = localStorage.getItem('facebook_long_lived_token') || localStorage.getItem('facebook_access_token');
+      
+      if (facebookToken) {
+        // We have a token, so user is connected
+        setFacebookConnected(true);
+        // Try to get user info from Facebook Graph API
+        try {
+          const userResponse = await fetch(`https://graph.facebook.com/v18.0/me?access_token=${facebookToken}&fields=id,name,email`);
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            setFacebookUser(userData);
+          } else if (userResponse.status === 401) {
+            // Token expired or invalid, clear it
+            localStorage.removeItem('facebook_long_lived_token');
+            localStorage.removeItem('facebook_access_token');
+            setFacebookConnected(false);
+            setFacebookUser(null);
+          }
+        } catch (userError) {
+          // Silently handle - token might be invalid
+          console.warn('Could not fetch Facebook user info:', userError);
         }
+      } else {
+        // No token found, user is not connected
+        setFacebookConnected(false);
+        setFacebookUser(null);
       }
     } catch (error: any) {
-      // Only log if it's not a connection refused error (server not running)
-      if (error.name !== 'AbortError' && !error.message?.includes('Failed to fetch')) {
-        console.error('Error checking Facebook status:', error);
-      }
-      // Silently fail if server is not running - this is expected in development
+      // Silently handle errors - this is expected if tokens don't exist
+      console.warn('Error checking Facebook status:', error);
     }
   };
 
-  const handleConnectFacebook = () => {
+  const handleConnectFacebook = async () => {
     // Redirect to backend Facebook authentication endpoint
-    window.location.href = 'http://localhost:3000/auth/facebook';
+    // Use the backend OAuth URL endpoint
+    const backendUrl = import.meta.env.VITE_CHAT_API_BASE?.replace('/api', '') || 'http://localhost:8080';
+    try {
+      const response = await fetch(`${backendUrl}/api/facebook/auth/url`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.authUrl) {
+          // Store provider info for callback
+          sessionStorage.setItem('oauth_provider', 'facebook');
+          window.location.href = data.authUrl;
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error getting Facebook OAuth URL:', error);
+    }
+    // Fallback: show error message
+    alert('Failed to initiate Facebook login. Please check your backend configuration.');
   };
 
   const handleDisconnectFacebook = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/facebook/logout', {
-        credentials: 'include'
-      });
-      if (response.ok) {
-        setFacebookConnected(false);
-        setFacebookUser(null);
-        alert('Disconnected from Facebook');
+      // Clear Facebook tokens from localStorage
+      localStorage.removeItem('facebook_access_token');
+      localStorage.removeItem('facebook_long_lived_token');
+      localStorage.removeItem('facebook_user_id');
+      localStorage.removeItem('facebook_page_id');
+      localStorage.removeItem('instagram_business_account_id');
+      
+      // Try backend logout if endpoint exists
+      const backendUrl = import.meta.env.VITE_CHAT_API_BASE?.replace('/api', '') || 'http://localhost:8080';
+      try {
+        const response = await fetch(`${backendUrl}/api/facebook/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        if (response.ok) {
+          // Backend logout successful
+        }
+      } catch (logoutError) {
+        // Backend endpoint doesn't exist - that's okay, we cleared localStorage
+        console.warn('Backend logout endpoint not available:', logoutError);
       }
+      
+      // Always clear local state regardless of backend response
+      setFacebookConnected(false);
+      setFacebookUser(null);
+      alert('Disconnected from Facebook');
     } catch (error) {
       console.error('Error disconnecting Facebook:', error);
       alert('Error disconnecting from Facebook');

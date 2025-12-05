@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithPopup } from 'firebase/auth';
-import { auth, db, facebookProvider } from '../lib/firebase';
+import { auth, db, facebookProvider, googleProvider, appleProvider } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile } from '../types/user';
 import { storage } from '../utils/storage';
@@ -13,6 +13,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ user?: User; error?: any }>;
   signUp: (email: string, password: string) => Promise<{ user?: User; error?: any }>;
   signInWithFacebook: () => Promise<{ user?: User; error?: any }>;
+  signInWithGoogle: () => Promise<{ user?: User; error?: any }>;
+  signInWithApple: () => Promise<{ user?: User; error?: any }>;
   logout: () => Promise<void>;
   updateUserData: (updates: Partial<UserProfile>) => Promise<void>;
   checkAuthStatus: () => Promise<boolean>;
@@ -322,6 +324,204 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      // Check if Firebase is properly configured
+      if (!auth) {
+        return { error: { code: 'auth/config-error', message: 'Firebase authentication is not properly configured. Please check your environment variables.' } };
+      }
+      
+      const result = await signInWithPopup(auth, googleProvider);
+      
+      // Check if this is a new user by checking if profile exists
+      const userDocRef = doc(db, 'profiles', result.user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (!userDoc.exists()) {
+        // Create a new profile for Google user
+        const defaultProfile: UserProfile = {
+          id: result.user.uid,
+          name: result.user.displayName || result.user.email?.split('@')[0] || 'Google User',
+          username: `@${result.user.displayName?.toLowerCase().replace(/\s+/g, '') || result.user.email?.split('@')[0] || 'googleuser'}`,
+          email: result.user.email || '',
+          bio: 'Tell us about yourself...',
+          location: 'Location',
+          website: 'https://example.com',
+          industry: 'Technology',
+          experienceLevel: 1,
+          rating: 4.5,
+          following: 0,
+          followers: 0,
+          profile_image_url: result.user.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80',
+          cover_image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          authProvider: 'google'
+        };
+        
+        await setDoc(userDocRef, defaultProfile);
+        setUserData(defaultProfile);
+      }
+      
+      return { user: result.user };
+    } catch (error: any) {
+      console.error('Google sign in error:', error);
+      
+      // Handle Firebase API key expired error
+      if (error?.code === 'auth/api-key-expired' || error?.code === 'auth/invalid-api-key' || error?.message?.includes('api-key')) {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'Firebase API key has expired or is invalid. Please update your VITE_FIREBASE_API_KEY in the .env file. See FIREBASE_API_KEY_TROUBLESHOOTING.md for detailed instructions.' 
+          } 
+        };
+      }
+      
+      // Handle popup blocked error
+      if (error?.code === 'auth/popup-blocked') {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'Popup was blocked by your browser. Please allow popups for this site and try again.' 
+          } 
+        };
+      }
+      
+      // Handle popup closed error
+      if (error?.code === 'auth/popup-closed-by-user') {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'Sign in was cancelled. Please try again.' 
+          } 
+        };
+      }
+      
+      // Handle Google-specific errors
+      if (error?.code === 'auth/operation-not-allowed') {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'Google Sign In is not enabled in Firebase. Please enable it in Firebase Console:\n\n1. Go to Firebase Console > Authentication > Sign-in method\n2. Click on "Google" provider\n3. Enable it and configure your OAuth client credentials\n\nSee GOOGLE_SIGN_IN_SETUP.md for detailed setup instructions.' 
+          } 
+        };
+      }
+      
+      // Handle account exists with different credential
+      if (error?.code === 'auth/account-exists-with-different-credential') {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'An account already exists with the same email address but different sign-in method. Please sign in using your original method.' 
+          } 
+        };
+      }
+      
+      return { error };
+    }
+  };
+
+  const signInWithApple = async () => {
+    try {
+      // Check if Firebase is properly configured
+      if (!auth) {
+        return { error: { code: 'auth/config-error', message: 'Firebase authentication is not properly configured. Please check your environment variables.' } };
+      }
+      
+      const result = await signInWithPopup(auth, appleProvider);
+      
+      // Check if this is a new user by checking if profile exists
+      const userDocRef = doc(db, 'profiles', result.user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (!userDoc.exists()) {
+        // Apple Sign In may not provide displayName on first sign in
+        // Extract name from email or use default
+        const displayName = result.user.displayName || result.user.email?.split('@')[0] || 'Apple User';
+        
+        // Create a new profile for Apple user
+        const defaultProfile: UserProfile = {
+          id: result.user.uid,
+          name: displayName,
+          username: `@${displayName.toLowerCase().replace(/\s+/g, '') || 'appleuser'}`,
+          email: result.user.email || '',
+          bio: 'Tell us about yourself...',
+          location: 'Location',
+          website: 'https://example.com',
+          industry: 'Technology',
+          experienceLevel: 1,
+          rating: 4.5,
+          following: 0,
+          followers: 0,
+          profile_image_url: result.user.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80',
+          cover_image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          authProvider: 'apple'
+        };
+        
+        await setDoc(userDocRef, defaultProfile);
+        setUserData(defaultProfile);
+      }
+      
+      return { user: result.user };
+    } catch (error: any) {
+      console.error('Apple sign in error:', error);
+      
+      // Handle Firebase API key expired error
+      if (error?.code === 'auth/api-key-expired' || error?.code === 'auth/invalid-api-key' || error?.message?.includes('api-key')) {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'Firebase API key has expired or is invalid. Please update your VITE_FIREBASE_API_KEY in the .env file. See FIREBASE_API_KEY_TROUBLESHOOTING.md for detailed instructions.' 
+          } 
+        };
+      }
+      
+      // Handle popup blocked error
+      if (error?.code === 'auth/popup-blocked') {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'Popup was blocked by your browser. Please allow popups for this site and try again.' 
+          } 
+        };
+      }
+      
+      // Handle popup closed error
+      if (error?.code === 'auth/popup-closed-by-user') {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'Sign in was cancelled. Please try again.' 
+          } 
+        };
+      }
+      
+      // Handle Apple-specific errors
+      if (error?.code === 'auth/operation-not-allowed') {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'Apple Sign In is not enabled in Firebase. Please enable it in Firebase Console:\n\n1. Go to Firebase Console > Authentication > Sign-in method\n2. Click on "Apple" provider\n3. Enable it and configure your Apple credentials\n\nSee APPLE_SIGN_IN_SETUP.md for detailed setup instructions.' 
+          } 
+        };
+      }
+      
+      // Handle account exists with different credential
+      if (error?.code === 'auth/account-exists-with-different-credential') {
+        return { 
+          error: { 
+            code: error.code, 
+            message: 'An account already exists with the same email address but different sign-in method. Please sign in using your original method.' 
+          } 
+        };
+      }
+      
+      return { error };
+    }
+  };
+
   const logout = async () => {
     try {
       await signOut(auth);
@@ -354,6 +554,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signUp,
     signInWithFacebook,
+    signInWithGoogle,
+    signInWithApple,
     logout,
     updateUserData,
     checkAuthStatus,

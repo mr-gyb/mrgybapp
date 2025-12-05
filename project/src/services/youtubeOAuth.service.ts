@@ -23,59 +23,102 @@ class YouTubeOAuthService {
     // Use provided client ID or fallback to env variable
     this.clientId = import.meta.env.VITE_YOUTUBE_CLIENT_ID || '956684071028-3vm17a0fknfnrvcmrm3baolgtqai1f8l.apps.googleusercontent.com';
     this.clientSecret = import.meta.env.VITE_YOUTUBE_CLIENT_SECRET || '';
-    this.redirectUri = `${window.location.origin}/settings/integrations/callback`;
+    // Use explicit redirect URI from env or default to localhost:3002
+    this.redirectUri = import.meta.env.VITE_YOUTUBE_REDIRECT_URI || 
+                      (import.meta.env.DEV ? 'http://localhost:3002/settings/integrations/callback' : 
+                       `${window.location.origin}/settings/integrations/callback`);
   }
 
   /**
-   * Get the OAuth authorization URL
+   * Get the OAuth authorization URL from backend
    */
-  getAuthUrl(): string {
-    const scope = encodeURIComponent(
-      'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly'
-    );
-    const state = this.generateState();
-    sessionStorage.setItem('youtube_oauth_state', state);
+  async getAuthUrl(): Promise<string> {
+    const backendUrl = import.meta.env.VITE_CHAT_API_BASE?.replace('/api', '') || 'http://localhost:8080';
     
-    return `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `response_type=code&` +
-      `client_id=${this.clientId}&` +
-      `redirect_uri=${encodeURIComponent(this.redirectUri)}&` +
-      `scope=${scope}&` +
-      `state=${state}&` +
-      `access_type=offline&` +
-      `prompt=consent`;
+    try {
+      const response = await fetch(`${backendUrl}/api/youtube/auth-url`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (parseError) {
+          // If JSON parsing fails, try to get text
+          try {
+            const errorText = await response.text();
+            if (errorText) {
+              errorMessage = errorText;
+            }
+          } catch (textError) {
+            // Keep the default error message
+          }
+        }
+        
+        // Provide specific error messages
+        if (response.status === 500) {
+          errorMessage = 'Backend server error. Please ensure the backend is running and YouTube OAuth credentials are configured.';
+        } else if (response.status === 404) {
+          errorMessage = 'OAuth endpoint not found. Please check backend configuration.';
+        } else if (response.status === 0 || errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+          errorMessage = `Cannot connect to backend server at ${backendUrl}. Please ensure the backend is running on port 8080.`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      
+      if (!data.authUrl) {
+        throw new Error('Backend did not return an OAuth URL. Please check backend configuration.');
+      }
+      
+      const state = this.generateState();
+      sessionStorage.setItem('youtube_oauth_state', state);
+      
+      // Append state to the auth URL for CSRF protection
+      const separator = data.authUrl.includes('?') ? '&' : '?';
+      return `${data.authUrl}${separator}state=${state}`;
+    } catch (error: any) {
+      console.error('Error getting OAuth URL:', error);
+      
+      // Provide more helpful error messages
+      if (error.message) {
+        throw error;
+      } else if (error.name === 'TypeError' && error.message?.includes('fetch')) {
+        throw new Error(`Cannot connect to backend server at ${backendUrl}. Please ensure the backend is running on port 8080.`);
+      } else {
+        throw new Error(error.message || 'Failed to get OAuth URL. Please check backend configuration and ensure YouTube OAuth credentials are set.');
+      }
+    }
   }
 
   /**
-   * Exchange authorization code for access token
+   * Exchange authorization code for access token via backend
    */
   async exchangeCodeForToken(code: string): Promise<TokenResponse> {
-    if (!this.clientId || !this.clientSecret) {
-      throw new Error('YouTube OAuth credentials not configured. Please set VITE_YOUTUBE_CLIENT_ID and VITE_YOUTUBE_CLIENT_SECRET in your .env file.');
-    }
-
     try {
-      // For client-side OAuth, we need to use a backend proxy or handle it differently
-      // Since we don't have a backend, we'll use a workaround with Google's token endpoint
-      // Note: This requires CORS to be enabled or a backend proxy
+      const backendUrl = import.meta.env.VITE_CHAT_API_BASE?.replace('/api', '') || 'http://localhost:8080';
       
-      const response = await fetch('https://oauth2.googleapis.com/token', {
+      const response = await fetch(`${backendUrl}/api/youtube/oauth/token`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({
+        body: JSON.stringify({
           code,
-          client_id: this.clientId,
-          client_secret: this.clientSecret,
-          redirect_uri: this.redirectUri,
-          grant_type: 'authorization_code',
+          redirectUri: this.redirectUri,
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Token exchange failed: ${response.status} ${errorData}`);
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `Token exchange failed: ${response.status}`);
       }
 
       const tokenData: TokenResponse = await response.json();
@@ -83,10 +126,7 @@ class YouTubeOAuthService {
       return tokenData;
     } catch (error) {
       console.error('Error exchanging code for token:', error);
-      // If direct call fails (CORS issue), provide instructions for backend setup
-      throw new Error(
-        'Token exchange requires a backend server. Please set up a backend endpoint to exchange the authorization code for an access token, or use the manual token method.'
-      );
+      throw error;
     }
   }
 
@@ -111,22 +151,29 @@ class YouTubeOAuthService {
   }
 
   /**
-   * Get stored access token
+   * Get stored access token (auto-refreshes if expired)
    */
-  getAccessToken(): string | null {
+  async getAccessToken(): Promise<string | null> {
     // Check if token is expired
     const expiryTime = localStorage.getItem(this.tokenExpiryKey);
     if (expiryTime && Date.now() > parseInt(expiryTime)) {
       // Token expired, try to refresh
-      this.refreshToken();
-      return null;
+      const refreshed = await this.refreshToken();
+      return refreshed;
     }
 
     return localStorage.getItem(this.tokenStorageKey);
   }
 
   /**
-   * Refresh access token using refresh token
+   * Get stored access token synchronously (for immediate use, may be expired)
+   */
+  getAccessTokenSync(): string | null {
+    return localStorage.getItem(this.tokenStorageKey);
+  }
+
+  /**
+   * Refresh access token using refresh token via backend
    */
   async refreshToken(): Promise<string | null> {
     const refreshToken = localStorage.getItem(this.refreshTokenStorageKey);
@@ -135,16 +182,15 @@ class YouTubeOAuthService {
     }
 
     try {
-      const response = await fetch('https://oauth2.googleapis.com/token', {
+      const backendUrl = import.meta.env.VITE_CHAT_API_BASE?.replace('/api', '') || 'http://localhost:8080';
+      
+      const response = await fetch(`${backendUrl}/api/youtube/oauth/refresh`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({
-          refresh_token: refreshToken,
-          client_id: this.clientId,
-          client_secret: this.clientSecret,
-          grant_type: 'refresh_token',
+        body: JSON.stringify({
+          refreshToken,
         }),
       });
 
@@ -164,9 +210,11 @@ class YouTubeOAuthService {
   }
 
   /**
-   * Manually set access token (for users who get it from Google Cloud Console)
+   * Manually set access token (DEPRECATED - use OAuth flow instead)
+   * @deprecated Use the OAuth flow instead of manual token entry
    */
   setAccessTokenManually(token: string): void {
+    console.warn('Manual token entry is deprecated. Please use the OAuth flow.');
     localStorage.setItem(this.tokenStorageKey, token);
     // Set expiry to 1 hour from now (default Google token expiry)
     const expiryTime = Date.now() + (3600 * 1000);
@@ -194,7 +242,7 @@ class YouTubeOAuthService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    const token = this.getAccessToken();
+    const token = this.getAccessTokenSync();
     return !!token;
   }
 
@@ -218,4 +266,5 @@ class YouTubeOAuthService {
 
 export const youtubeOAuthService = new YouTubeOAuthService();
 export default youtubeOAuthService;
+
 

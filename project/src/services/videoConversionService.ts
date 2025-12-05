@@ -135,7 +135,7 @@ class VideoConversionService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4',
+          model: 'o3-mini',
           messages: [
             {
               role: 'system',
@@ -430,7 +430,7 @@ Respond with the complete script only.`;
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4',
+          model: 'o3-mini',
           messages: [
             {
               role: 'system',

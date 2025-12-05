@@ -90,7 +90,7 @@ export const processMediaContent = async (
   try {
     // Generate blog post and headline
     const blogResponse = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: 'o3-mini',
       messages: [
         {
           role: 'system',
@@ -130,7 +130,7 @@ export const processMediaContent = async (
 
     // Generate SEO tags
     const seoResponse = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: 'o3-mini',
       messages: [
         {
           role: 'system',

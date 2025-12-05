@@ -150,24 +150,65 @@ const VideoUploadFlow: React.FC = () => {
         lastModified: videoFile.lastModified || Date.now()
       }));
     } catch (error) {
+      // Log full error details for debugging
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      const errorDetails = {
+        message: errorMessage,
+        name: error instanceof Error ? error.name : undefined,
+        stack: error instanceof Error ? error.stack : undefined,
+        cause: error instanceof Error ? (error as any).cause : undefined,
+        status: (error as any)?.status,
+        errorData: (error as any)?.errorData
+      };
       
       // Only log non-quota errors (quota errors are handled in UI)
       if (!errorMessage.toLowerCase().includes('quota') && !errorMessage.toLowerCase().includes('insufficient_quota')) {
-        console.error('Error processing video:', error);
+        console.error('❌ Error processing video - full details:', errorDetails);
       } else {
-        // Quota errors are expected and handled in UI - just log as warning
         console.warn('⚠️ Video upload quota error - error displayed in UI');
       }
       
-      // Check if it's a quota error and provide helpful message
-      const isQuotaError = errorMessage.toLowerCase().includes('quota') || 
-                          errorMessage.toLowerCase().includes('insufficient_quota') ||
-                          errorMessage.toLowerCase().includes('billing');
+      // Check error type from backend response
+      const errorData = (error as any)?.errorData || {};
+      const errorType = errorData.errorType || '';
+      const isBillingQuota = errorType === 'billing_quota' || errorType === 'quota';
+      const isRateLimit = errorType === 'rate_limit' || errorType === 'rate_limit_tpd' || errorType === 'rate_limit_exceeded';
+      
+      // Fallback to message parsing if errorType not available
+      const errorMsgLower = errorMessage.toLowerCase();
+      const isQuotaFromMsg = errorMsgLower.includes('quota') || 
+                            errorMsgLower.includes('insufficient_quota');
+      const isBillingFromMsg = errorMsgLower.includes('billing') || 
+                               errorMsgLower.includes('payment') || 
+                               errorMsgLower.includes('plan');
+      const isRateLimitFromMsg = errorMsgLower.includes('rate limit') || 
+                                errorMsgLower.includes('tpd') || 
+                                errorMsgLower.includes('tpm') || 
+                                errorMsgLower.includes('rpm');
+      
+      const isNetworkError = errorMsgLower.includes('network error') ||
+                            errorMsgLower.includes('fetch failed') ||
+                            errorMsgLower.includes('unable to connect');
+      
+      const isFileError = errorMsgLower.includes('too large') ||
+                         errorMsgLower.includes('file is empty') ||
+                         errorMsgLower.includes('unsupported');
       
       let displayMessage = errorMessage;
-      if (isQuotaError) {
-        displayMessage = 'OpenAI API quota exceeded. Please check your billing and plan details. The video processing feature requires an active OpenAI API subscription with available credits.';
+      
+      if (isBillingQuota || (isQuotaFromMsg && isBillingFromMsg)) {
+        displayMessage = 'Your OpenAI billing quota is depleted. Check your billing at https://platform.openai.com/account/billing';
+      } else if (isRateLimit || (isQuotaFromMsg && isRateLimitFromMsg)) {
+        displayMessage = 'You\'ve reached your OpenAI usage limits (TPM/RPM/TPD). Please wait for your limits to reset and try again later.';
+      } else if (isNetworkError) {
+        displayMessage = 'Network error: Unable to connect to the server. Please check your internet connection and ensure the backend server is running.';
+      } else if (isFileError) {
+        displayMessage = errorMessage; // File errors are already user-friendly
+      } else if (errorMessage.includes('timeout')) {
+        displayMessage = 'Request timed out. The video file may be too large. Please try a shorter video or compress the file.';
+      } else {
+        // Generic error - provide helpful context
+        displayMessage = `Video processing failed: ${errorMessage}. Please try again or contact support if the issue persists.`;
       }
       
       setProcessingError(displayMessage);

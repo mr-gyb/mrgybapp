@@ -137,7 +137,7 @@ async function generateIdeasWithAI_DEPRECATED(
             content: prompt
           }
         ],
-        model: import.meta.env.VITE_MODEL_NAME || 'gpt-4o-mini',
+        model: import.meta.env.VITE_MODEL_NAME || 'o3-mini',
         stream: true, // Backend streams by default
         temperature: 0.7,
         max_tokens: 1000

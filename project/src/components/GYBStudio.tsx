@@ -9,6 +9,7 @@ import CategorySpecificUploader from './content/CategorySpecificUploader';
 import CreationInspirationsLazyWrapper from './content/CreationInspirationsLazyWrapper';
 import ContentInspiration from './content/ContentInspiration';
 import CreatedShortsSection from './content/CreatedShortsSection';
+import AnalysisDashboard from './content/AnalysisDashboard';
 import youtubeIcon from './images/y.png';
 import instagramIcon from './images/Instagram_icon.png.webp';
 import facebookIcon from './images/Facebook.png';
@@ -1854,6 +1855,11 @@ const GYBStudio: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold">Analyze</h2>
+          </div>
+          
+          {/* Analysis Dashboard */}
+          <div className="mb-8">
+            <AnalysisDashboard />
           </div>
           
           {/* Past Uploads Section */}

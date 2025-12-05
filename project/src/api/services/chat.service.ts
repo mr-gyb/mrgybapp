@@ -94,7 +94,7 @@ const ensureClientEnv = () => {
     }
 
     if (!model) {
-      inferredModelName = 'gpt-4o-mini';
+      inferredModelName = 'o3-mini';
       hints['VITE_MODEL_NAME'] = inferredModelName;
     }
 
@@ -132,7 +132,7 @@ const getChatEndpoint = (): string => {
 
 const getClientModelName = (): string => {
   ensureClientEnv();
-  return import.meta.env.VITE_MODEL_NAME?.trim() || inferredModelName || 'gpt-4o-mini';
+  return import.meta.env.VITE_MODEL_NAME?.trim() || inferredModelName || 'o3-mini';
 };
 
 const generateRequestId = (): string => {
@@ -515,7 +515,7 @@ export const generateAIResponse = async (
       if (lastMessage.content.some(item => item.type === 'image_url')) {
         console.log("image file?"); 
         const completion = await openai.chat.completions.create({
-          model: 'gpt-4-vision-preview',
+          model: 'o3-mini', // Using o3-mini instead of gpt-4-vision-preview
           messages: [
             {
               role: 'system',
@@ -815,7 +815,7 @@ export const generateAIResponse2 = async (
 
     /* Tradition completion API
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'o3-mini',
       messages:[
         {
           role: 'system',
@@ -842,7 +842,7 @@ export const generateAIResponse2 = async (
   if (assistantId === 'fallback') {
     // Use regular chat completions as fallback
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'o3-mini',
       messages: [
         {
           role: 'system',

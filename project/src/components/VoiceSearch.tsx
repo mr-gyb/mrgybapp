@@ -468,3 +468,4 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({
 };
 
 export default VoiceSearch;
+

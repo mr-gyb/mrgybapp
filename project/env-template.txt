@@ -19,6 +19,8 @@ VITE_SPOTIFY_REDIRECT_URI=http://localhost:3002/callback
 VITE_YOUTUBE_API_KEY=your_youtube_api_key_here
 VITE_YOUTUBE_CLIENT_ID=your_youtube_oauth_client_id_here
 VITE_YOUTUBE_CLIENT_SECRET=your_youtube_oauth_client_secret_here
+# YouTube OAuth Redirect URI (must match Google Cloud Console settings)
+VITE_YOUTUBE_REDIRECT_URI=http://localhost:3002/settings/integrations/callback
 # VITE_YOUTUBE_ACCESS_TOKEN is optional - will be stored in localStorage after OAuth
 
 # Pinterest API Configuration
@@ -31,11 +33,27 @@ VITE_PINTEREST_APP_SECRET=your_pinterest_app_secret_here
 VITE_OPENAI_API_KEY=your_openai_api_key_here
 VITE_OPENAI_VIDEO_API_KEY=your_openai_video_api_key_here
 
-# Descript API Configuration (Optional - for video editing and short generation)
-# If not set, the app will use OpenAI fallback for short generation
-VITE_DESCRIPT_API_KEY=your_descript_api_key_here
+# OpenAI Video Analysis Configuration
+# Uses OpenAI Whisper for transcription + GPT-4/4o for segmentation
+# Uses the same OPENAI_API_KEY as chat (no separate key needed)
+# Optional: Use a different model for video analysis (default: gpt-4o)
+OPENAI_VIDEO_MODEL=gpt-4o
 
 # Chat proxy configuration
 VITE_CHAT_API_BASE=http://localhost:8080
 VITE_SHOW_DIAGNOSTIC_ERRORS=false
 VITE_CHAT_REQUEST_TIMEOUT_MS=25000
+
+# Backend Environment Variables (for backend/server.js)
+# These are used by the Node.js backend server
+PORT=8080
+CHAT_API_BASE=https://api.openai.com/v1
+MODEL_NAME=gpt-4o-mini
+OPENAI_API_KEY=your_openai_api_key_here
+# YouTube OAuth (backend uses these, frontend uses VITE_ prefixed versions)
+YOUTUBE_CLIENT_ID=your_youtube_oauth_client_id_here
+YOUTUBE_CLIENT_SECRET=your_youtube_oauth_client_secret_here
+YOUTUBE_REDIRECT_URI=http://localhost:3002/settings/integrations/callback
+YOUTUBE_API_KEY=your_youtube_api_key_here
+# Frontend URL for redirects
+FRONTEND_URL=http://localhost:3002

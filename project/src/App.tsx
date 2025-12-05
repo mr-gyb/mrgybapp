@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { useTheme } from './contexts/ThemeContext';
 import Header from './components/Header';
 import BottomMenu from './components/BottomMenu';
@@ -52,7 +52,6 @@ const Upload = lazy(() => import('./components/Upload'));
 const GYBMedia = lazy(() => import('./components/NewPost'));
 const GYBStudio = lazy(() => import('./components/GYBStudio'));
 const GYBStudioWelcome = lazy(() => import('./components/GYBStudioWelcome'));
-const VideoUploadPage = lazy(() => import('./components/VideoUploadPage'));
 const VideoUploadFlow = lazy(() => import('./components/video/VideoUploadFlow'));
 const CreatePage = lazy(() => import('./components/video/CreatePage'));
 const SummaryPage = lazy(() => import('./components/SummaryPage'));
@@ -80,6 +79,7 @@ const UpdatesSettings = lazy(() => import('./components/settings/UpdatesSettings
 const VoiceSettings = lazy(() => import('./components/settings/VoiceSettings'));
 const MainLanguageSettings = lazy(() => import('./components/settings/MainLanguageSettings'));
 const Integrations = lazy(() => import('./components/settings/integrations/Integrations'));
+const IntegrationCallback = lazy(() => import('./components/settings/integrations/IntegrationCallback'));
 const HelpCenter = lazy(() => import('./components/settings/HelpCenter'));
 const TermsOfUse = lazy(() => import('./components/settings/TermsOfUse'));
 const PrivacyPolicy = lazy(() => import('./components/settings/PrivacyPolicy'));
@@ -95,6 +95,8 @@ const TrialSignupStep2 = lazy(() => import('./components/TrialSignupStep2'));
 const TrialSignupConfirmation = lazy(() => import('./components/TrialSignupConfirmation'));
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 const Login = lazy(() => import('./components/Login'));
+const Signup = lazy(() => import('./components/Signup'));
+const LandingPage = lazy(() => import('./components/landing/LandingPage'));
 const BusinessRoadmapWelcome = lazy(() => import('./components/BusinessRoadmapWelcome'));
 const LetsBegin = lazy(() => import('./components/LetsBegin'));
 const Assessment = lazy(() => import('./components/Assessment'));
@@ -159,21 +161,36 @@ const getPageTitle = (pathname: string): string => {
   return titleMap[pathname] || 'GYB Studio';
 };
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const { isDarkMode } = useTheme();
+  const location = useLocation();
+  const isLandingPage = location.pathname === '/' || location.pathname === '/landing';
 
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <div className={`flex flex-col min-h-screen ${isDarkMode ? 'dark bg-navy-blue text-white' : 'bg-white text-navy-blue'}`}>
-        <Header getPageTitle={getPageTitle} />
-        <main className="flex-grow mt-16 mb-16">
+    <div className={`flex flex-col min-h-screen ${isDarkMode ? 'dark bg-navy-blue text-white' : 'bg-white text-navy-blue'}`}>
+      {!isLandingPage && <Header getPageTitle={getPageTitle} />}
+      <main className={`flex-grow ${!isLandingPage ? 'mt-16 mb-16' : ''}`}>
           <Routes>
-            {/* Public Routes - Redirect to home if already authenticated */}
-            <Route path="/" element={<Navigate to="/home" replace />} />
+            {/* Public Routes */}
+            <Route path="/" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <LandingPage />
+              </Suspense>
+            } />
+            <Route path="/landing" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <LandingPage />
+              </Suspense>
+            } />
 
             <Route path="/login" element={
               <Suspense fallback={<LoadingSpinner />}>
                 <Login />
+              </Suspense>
+            } />
+            <Route path="/signup" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <Signup />
               </Suspense>
             } />
             <Route path="/onboarding" element={
@@ -549,6 +566,11 @@ const App: React.FC = () => {
                 </Suspense>
               </ProtectedRoute>
             } />
+            <Route path="/settings/integrations/callback" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <IntegrationCallback />
+              </Suspense>
+            } />
             <Route path="/help-center" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
@@ -596,8 +618,15 @@ const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </main>
-        <BottomMenu />
+        {!isLandingPage && <BottomMenu />}
       </div>
+    );
+};
+
+const App: React.FC = () => {
+  return (
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <AppContent />
     </Router>
   );
 };

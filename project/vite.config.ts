@@ -53,8 +53,11 @@ export default defineConfig({
       'recharts',
       'axios',
       'openai',
+      'react-markdown',
+      'remark-gfm',
     ],
     exclude: ['firebase'], // Exclude Firebase from optimization to avoid build issues
+    force: false, // Set to true to force re-optimization on startup
   },
   // Add resolve configuration for Firebase
   resolve: {

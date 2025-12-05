@@ -113,7 +113,7 @@ export const analyzeUserContentAndSuggest = async (userContent: ContentItem[]): 
     
       // Call OpenAI for analysis and suggestions
   const response = await openai.chat.completions.create({
-    model: 'gpt-4-turbo-preview',
+    model: 'o3-mini',
     messages: [
       {
         role: 'system',
@@ -331,7 +331,7 @@ export const getCreationInspirationsOpenAI = async (userContent: ContentItem[], 
     console.log('Sending enhanced analysis prompt to OpenAI:', prompt);
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: 'o3-mini',
       messages: [
         {
           role: 'system',

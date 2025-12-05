@@ -386,6 +386,111 @@ class FacebookIntegrationService {
     return this.userId;
   }
 
+  // Exchange short-lived token for long-lived token
+  async exchangeForLongLivedToken(shortLivedToken: string): Promise<{ accessToken: string; expiresIn: number }> {
+    try {
+      const appSecret = getFacebookConfig().appSecret;
+      if (!appSecret) {
+        throw new Error('Facebook App Secret is not configured');
+      }
+
+      const response = await fetch(
+        `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${this.appId}&client_secret=${appSecret}&fb_exchange_token=${shortLivedToken}`
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to exchange token');
+      }
+
+      const data = await response.json();
+      return {
+        accessToken: data.access_token,
+        expiresIn: data.expires_in || 5184000 // Default 60 days
+      };
+    } catch (error) {
+      console.error('Error exchanging token:', error);
+      throw error;
+    }
+  }
+
+  // Get Instagram Business Account ID from Facebook Page
+  async getInstagramBusinessAccount(pageId: string, pageAccessToken: string): Promise<string | null> {
+    try {
+      const response = await fetch(
+        `https://graph.facebook.com/v18.0/${pageId}?fields=instagram_business_account&access_token=${pageAccessToken}`
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to get Instagram Business Account');
+      }
+
+      const data = await response.json();
+      return data.instagram_business_account?.id || null;
+    } catch (error) {
+      console.error('Error getting Instagram Business Account:', error);
+      return null;
+    }
+  }
+
+  // Enhanced login that exchanges for long-lived token and gets Instagram account
+  async loginToFacebookWithLongLivedToken(): Promise<{
+    authResponse: FacebookAuthResponse;
+    longLivedToken?: string;
+    expiresIn?: number;
+    instagramBusinessAccountId?: string;
+    pageId?: string;
+  }> {
+    try {
+      // First, do regular login
+      const authResponse = await this.loginToFacebook();
+      
+      if (authResponse.status !== 'connected' || !authResponse.authResponse) {
+        return { authResponse };
+      }
+
+      const shortLivedToken = authResponse.authResponse.accessToken;
+      
+      // Exchange for long-lived token
+      try {
+        const longLivedData = await this.exchangeForLongLivedToken(shortLivedToken);
+        
+        // Store long-lived token
+        this.accessToken = longLivedData.accessToken;
+        this.storeTokens();
+
+        // Get user's pages to find Instagram Business Account
+        const pages = await this.getUserPages();
+        let instagramAccountId: string | null = null;
+        let pageId: string | undefined;
+
+        // Try to find Instagram Business Account from first page
+        if (pages.length > 0) {
+          const firstPage = pages[0];
+          pageId = firstPage.id;
+          if (firstPage.accessToken) {
+            instagramAccountId = await this.getInstagramBusinessAccount(firstPage.id, firstPage.accessToken);
+          }
+        }
+
+        return {
+          authResponse,
+          longLivedToken: longLivedData.accessToken,
+          expiresIn: longLivedData.expiresIn,
+          instagramBusinessAccountId: instagramAccountId || undefined,
+          pageId
+        };
+      } catch (exchangeError) {
+        console.warn('Could not exchange for long-lived token, using short-lived token:', exchangeError);
+        return { authResponse };
+      }
+    } catch (error) {
+      console.error('Error in enhanced Facebook login:', error);
+      throw error;
+    }
+  }
+
   // Store tokens in localStorage
   private storeTokens(): void {
     if (this.accessToken && this.userId) {

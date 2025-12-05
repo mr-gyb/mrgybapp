@@ -155,7 +155,7 @@ export async function analyzeContent(items: ContentItem[]): Promise<ContentAnaly
 
     // Call OpenAI with structured output
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'o3-mini',
       messages: buildAnalysisPrompt(realContent),
       response_format: { type: "json_object" },
       max_tokens: 2000,
@@ -184,7 +184,7 @@ export async function analyzeContent(items: ContentItem[]): Promise<ContentAnaly
       // Retry with stricter prompt
       console.log('🔄 Retrying with stricter JSON prompt...');
       const retryResponse = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'o3-mini',
         messages: [
           {
             role: "system" as const,
