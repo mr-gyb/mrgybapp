@@ -1,3 +1,9 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; /* Prevent horizontal scroll due to potential overflow */
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -69,6 +75,10 @@
   .space-y-4 > * + * {
     margin-top: 1rem;
   }
+}
+
+.hero-gradient-background {
+  background: linear-gradient(to right, #1A2C42, #E3C472);
 }
 
 /* Markdown styling */

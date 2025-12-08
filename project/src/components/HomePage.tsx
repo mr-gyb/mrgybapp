@@ -1,142 +1,166 @@
-import React, { useState, useEffect, useCallback } from 'react'; // Removed useMemo
-import { useUserContent } from '../hooks/useUserContent';
-import { useAnalytics } from '../hooks/useAnalytics';
-import { groupPlatform } from '../hooks/useAnalytics';
-// Removed @mui/x-charts imports
-// import { BarChart, Bar, XAxis, YAxis, ChartsGrid, Tooltip, Legend, PieChart, Pie, Cell } from '@mui/x-charts';
-import { ResponsiveContainer } from 'recharts';
-import { ContentItem } from '../types/content';
-// Blank line to force re-evaluation
-interface HomePageProps {}
+import React from 'react';
+// (no auth hook used in this simplified header)
 
-const HomePage: React.FC<HomePageProps> = () => {
-  const { content: userContent } = useUserContent();
-  // Ensure userContent is always an array
-  const safeUserContent = Array.isArray(userContent) ? userContent : [];
-  const [facebookMetrics, setFacebookMetrics] = useState<{
-    total_impressions: number;
-    total_reactions: number;
-  }>({ total_impressions: 0, total_reactions: 0 });
+// Google Fonts import for Space Mono and Roboto Mono
+const fontLinks = [
+  <link
+    key="space-mono"
+    href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Space+Mono:wght@700&display=swap"
+    rel="stylesheet"
+  />
+];
 
-  // Use shared analytics hook
-  const analyticsData = useAnalytics(safeUserContent);
-
-  // Define CustomBarTooltip locally (removed as it's related to @mui/x-charts)
-  // const CustomBarTooltip = ({ active, payload, label }: { active: boolean; payload: any[]; label: string }) => {
-  //   if (active && payload && payload.length) {
-  //     return (
-  //       <div className="bg-white p-2 border border-gray-300 rounded shadow-sm text-sm">
-  //         <p className="font-bold text-navy-blue">{label}</p>
-  //         {payload.map((entry, index) => (
-  //           <p key={`item-${index}`} style={{ color: entry.color }}>
-  //             {entry.name}: <span className="font-bold">{entry.value}</span>
-  //           </p>
-  //         ))}
-  //       </div>
-  //     );
-  //   }
-  //   return null;
-  // };
-
-  // Define renderCustomPieLabel locally (removed as it's related to @mui/x-charts)
-  // const renderCustomPieLabel = ({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
-  //   const radius = outerRadius + 10; // Adjust label distance from pie
-  //   const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
-  //   const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
-  //
-  //   return (
-  //     <text
-  //       x={x}
-  //       y={y}
-  //       fill="#000" // Label color
-  //       textAnchor={x > cx ? 'start' : 'end'}
-  //       dominantBaseline="central"
-  //       className="text-xs"
-  //     >
-  //       {`${name} (${(percent * 100).toFixed(0)}%)`}
-  //     </text>
-  //   );
-  // };
-
-  // Fetch Facebook metrics
-  const getFacebookMetrics = useCallback(async () => {
-    console.log('Fetching Facebook metrics...');
-    // Placeholder for actual implementation
-  }, []);
-
-  useEffect(() => {
-    getFacebookMetrics();
-  }, [getFacebookMetrics]);
-
-  // Placeholder for Facebook metrics display
-  const renderFacebookMetrics = () => {
-    if (!facebookMetrics.total_impressions && !facebookMetrics.total_reactions) {
-      return null; // Or a loading indicator/message
-    }
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center mt-4">
-        <div className="bg-blue-100 p-4 rounded-lg shadow">
-          <h4 className="text-lg font-semibold text-blue-800">Total Impressions</h4>
-          <p className="text-2xl font-bold text-blue-900">{facebookMetrics.total_impressions.toLocaleString()}</p>
-        </div>
-        <div className="bg-blue-100 p-4 rounded-lg shadow">
-          <h4 className="text-lg font-semibold text-blue-800">Total Reactions</h4>
-          <p className="text-2xl font-bold text-blue-900">{facebookMetrics.total_reactions.toLocaleString()}</p>
-        </div>
-      </div>
-    );
-  };
+const HomePage: React.FC = () => {
+  // Brand colors: use project navy/blue (#3B4371) and gold (#b29958)
+  const brandGradient = 'linear-gradient(90deg, #3B4371 0%, #b29958 100%)';
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col p-4 sm:p-6 lg:p-8">
-      <h1 className="text-3xl font-bold text-navy-blue mb-6">Analytics Overview</h1>
+    <div className="min-h-screen bg-gray-50">
+      {fontLinks}
 
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 className="text-2xl font-semibold text-navy-blue mb-4">Facebook Page Metrics</h2>
-        {renderFacebookMetrics()}
-      </div>
+      {/* Top navigation removed as requested */}
 
-      {/* Removed @mui/x-charts BarChart section */}
-      {/* <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 className="text-2xl font-semibold text-navy-blue mb-4">Content Performance by Platform</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart
-            series={[{ dataKey: 'views', label: 'Views', color: '#8884d8' }]} // Corrected series prop
-            xAxis={[{ scaleType: 'band', dataKey: 'name' }]} // Corrected xAxis prop
-            dataset={analyticsData.barData} // Corrected data prop to dataset
-            margin={{
-              top: 20, right: 30, left: 20, bottom: 5,
-            }}
-          >
-            <ChartsGrid strokeDasharray="3 3" />
-            <XAxis />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-          </BarChart>
-        </ResponsiveContainer>
-      </div> */}
+      {/* Hero - large rounded panel with wave background and layered phone mockup (matches screenshot) */}
+      <section className="py-12">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="relative">
+            {/* Rounded panel */}
+            <div className="relative overflow-hidden rounded-2xl" style={{ background: brandGradient, borderRadius: 24 }}>
+              {/* Decorative wave SVG on left */}
+              <svg className="absolute left-0 top-0 h-full w-1/2 opacity-40" viewBox="0 0 600 400" preserveAspectRatio="none">
+                <path d="M0,200 C150,100 300,300 600,200 L600,400 L0,400 Z" fill="rgba(255,255,255,0.06)" />
+              </svg>
 
-      {/* Removed @mui/x-charts PieChart section */}
-      {/* <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold text-navy-blue mb-4">Platform Distribution</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart series={[{ data: analyticsData.platformData, arcLabel: (item) => `${item.dataKey} (${item.value})` }]} > // Corrected series prop
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      </div> */}
+              <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 items-center gap-6 py-16 px-6 md:px-12">
+                {/* Left column - headline and CTA */}
+                <div className="text-white md:pr-8">
+                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight" style={{ fontFamily: 'Space Mono, monospace' }}>
+                    A New Way to Grow with AI
+                  </h1>
+                  <p className="mt-4 text-lg md:text-xl max-w-xl" style={{ fontFamily: 'Roboto Mono, monospace' }}>
+                    Culture, Content, Community, and Commerce — all powered by advanced AI to help creators and teams scale.
+                  </p>
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold text-navy-blue mb-4">Content Performance by Platform (Placeholder)</h2>
-        <p>Charts will be displayed here once @mui/x-charts integration issues are resolved.</p>
-      </div>
+                  <div className="mt-8">
+                    <a className="inline-flex items-center gap-3 bg-white text-[#3B4371] px-5 py-3 rounded-full font-semibold shadow-md" href="/signup">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <rect width="18" height="12" x="3" y="6" rx="3" fill="#3B4371" />
+                        <path d="M6 11h12" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Get the App
+                    </a>
+                  </div>
+                </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md mt-8">
-        <h2 className="text-2xl font-semibold text-navy-blue mb-4">Platform Distribution (Placeholder)</h2>
-        <p>Charts will be displayed here once @mui/x-charts integration issues are resolved.</p>
-      </div>
+                {/* Right column - layered phone mockup */}
+                <div className="flex items-center justify-center md:justify-end">
+                  <div className="relative w-[320px] md:w-[420px] lg:w-[520px]">
+                    {/* Back large device */}
+                    <div className="absolute left-8 top-8 w-[260px] md:w-[340px] lg:w-[420px] h-[420px] md:h-[520px] bg-white rounded-3xl shadow-lg transform rotate-[-4deg]" style={{ borderRadius: 28 }} />
+
+                    {/* Foreground phone */}
+                    <div className="relative bg-white rounded-3xl shadow-[0_40px_80px_rgba(0,0,0,0.18)] overflow-hidden" style={{ borderRadius: 28 }}>
+                      <div className="h-4 bg-white" />
+                      <div className="p-4">
+                        <img src="https://images.unsplash.com/photo-1560184897-6f3a9b9f1e3f?auto=format&fit=crop&w=800&q=60" alt="hero-listing" className="w-full h-44 object-cover rounded-xl" />
+                        <div className="mt-4">
+                          <div className="text-sm font-semibold text-gray-800">Trending Properties</div>
+                          <div className="mt-2 grid grid-cols-2 gap-3">
+                            <div className="bg-gray-50 rounded-lg p-3">
+                              <div className="text-sm font-medium">Chandler-S5</div>
+                              <div className="text-xs text-gray-500 mt-1">$179.00</div>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-3">
+                              <div className="text-sm font-medium">Seattle-D1</div>
+                              <div className="text-xs text-gray-500 mt-1">$660.05</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* bottom pale strip */}
+              <div className="h-6 bg-white/10" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature sections */}
+      <section id="culture" className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-6 md:flex md:Items-center md:gap-12">
+          <div className="md:w-1/2">
+            <h2 className="text-3xl font-bold text-[#1f2a44]" style={{ fontFamily: 'Space Mono, monospace' }}>Culture (AI & Communication)</h2>
+            <p className="mt-4 text-gray-700">It features an advanced AI chat system that enables users to engage with AI agents.</p>
+          </div>
+          <div className="md:w-1/2 mt-6 md:mt-0">
+            <div className="bg-white rounded-xl p-6 shadow">Interactive AI chat preview (placeholder)</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="content" className="py-20 bg-[#f7f7fb]">
+        <div className="max-w-6xl mx-auto px-6 md:flex md:items-center md:gap-12">
+          <div className="md:w-1/2 md:order-2">
+            <h2 className="text-3xl font-bold text-[#1f2a44]" style={{ fontFamily: 'Space Mono, monospace' }}>Content (Creation & Management)</h2>
+            <p className="mt-4 text-gray-700">Comprehensive hub for content creation and analytics. It supports a diverse range of content types, from blog posts and videos to images, audio, and social media content. The platform provides sophisticated analytics tools.</p>
+          </div>
+          <div className="md:w-1/2 mt-6 md:mt-0 md:order-1">
+            <div className="bg-white rounded-xl p-6 shadow">Studio preview (placeholder)</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="community" className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-6 md:flex md:items-center md:gap-12">
+          <div className="md:w-1/2">
+            <h2 className="text-3xl font-bold text-[#1f2a44]" style={{ fontFamily: 'Space Mono, monospace' }}>Community (Networking & Collaboration)</h2>
+            <p className="mt-4 text-gray-700">It allows users to build and maintain professional relationships through detailed user profiles and portfolios. The platform includes a professional verification system and industry-specific networking features.</p>
+          </div>
+          <div className="md:w-1/2 mt-6 md:mt-0">
+            <div className="bg-white rounded-xl p-6 shadow">Profiles & networking preview (placeholder)</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="commerce" className="py-20 bg-[#f7faf7]">
+        <div className="max-w-6xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-[#1f2a44]" style={{ fontFamily: 'Space Mono, monospace' }}>Commerce (Business & Monetization)</h2>
+          <p className="mt-4 text-gray-700 max-w-3xl">The platform implements a tiered subscription model designed to accommodate businesses of various sizes and needs. The Basic tier ($29/month) provides essential features, while the Pro tier ($79/month) offers advanced capabilities, and the Enterprise tier ($199/month) delivers comprehensive solutions for large organizations.</p>
+
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="border rounded-xl p-6 bg-white shadow">
+              <div className="text-lg font-semibold">Basic</div>
+              <div className="mt-2 text-2xl font-bold text-[#3B4371]">$29 <span className="text-sm font-medium">/month</span></div>
+              <ul className="mt-4 text-sm text-gray-600 space-y-2">
+                <li>Essential features</li>
+                <li>Content tools</li>
+              </ul>
+            </div>
+
+            <div className="border rounded-xl p-6 bg-white shadow-lg">
+              <div className="text-lg font-semibold">Pro</div>
+              <div className="mt-2 text-2xl font-bold text-[#3B4371]">$79 <span className="text-sm font-medium">/month</span></div>
+              <ul className="mt-4 text-sm text-gray-600 space-y-2">
+                <li>Advanced analytics</li>
+                <li>Team collaboration</li>
+              </ul>
+            </div>
+
+            <div className="border rounded-xl p-6 bg-white shadow">
+              <div className="text-lg font-semibold">Enterprise</div>
+              <div className="mt-2 text-2xl font-bold text-[#3B4371]">$199 <span className="text-sm font-medium">/month</span></div>
+              <ul className="mt-4 text-sm text-gray-600 space-y-2">
+                <li>Custom integrations</li>
+                <li>Dedicated support</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

@@ -260,7 +260,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
           .reduce((sum, item) => sum + (item.views ?? 1), 0),
       });
     }
-
+    
     // Other
     const otherCount = userContent.filter(item => 
       item.platforms && 
