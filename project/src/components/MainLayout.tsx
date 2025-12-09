@@ -28,7 +28,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, getPageTitle }) => {
   // }
 
   const baseClasses = isHome
-    ? 'bg-[#020617] text-white'
+    ? 'bg-white text-navy-blue'
     : isDarkMode
       ? 'dark bg-navy-blue text-white'
       : 'bg-white text-navy-blue';

@@ -85,13 +85,13 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-10 bg-[#020617] shadow-sm">
+      <header className="fixed top-0 left-0 right-0 z-10 bg-[#11335d] shadow-sm">
         <div className="w-full flex items-center justify-between px-4 py-2.5">
           {/* Left cluster: app grid, menu, brand */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSideMenuOpen(true)}
-              className="w-9 h-9 rounded-full bg-[#020617] border border-[#111827] flex items-center justify-center text-gray-300 hover:bg-[#030712]"
+              className="w-9 h-9 rounded-full bg-[#E3C472] border border-[#E3C472] flex items-center justify-center text-[#11335d] hover:opacity-90 transition-opacity"
             >
               <Grid3X3 size={16} />
             </button>

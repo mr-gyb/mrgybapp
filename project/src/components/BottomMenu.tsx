@@ -71,9 +71,9 @@ const BottomMenu: React.FC = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#020617] border-t border-[#020617]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-transparent">
       <div className="max-w-5xl mx-auto px-6 py-2">
-        <div className="flex items-center justify-between rounded-3xl bg-gradient-to-r from-[#020617] via-[#020617] to-[#020617] shadow-[0_0_40px_rgba(0,0,0,0.9)] px-6 py-2">
+        <div className="flex items-center justify-between rounded-3xl bg-[#11335d] shadow-[0_0_40px_rgba(0,0,0,0.6)] px-6 py-2">
           {menuItems.map((item, idx) => {
             const active = isActive(item.path);
 
