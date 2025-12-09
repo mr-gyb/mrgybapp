@@ -1,166 +1,192 @@
-import React from 'react';
-// (no auth hook used in this simplified header)
-
-// Google Fonts import for Space Mono and Roboto Mono
-const fontLinks = [
-  <link
-    key="space-mono"
-    href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Space+Mono:wght@700&display=swap"
-    rel="stylesheet"
-  />
-];
+import React, { useMemo } from 'react';
+import { Bell, Activity, Video, Users } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useChat } from '../contexts/ChatContext';
+import { useNavigate } from 'react-router-dom';
 
 const HomePage: React.FC = () => {
-  // Brand colors: use project navy/blue (#3B4371) and gold (#b29958)
-  const brandGradient = 'linear-gradient(90deg, #3B4371 0%, #b29958 100%)';
+  const { userData } = useAuth();
+  const firstName = userData?.name?.split(' ')[0] || 'John';
+  const { chats } = useChat();
+  const navigate = useNavigate();
+
+  const unreadCount = useMemo(() => {
+    if (!chats || chats.length === 0) return 0;
+
+    const raw = window.localStorage.getItem('mrgyb_culture_lastViewed');
+    const lastViewed: Record<string, string> = raw ? JSON.parse(raw) : {};
+
+    const nowUnread = chats.filter((chat) => {
+      if (!chat.updatedAt) return false;
+      const last = lastViewed[chat.id];
+      if (!last) return true;
+      return new Date(chat.updatedAt) > new Date(last);
+    });
+
+    return nowUnread.length;
+  }, [chats]);
+
+  const handleCultureInsightsClick = () => {
+    try {
+      const map: Record<string, string> = {};
+      const nowIso = new Date().toISOString();
+      chats.forEach((chat) => {
+        if (chat.id) {
+          map[chat.id] = nowIso;
+        }
+      });
+      window.localStorage.setItem('mrgyb_culture_lastViewed', JSON.stringify(map));
+    } catch {
+      // ignore storage errors
+    }
+    navigate('/chat-history');
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {fontLinks}
+    <div className="min-h-screen bg-[#020617] text-white px-4 py-6 md:px-8">
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* Greeting */}
+        <div>
+          <h1 className="text-2xl md:text-3xl font-semibold">
+            Good morning, {firstName}
+          </h1>
+          <p className="mt-1 text-sm text-gray-400">Here&apos;s your daily briefing.</p>
+        </div>
 
-      {/* Top navigation removed as requested */}
+        {/* Stats row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Community notifications */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#020617] via-[#020617] to-[#020617] border border-[#1e293b] shadow-[0_18px_40px_rgba(0,0,0,0.75)] px-5 py-4">
+            <div className="flex items-center justify-between text-xs font-semibold text-[#E3C472] tracking-wide">
+              <div className="flex items-center gap-2">
+                <Bell size={16} />
+                <span>COMMUNITY UPDATES</span>
+              </div>
+            </div>
+            <div className="mt-4 text-xl md:text-2xl font-semibold">2 new notifications</div>
+            <div className="mt-1 text-xs text-gray-400">
+              1 new friend request · 1 new post from your network
+            </div>
+          </div>
 
-      {/* Hero - large rounded panel with wave background and layered phone mockup (matches screenshot) */}
-      <section className="py-12">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="relative">
-            {/* Rounded panel */}
-            <div className="relative overflow-hidden rounded-2xl" style={{ background: brandGradient, borderRadius: 24 }}>
-              {/* Decorative wave SVG on left */}
-              <svg className="absolute left-0 top-0 h-full w-1/2 opacity-40" viewBox="0 0 600 400" preserveAspectRatio="none">
-                <path d="M0,200 C150,100 300,300 600,200 L600,400 L0,400 Z" fill="rgba(255,255,255,0.06)" />
-              </svg>
+          {/* Latest post engagement */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#020617] via-[#020617] to-[#020617] border border-[#1e293b] shadow-[0_18px_40px_rgba(0,0,0,0.75)] px-5 py-4">
+            <div className="flex items-center justify-between text-xs font-semibold text-sky-300 tracking-wide">
+              <div className="flex items-center gap-2">
+                <Activity size={16} />
+                <span>LATEST POST ENGAGEMENT</span>
+              </div>
+            </div>
+            <div className="mt-4 text-xl md:text-2xl font-semibold">1.3k views</div>
+            <div className="mt-1 text-xs text-gray-400">
+              87 likes · 14 comments on your most recent post
+            </div>
+          </div>
+        </div>
 
-              <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 items-center gap-6 py-16 px-6 md:px-12">
-                {/* Left column - headline and CTA */}
-                <div className="text-white md:pr-8">
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight" style={{ fontFamily: 'Space Mono, monospace' }}>
-                    A New Way to Grow with AI
-                  </h1>
-                  <p className="mt-4 text-lg md:text-xl max-w-xl" style={{ fontFamily: 'Roboto Mono, monospace' }}>
-                    Culture, Content, Community, and Commerce — all powered by advanced AI to help creators and teams scale.
-                  </p>
+        {/* Modules header */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-semibold tracking-[0.2em] text-gray-400">
+            YOUR MODULES
+          </h2>
+        </div>
 
-                  <div className="mt-8">
-                    <a className="inline-flex items-center gap-3 bg-white text-[#3B4371] px-5 py-3 rounded-full font-semibold shadow-md" href="/signup">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                        <rect width="18" height="12" x="3" y="6" rx="3" fill="#3B4371" />
-                        <path d="M6 11h12" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      Get the App
-                    </a>
-                  </div>
-                </div>
+        {/* Culture Profile module card */}
+        <div className="rounded-2xl bg-[#020617] border border-[#1f2937] shadow-[0_24px_60px_rgba(0,0,0,0.9)] px-5 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-[#0f172a] flex items-center justify-center text-[#E3C472]">
+                <span className="text-lg">🏛</span>
+              </div>
+              <div>
+                <h3 className="text-base md:text-lg font-semibold">Culture Profile</h3>
+                <p className="mt-1 text-xs md:text-sm text-gray-400">
+                  Refine your brand voice and internal values.
+                </p>
+              </div>
+            </div>
 
-                {/* Right column - layered phone mockup */}
-                <div className="flex items-center justify-center md:justify-end">
-                  <div className="relative w-[320px] md:w-[420px] lg:w-[520px]">
-                    {/* Back large device */}
-                    <div className="absolute left-8 top-8 w-[260px] md:w-[340px] lg:w-[420px] h-[420px] md:h-[520px] bg-white rounded-3xl shadow-lg transform rotate-[-4deg]" style={{ borderRadius: 28 }} />
+            {unreadCount > 0 && (
+              <button
+                onClick={handleCultureInsightsClick}
+                className="self-start rounded-md bg-[#E3C472] px-3 py-1 text-[11px] font-semibold text-black shadow-sm"
+              >
+                {unreadCount} New Insight{unreadCount > 1 ? 's' : ''}
+              </button>
+            )}
+          </div>
+        </div>
 
-                    {/* Foreground phone */}
-                    <div className="relative bg-white rounded-3xl shadow-[0_40px_80px_rgba(0,0,0,0.18)] overflow-hidden" style={{ borderRadius: 28 }}>
-                      <div className="h-4 bg-white" />
-                      <div className="p-4">
-                        <img src="https://images.unsplash.com/photo-1560184897-6f3a9b9f1e3f?auto=format&fit=crop&w=800&q=60" alt="hero-listing" className="w-full h-44 object-cover rounded-xl" />
-                        <div className="mt-4">
-                          <div className="text-sm font-semibold text-gray-800">Trending Properties</div>
-                          <div className="mt-2 grid grid-cols-2 gap-3">
-                            <div className="bg-gray-50 rounded-lg p-3">
-                              <div className="text-sm font-medium">Chandler-S5</div>
-                              <div className="text-xs text-gray-500 mt-1">$179.00</div>
-                            </div>
-                            <div className="bg-gray-50 rounded-lg p-3">
-                              <div className="text-sm font-medium">Seattle-D1</div>
-                              <div className="text-xs text-gray-500 mt-1">$660.05</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+        {/* Content Studio module card */}
+        <div className="rounded-2xl bg-[#020617] border border-[#1f2937] shadow-[0_24px_60px_rgba(0,0,0,0.9)] px-5 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-[#0f172a] flex items-center justify-center text-sky-300">
+                <Video size={18} />
+              </div>
+              <div>
+                <h3 className="text-base md:text-lg font-semibold">Content Studio</h3>
+                <p className="mt-1 text-xs md:text-sm text-gray-400">
+                  Script generation and performance analytics.
+                </p>
+                <div className="mt-3 flex flex-col md:flex-row gap-3">
+                  <button
+                    className="flex-1 rounded-md bg-[#E3C472] px-4 py-2 text-xs md:text-sm font-semibold text-black shadow-sm flex items-center justify-center gap-2"
+                    onClick={() => navigate('/gyb-studio-welcome')}
+                  >
+                    <span className="text-lg leading-none">+</span>
+                    <span>New Script</span>
+                  </button>
+                  <button
+                    className="flex-1 rounded-md bg-[#020617] border border-[#1f2937] px-4 py-2 text-xs md:text-sm font-semibold text-gray-200 hover:bg-[#020b2a]"
+                    onClick={() => navigate('/analytics')}
+                  >
+                    Analytics
+                  </button>
                 </div>
               </div>
+            </div>
 
-              {/* bottom pale strip */}
-              <div className="h-6 bg-white/10" />
+            <div className="self-start rounded-full bg-[#0f172a] px-2.5 py-1 text-[10px] font-medium text-gray-200 border border-[#1f2937]">
+              +3 drafts
             </div>
           </div>
         </div>
-      </section>
 
-      {/* Feature sections */}
-      <section id="culture" className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-6 md:flex md:Items-center md:gap-12">
-          <div className="md:w-1/2">
-            <h2 className="text-3xl font-bold text-[#1f2a44]" style={{ fontFamily: 'Space Mono, monospace' }}>Culture (AI & Communication)</h2>
-            <p className="mt-4 text-gray-700">It features an advanced AI chat system that enables users to engage with AI agents.</p>
-          </div>
-          <div className="md:w-1/2 mt-6 md:mt-0">
-            <div className="bg-white rounded-xl p-6 shadow">Interactive AI chat preview (placeholder)</div>
-          </div>
-        </div>
-      </section>
+        {/* Community module card */}
+        <div className="rounded-2xl bg-[#020617] border border-[#1f2937] shadow-[0_24px_60px_rgba(0,0,0,0.9)] px-5 py-4 mb-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-[#0f172a] flex items-center justify-center text-gray-200">
+                <Users size={18} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base md:text-lg font-semibold">Community</h3>
+                <p className="mt-1 text-xs md:text-sm text-gray-400">
+                  Connect with other founders and creators.
+                </p>
 
-      <section id="content" className="py-20 bg-[#f7f7fb]">
-        <div className="max-w-6xl mx-auto px-6 md:flex md:items-center md:gap-12">
-          <div className="md:w-1/2 md:order-2">
-            <h2 className="text-3xl font-bold text-[#1f2a44]" style={{ fontFamily: 'Space Mono, monospace' }}>Content (Creation & Management)</h2>
-            <p className="mt-4 text-gray-700">Comprehensive hub for content creation and analytics. It supports a diverse range of content types, from blog posts and videos to images, audio, and social media content. The platform provides sophisticated analytics tools.</p>
-          </div>
-          <div className="md:w-1/2 mt-6 md:mt-0 md:order-1">
-            <div className="bg-white rounded-xl p-6 shadow">Studio preview (placeholder)</div>
-          </div>
-        </div>
-      </section>
-
-      <section id="community" className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-6 md:flex md:items-center md:gap-12">
-          <div className="md:w-1/2">
-            <h2 className="text-3xl font-bold text-[#1f2a44]" style={{ fontFamily: 'Space Mono, monospace' }}>Community (Networking & Collaboration)</h2>
-            <p className="mt-4 text-gray-700">It allows users to build and maintain professional relationships through detailed user profiles and portfolios. The platform includes a professional verification system and industry-specific networking features.</p>
-          </div>
-          <div className="md:w-1/2 mt-6 md:mt-0">
-            <div className="bg-white rounded-xl p-6 shadow">Profiles & networking preview (placeholder)</div>
-          </div>
-        </div>
-      </section>
-
-      <section id="commerce" className="py-20 bg-[#f7faf7]">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-[#1f2a44]" style={{ fontFamily: 'Space Mono, monospace' }}>Commerce (Business & Monetization)</h2>
-          <p className="mt-4 text-gray-700 max-w-3xl">The platform implements a tiered subscription model designed to accommodate businesses of various sizes and needs. The Basic tier ($29/month) provides essential features, while the Pro tier ($79/month) offers advanced capabilities, and the Enterprise tier ($199/month) delivers comprehensive solutions for large organizations.</p>
-
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="border rounded-xl p-6 bg-white shadow">
-              <div className="text-lg font-semibold">Basic</div>
-              <div className="mt-2 text-2xl font-bold text-[#3B4371]">$29 <span className="text-sm font-medium">/month</span></div>
-              <ul className="mt-4 text-sm text-gray-600 space-y-2">
-                <li>Essential features</li>
-                <li>Content tools</li>
-              </ul>
+                <div className="mt-3 rounded-lg bg-[#020617] border border-[#1f2937] px-3 py-2">
+                  <p className="text-[10px] font-semibold text-[#E3C472] uppercase tracking-[0.18em]">
+                    Trending discussion
+                  </p>
+                  <p className="mt-1 text-xs md:text-sm text-gray-300 truncate">
+                    &quot;How are you utilizing AI for customer support...&quot;
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="border rounded-xl p-6 bg-white shadow-lg">
-              <div className="text-lg font-semibold">Pro</div>
-              <div className="mt-2 text-2xl font-bold text-[#3B4371]">$79 <span className="text-sm font-medium">/month</span></div>
-              <ul className="mt-4 text-sm text-gray-600 space-y-2">
-                <li>Advanced analytics</li>
-                <li>Team collaboration</li>
-              </ul>
-            </div>
-
-            <div className="border rounded-xl p-6 bg-white shadow">
-              <div className="text-lg font-semibold">Enterprise</div>
-              <div className="mt-2 text-2xl font-bold text-[#3B4371]">$199 <span className="text-sm font-medium">/month</span></div>
-              <ul className="mt-4 text-sm text-gray-600 space-y-2">
-                <li>Custom integrations</li>
-                <li>Dedicated support</li>
-              </ul>
-            </div>
+            <button
+              className="self-start flex items-center gap-1 text-[10px] font-medium text-emerald-400"
+              onClick={() => navigate('/gyb-live-network')}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>14 Online</span>
+            </button>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   );
 };

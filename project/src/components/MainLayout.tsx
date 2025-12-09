@@ -14,7 +14,9 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children, getPageTitle }) => {
   const { isDarkMode } = useTheme(); // Removed isLoading: isThemeLoading
   const location = useLocation();
-  const showHeaderAndMenu = location.pathname !== '/';
+  const showHeaderAndMenu = location.pathname !== '/' && location.pathname !== '/login';
+  const isHome = location.pathname === '/home';
+  const showBottomMenu = showHeaderAndMenu;
 
   // Removed conditional loading spinner
   // if (isThemeLoading || isAuthLoading || isChatLoading) {
@@ -25,13 +27,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, getPageTitle }) => {
   //   );
   // }
 
+  const baseClasses = isHome
+    ? 'bg-[#020617] text-white'
+    : isDarkMode
+      ? 'dark bg-navy-blue text-white'
+      : 'bg-white text-navy-blue';
+
   return (
-    <div className={`flex flex-col min-h-screen ${isDarkMode ? 'dark bg-navy-blue text-white' : 'bg-white text-navy-blue'}`}>
+    <div className={`flex flex-col min-h-screen ${baseClasses}`}>
       {showHeaderAndMenu && <Header getPageTitle={getPageTitle} />}
       <main className={`flex-grow ${showHeaderAndMenu ? 'mt-16 mb-16' : ''}`}>
         {children}
       </main>
-      {showHeaderAndMenu && <BottomMenu />}
+      {showBottomMenu && <BottomMenu />}
     </div>
   );
 };
