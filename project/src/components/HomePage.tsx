@@ -95,8 +95,12 @@ const HomePage: React.FC = () => {
         <div className="rounded-2xl bg-[#11335d] border border-[#11335d] shadow-[0_24px_60px_rgba(0,0,0,0.25)] px-5 py-4 text-white">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[#0f172a] flex items-center justify-center text-[#E3C472]">
-                <span className="text-lg">🏛</span>
+              <div className="w-9 h-9 rounded-lg bg-[#E3C472] flex items-center justify-center">
+                <img
+                  src="/culture-icon.jpg"
+                  alt="Culture"
+                  className="w-7 h-7 object-contain"
+                />
               </div>
               <div>
                 <h3 className="text-base md:text-lg font-semibold">Culture Profile</h3>
@@ -121,7 +125,7 @@ const HomePage: React.FC = () => {
         <div className="rounded-2xl bg-[#11335d] border border-[#11335d] shadow-[0_24px_60px_rgba(0,0,0,0.25)] px-5 py-4 text-white">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[#0f172a] flex items-center justify-center text-sky-300">
+              <div className="w-9 h-9 rounded-lg bg-[#E3C472] flex items-center justify-center text-[#11335d]">
                 <Video size={18} />
               </div>
               <div>
@@ -157,7 +161,7 @@ const HomePage: React.FC = () => {
         <div className="rounded-2xl bg-[#11335d] border border-[#11335d] shadow-[0_24px_60px_rgba(0,0,0,0.25)] px-5 py-4 mb-4 text-white">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[#0f172a] flex items-center justify-center text-gray-200">
+              <div className="w-9 h-9 rounded-lg bg-[#E3C472] flex items-center justify-center text-[#11335d]">
                 <Users size={18} />
               </div>
               <div className="flex-1">

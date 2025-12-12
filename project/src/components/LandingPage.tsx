@@ -62,6 +62,44 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
+        {/* Feature cards section */}
+        <section className="py-24 bg-white">
+          <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Culture Profile */}
+            <div className="bg-[#E3C472] rounded-3xl border border-[#11335d] px-8 py-10 flex flex-col justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-[#11335d] mb-4">Culture Profile</h3>
+                <p className="text-[#11335d] text-sm md:text-base leading-relaxed">
+                  Define your unique voice. Our AI learns your values and tone to ensure every piece of content feels
+                  authentically yours.
+                </p>
+              </div>
+            </div>
+
+            {/* Content Studio */}
+            <div className="bg-[#11335d] rounded-3xl border border-[#11335d] px-8 py-10 flex flex-col justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-4">Content Studio</h3>
+                <p className="text-white text-sm md:text-base leading-relaxed">
+                  Generate viral-ready scripts, hooks, and threads in seconds. Based on proven frameworks used by top
+                  creators.
+                </p>
+              </div>
+            </div>
+
+            {/* Community */}
+            <div className="bg-[#E3C472] rounded-3xl border border-[#11335d] px-8 py-10 flex flex-col justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-[#11335d] mb-4">Community</h3>
+                <p className="text-[#11335d] text-sm md:text-base leading-relaxed">
+                  Track engagement trends and connect with other founders. See what&apos;s working in your niche right
+                  now.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Testimonial section (page 2) */}
         <section className="py-24 bg-white">
           <div className="max-w-5xl mx-auto px-6 text-center">
@@ -107,44 +145,6 @@ const LandingPage: React.FC = () => {
               >
                 Sign Up
               </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Feature cards section */}
-        <section className="py-24 bg-white">
-          <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Culture Profile */}
-            <div className="bg-[#E3C472] rounded-3xl border border-[#11335d] px-8 py-10 flex flex-col justify-between">
-              <div>
-                <h3 className="text-2xl font-bold text-[#11335d] mb-4">Culture Profile</h3>
-                <p className="text-[#11335d] text-sm md:text-base leading-relaxed">
-                  Define your unique voice. Our AI learns your values and tone to ensure every piece of content feels
-                  authentically yours.
-                </p>
-              </div>
-            </div>
-
-            {/* Content Studio */}
-            <div className="bg-[#11335d] rounded-3xl border border-[#11335d] px-8 py-10 flex flex-col justify-between">
-              <div>
-                <h3 className="text-2xl font-bold text-white mb-4">Content Studio</h3>
-                <p className="text-white text-sm md:text-base leading-relaxed">
-                  Generate viral-ready scripts, hooks, and threads in seconds. Based on proven frameworks used by top
-                  creators.
-                </p>
-              </div>
-            </div>
-
-            {/* Community */}
-            <div className="bg-[#E3C472] rounded-3xl border border-[#11335d] px-8 py-10 flex flex-col justify-between">
-              <div>
-                <h3 className="text-2xl font-bold text-[#11335d] mb-4">Community</h3>
-                <p className="text-[#11335d] text-sm md:text-base leading-relaxed">
-                  Track engagement trends and connect with other founders. See what&apos;s working in your niche right
-                  now.
-                </p>
-              </div>
             </div>
           </div>
         </section>

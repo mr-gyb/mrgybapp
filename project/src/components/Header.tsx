@@ -93,7 +93,7 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
               onClick={() => setIsSideMenuOpen(true)}
               className="w-9 h-9 rounded-full bg-[#E3C472] border border-[#E3C472] flex items-center justify-center text-[#11335d] hover:opacity-90 transition-opacity"
             >
-              <Grid3X3 size={16} />
+              <Menu size={18} />
             </button>
 
             <button
@@ -101,7 +101,7 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
               className="flex items-center gap-2 group"
             >
               <img
-                src="/gyb-transparent.png"
+                src="/GYBlogo.webp"
                 alt="Grow Your Business"
                 className="h-7 w-auto object-contain"
               />
@@ -123,7 +123,7 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
 
             <button
               onClick={() => setIsSideMenuOpen(true)}
-              className="w-9 h-9 rounded-full bg-gradient-to-br from-[#1d4ed8] to-[#020617] flex items-center justify-center border border-[#1f2937] text-xs font-semibold"
+              className="w-9 h-9 rounded-full bg-[#E3C472] flex items-center justify-center border border-[#E3C472] text-xs font-semibold text-[#11335d]"
             >
               {initials}
             </button>

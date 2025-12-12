@@ -73,7 +73,7 @@ const BottomMenu: React.FC = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-transparent">
       <div className="max-w-5xl mx-auto px-6 py-2">
-        <div className="flex items-center justify-between rounded-3xl bg-[#11335d] shadow-[0_0_40px_rgba(0,0,0,0.6)] px-6 py-2">
+        <div className="flex items-center justify-between rounded-3xl bg-[#E3C472] border border-[#11335d] shadow-[0_0_20px_rgba(0,0,0,0.12)] px-6 py-2">
           {menuItems.map((item, idx) => {
             const active = isActive(item.path);
 
@@ -85,14 +85,12 @@ const BottomMenu: React.FC = () => {
                 <button
                   key={`${item.label}-${idx}`}
                   onClick={item.onClick}
-                  className={`${commonClasses} ${
-                    active ? 'text-white' : 'text-gray-400'
-                  }`}
+                  className={`${commonClasses} text-[#11335d]`}
                 >
                   <div
                     className={`flex items-center justify-center mb-1 ${
                       active
-                        ? 'w-9 h-9 rounded-xl bg-[#0f172a] border border-[#E3C472] shadow-[0_0_18px_rgba(227,196,114,0.8)]'
+                        ? 'w-9 h-9 rounded-xl bg-white border border-[#11335d] shadow-[0_0_18px_rgba(17,51,93,0.25)]'
                         : 'w-8 h-8 rounded-xl'
                     }`}
                   >
@@ -115,14 +113,12 @@ const BottomMenu: React.FC = () => {
               <Link
                 key={`${item.label}-${idx}`}
                 to={item.path === '/new-post' ? '/gyb-studio-welcome' : item.path}
-                className={`${commonClasses} ${
-                  active ? 'text-white' : 'text-gray-400'
-                }`}
+                className={`${commonClasses} text-[#11335d]`}
               >
                 <div
                   className={`flex items-center justify-center mb-1 ${
                     active
-                      ? 'w-9 h-9 rounded-xl bg-[#0f172a] border border-[#E3C472] shadow-[0_0_18px_rgba(227,196,114,0.8)]'
+                      ? 'w-9 h-9 rounded-xl bg-white border border-[#11335d] shadow-[0_0_18px_rgba(17,51,93,0.25)]'
                       : 'w-8 h-8 rounded-xl'
                   }`}
                 >
