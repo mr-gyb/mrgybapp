@@ -50,12 +50,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
-<<<<<<< HEAD
   const [chatDiagnostics, setChatDiagnostics] = useState<ChatDiagnostics | null>(null);
   const [streamingResponses, setStreamingResponses] = useState<Record<string, { content: string; agent: string | null }>>({});
   const [retryableChats, setRetryableChats] = useState<Record<string, { prompt: string; agent: string | null; status?: number; message?: string; requestId?: string; retryAfter?: number }>>({});
   const [quotaError, setQuotaError] = useState<{ retryAfter?: number; message: string } | null>(null);
-  const { user, userData } = useAuth();
+  const [chatInitialized, setChatInitialized] = useState(false);
+  const { user, userData, isLoading: authLoading } = useAuth();
+  const authInitialized = !authLoading;
 
   const buildOwnerParticipant = (): ChatParticipant | null => {
     if (!user) return null;
@@ -154,14 +155,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     }
   };
-
-  const [chatDiagnostics, setChatDiagnostics] = useState<ChatDiagnostics | null>(null);
-  const [streamingResponses, setStreamingResponses] = useState<Record<string, { content: string; agent: string | null }>>({});
-  const [retryableChats, setRetryableChats] = useState<Record<string, { prompt: string; agent: string | null; status?: number; message?: string; requestId?: string; retryAfter?: number }>>({});
-  const [quotaError, setQuotaError] = useState<{ retryAfter?: number; message: string } | null>(null);
-  const [chatInitialized, setChatInitialized] = useState(false);
-  const { user, userData, isLoading: authLoading } = useAuth();
-  const authInitialized = !authLoading;
 
   useEffect(() => {
     let unsubscribeChats = () => {};
@@ -287,7 +280,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setCurrentChatId(chatData[0].id);
           }
           
-<<<<<<< HEAD
           setIsLoading(false);
         }, (error: any) => {
           // Suppress index errors - they're expected until indexes are deployed
