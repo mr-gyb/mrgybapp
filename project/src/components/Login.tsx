@@ -294,6 +294,18 @@ const Login: React.FC = () => {
               type="submit"
               disabled={isLoading}
               className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-[#0C2440] text-white rounded-xl font-semibold hover:bg-[#0a1d33] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#0C2440] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+<<<<<<< Updated upstream
+=======
+            >
+              Login
+            </button>
+
+            {/* Sign In Button - Exact Canva styling */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-[#0C2440] text-white rounded-xl font-semibold hover:bg-[#0a1d33] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#0C2440] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+>>>>>>> Stashed changes
             >
               {isLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>

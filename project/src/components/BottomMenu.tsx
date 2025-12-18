@@ -23,9 +23,9 @@ const BottomMenu: React.FC = () => {
   };
 
   const menuItems = [
-    { 
-      path: '/new-chat', 
-      icon: CultureIcon, // Use CultureIcon here
+    {
+      path: '/new-chat',
+      icon: null,
       label: 'Culture',
       onClick: handleChatNavigation,
       isCustomNav: true 

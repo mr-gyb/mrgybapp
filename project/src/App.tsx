@@ -54,7 +54,6 @@ const GYBStudio = lazy(() => import('./components/GYBStudio'));
 const GYBStudioWelcome = lazy(() => import('./components/GYBStudioWelcome'));
 const VideoUploadFlow = lazy(() => import('./components/video/VideoUploadFlow'));
 const CreatePage = lazy(() => import('./components/video/CreatePage'));
-const SummaryPage = lazy(() => import('./components/SummaryPage'));
 const CreatedShortsPage = lazy(() => import('./components/video/CreatedShortsPage'));
 const FacebookAPITester = lazy(() => import('./components/FacebookAPITester'));
 const FacebookPostsDisplay = lazy(() => import('./components/FacebookPostsDisplay'));
@@ -101,8 +100,6 @@ const BusinessRoadmapWelcome = lazy(() => import('./components/BusinessRoadmapWe
 const LetsBegin = lazy(() => import('./components/LetsBegin'));
 const Assessment = lazy(() => import('./components/Assessment'));
 const TestImage = lazy(() => import('./components/TestImage'));
-const ChrisAIBusinessCoach = lazy(() => import('./components/ChrisAIBusinessCoach'));
-const ContentInspiration = lazy(() => import('./components/ContentInspiration'));
 
 // Loading spinner component
 const LoadingSpinner = () => (
@@ -164,7 +161,11 @@ const getPageTitle = (pathname: string): string => {
 const AppContent: React.FC = () => {
   const { isDarkMode } = useTheme();
   const location = useLocation();
+<<<<<<< Updated upstream
   const isLandingPage = location.pathname === '/' || location.pathname === '/landing';
+=======
+  const { isLoading: isAuthLoading } = useAuth();
+>>>>>>> Stashed changes
 
   return (
     <div className={`flex flex-col min-h-screen ${isDarkMode ? 'dark bg-navy-blue text-white' : 'bg-white text-navy-blue'}`}>
