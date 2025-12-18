@@ -28,9 +28,9 @@ const BottomMenu: React.FC = () => {
       label: 'Content',
       isCustomNav: false
     },
-    { 
-      path: '/gyb-live-network', 
-      icon: Users, 
+    {
+      path: '/gyb-live-network',
+      icon: Users,
       label: 'Community',
       isCustomNav: false
     }

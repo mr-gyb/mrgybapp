@@ -20,7 +20,7 @@ export interface UserProfile {
   cover_image_url: string;
   created_at: string;
   updated_at: string;
-  authProvider?: 'email' | 'facebook' | 'google';
+  authProvider?: 'email' | 'facebook' | 'google' | 'apple';
   isAI?: boolean;
   isPlaceholder?: boolean;
   darkMode?: boolean;

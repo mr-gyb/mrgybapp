@@ -385,8 +385,8 @@ const Chat: React.FC = () => {
     console.log('Looking for AI user with id:', agentNewName);
     console.log('Available AI users:', Object.keys(AI_USERS));
 
-    const aiUser = Object.values(AI_USERS).find((ai) => ai.id === agentNewName);
-    if (aiUser) {
+  const aiUser = Object.values(AI_USERS).find((ai) => ai.id === agentNewName);
+  if (aiUser) {
       console.log('AI User found:', aiUser.name, 'Image URL:', aiUser.profile_image_url);
       // Handle relative paths (like /images/team/jake.png) vs absolute URLs
       if (aiUser.profile_image_url.startsWith('/') || aiUser.profile_image_url.startsWith('./')) {
@@ -407,9 +407,10 @@ const Chat: React.FC = () => {
         }
       }
     }
-  // AI user not found — fallback to default logo
-  console.log('AI User not found for:', agentName, 'fallback to default');
-  return "/gyb-logo.png";
+
+    // AI user not found — fallback to default AI profile image
+    console.log('AI User not found for:', agentName, 'fallback to default');
+    return "/gyb-logo.png";
   };
 
   if (isLoading) {

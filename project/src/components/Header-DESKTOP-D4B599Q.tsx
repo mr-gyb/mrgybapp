@@ -98,20 +98,6 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
               className="w-full h-full object-cover"
             />
           </button>
-<<<<<<< HEAD
-=======
-
-          <h1 
-            onClick={handleTitleClick}
-            className="text-lg sm:text-xl font-bold text-navy-blue dark:text-white cursor-pointer hover:opacity-80 transition-opacity"
-          >
-            {getPageTitle(location.pathname)}
-          </h1>
-
-          <button onClick={handleLogoClick} className="h-8 sm:h-10">
-            <img src="/gyb-logo.png" alt="GYB Logo" className="h-full" />
-          </button>
->>>>>>> origin/rutuja_gyb
         </div>
       </header>
 
