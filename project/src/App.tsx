@@ -1,8 +1,13 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
-import { useTheme } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { ChatProvider } from './contexts/ChatContext';
 import Header from './components/Header';
 import BottomMenu from './components/BottomMenu';
+import LoadingSpinner from './components/LoadingSpinner';
+import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './contexts/AuthContext';
 
 /**
  * Facebook Passport Strategy Configuration
@@ -94,23 +99,15 @@ const WhatToExpect = lazy(() => import('./components/WhatToExpect'));
 const TrialSignupPage = lazy(() => import('./components/TrialSignupPage'));
 const TrialSignupStep2 = lazy(() => import('./components/TrialSignupStep2'));
 const TrialSignupConfirmation = lazy(() => import('./components/TrialSignupConfirmation'));
-const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 const Login = lazy(() => import('./components/Login'));
 const Signup = lazy(() => import('./components/Signup'));
-const LandingPage = lazy(() => import('./components/landing/LandingPage'));
+const LandingPage = lazy(() => import('./components/LandingPage'));
 const BusinessRoadmapWelcome = lazy(() => import('./components/BusinessRoadmapWelcome'));
 const LetsBegin = lazy(() => import('./components/LetsBegin'));
 const Assessment = lazy(() => import('./components/Assessment'));
 const TestImage = lazy(() => import('./components/TestImage'));
 const ChrisAIBusinessCoach = lazy(() => import('./components/ChrisAIBusinessCoach'));
 const ContentInspiration = lazy(() => import('./components/ContentInspiration'));
-
-// Loading spinner component
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-  </div>
-);
 
 
 // Get page title based on current route
@@ -166,12 +163,19 @@ const getPageTitle = (pathname: string): string => {
 const AppContent: React.FC = () => {
   const { isDarkMode } = useTheme();
   const location = useLocation();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const isLandingPage = location.pathname === '/' || location.pathname === '/landing';
 
+  const showHeaderAndBottomMenu = !['/login', '/onboarding', '/trial-signup', '/trial-signup-step2', '/trial-signup-confirmation', '/business-roadmap-welcome', '/lets-begin', '/assessment'].includes(location.pathname);
+
+  if (isAuthLoading) {
+    return <LoadingSpinner />;
+  }
+
   return (
-    <div className={`flex flex-col min-h-screen ${isDarkMode ? 'dark bg-navy-blue text-white' : 'bg-white text-navy-blue'}`}>
-      {!isLandingPage && <Header getPageTitle={getPageTitle} />}
-      <main className={`flex-grow ${!isLandingPage ? 'mt-16 mb-16' : ''}`}>
+    <div className={`min-h-screen flex flex-col ${isDarkMode ? 'dark' : ''}`}>
+      {showHeaderAndBottomMenu && <Header getPageTitle={getPageTitle} />}
+      <main className="flex-grow">
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={
@@ -233,18 +237,6 @@ const AppContent: React.FC = () => {
               <Suspense fallback={<LoadingSpinner />}>
                 <TestImage />
               </Suspense>
-            } />
-            <Route path="/chris-ai-coach" element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <ChrisAIBusinessCoach />
-              </Suspense>
-            } />
-            <Route path="/content-inspiration" element={
-              <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <ContentInspiration />
-                </Suspense>
-              </ProtectedRoute>
             } />
 
             {/* Protected App Routes - Require authentication */}
@@ -404,13 +396,6 @@ const AppContent: React.FC = () => {
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
                   <CreatedShortsPage />
-                </Suspense>
-              </ProtectedRoute>
-            } />
-            <Route path="/summary" element={
-              <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <SummaryPage />
                 </Suspense>
               </ProtectedRoute>
             } />
@@ -627,15 +612,21 @@ const AppContent: React.FC = () => {
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </main>
-        {!isLandingPage && <BottomMenu />}
+        {showHeaderAndBottomMenu && <BottomMenu />}
       </div>
     );
 };
 
 const App: React.FC = () => {
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AppContent />
+    <Router>
+      <AuthProvider>
+        <ThemeProvider>
+          <ChatProvider>
+            <AppContent />
+          </ChatProvider>
+        </ThemeProvider>
+      </AuthProvider>
     </Router>
   );
 };

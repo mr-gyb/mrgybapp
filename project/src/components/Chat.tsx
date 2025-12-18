@@ -407,13 +407,9 @@ const Chat: React.FC = () => {
         }
       }
     }
-
-    console.log('AI User not found for:', agentName, 'fallback to Mr.GYB AI image');
-    // Fallback to Mr.GYB AI image instead of generic logo
-    const mrGybUrl = "https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58";
-    const url = new URL(mrGybUrl);
-    url.searchParams.set('t', Date.now().toString());
-    return url.toString();
+  // AI user not found — fallback to default logo
+  console.log('AI User not found for:', agentName, 'fallback to default');
+  return "/gyb-logo.png";
   };
 
   if (isLoading) {
@@ -657,8 +653,11 @@ const Chat: React.FC = () => {
                         className="w-8 h-8 rounded-full flex-shrink-0"
                         onError={(e) => {
                           console.error('Failed to load AI profile image:', e.currentTarget.src);
+                          /*Existing code:
                           console.error('Selected agent:', selectedAgent);
                           e.currentTarget.src = "https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58";
+                          */
+                          e.currentTarget.src = "/gyb-logo.png";
                         }}
                         onLoad={() => {
                           console.log('AI profile image loaded successfully for:', selectedAgent);
@@ -736,8 +735,11 @@ const Chat: React.FC = () => {
                       className="w-8 h-8 rounded-full flex-shrink-0"
                       onError={(e) => {
                         console.error('Failed to load AI profile image (typing):', e.currentTarget.src);
+                        /* Existing code:
                         console.error('Selected agent (typing):', selectedAgent);
                         e.currentTarget.src = "https://firebasestorage.googleapis.com/v0/b/mr-gyb-ai-app-108.firebasestorage.app/o/profile-images%2FMr.GYB_AI.png?alt=media&token=40ed698e-e2d0-45ff-b33a-508683c51a58";
+                        */
+                        e.currentTarget.src = "/gyb-logo.png";
                       }}
                       onLoad={() => {
                         console.log('AI profile image loaded successfully (typing) for:', selectedAgent);

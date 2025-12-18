@@ -1,5 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; /* Prevent horizontal scroll due to potential overflow */
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -42,6 +48,7 @@
   --navy-blue: #0f2a4a;
   --gold: #d4af37;
   --brand-blue: #11335d;
+  --brand-gradient: linear-gradient(90deg, #3B4371 0%, #b29958 100%);
 }
 
 .dark {
@@ -71,6 +78,10 @@
   .space-y-4 > * + * {
     margin-top: 1rem;
   }
+}
+
+.hero-gradient-background {
+  background: linear-gradient(to right, #1A2C42, #E3C472);
 }
 
 /* Markdown styling */
@@ -161,4 +172,22 @@
 
 .bg-gold .prose pre {
   @apply bg-white/30 text-navy-blue;
+}
+
+@keyframes gradient-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background: var(--brand-gradient);
+  background-size: 200% 200%;
+  animation: gradient-animation 10s ease infinite;
 }

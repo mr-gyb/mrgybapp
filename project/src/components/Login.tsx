@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Apple, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Apple, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
@@ -8,14 +8,14 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(false);
 
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+<<<<<<< HEAD
     setIsLoading(true);
     setError('');
 
@@ -168,7 +168,7 @@ const Login: React.FC = () => {
           </div>
 
           {/* Email/Password Form - Exact Canva spacing and styling */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-5">
             {/* Email Field - Soft gray border, rounded corners, icon on left */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-[#0C2440] mb-2.5">
@@ -180,14 +180,11 @@ const Login: React.FC = () => {
                 </div>
                 <input
                   id="email"
-                  name="email"
                   type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4B77A] focus:border-[#D4B77A] transition-colors text-sm"
                   placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>
@@ -203,14 +200,11 @@ const Login: React.FC = () => {
                 </div>
                 <input
                   id="password"
-                  name="password"
                   type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-11 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4B77A] focus:border-[#D4B77A] transition-colors text-sm"
                   placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
                 <button
                   type="button"
@@ -294,17 +288,55 @@ const Login: React.FC = () => {
               type="submit"
               disabled={isLoading}
               className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-[#0C2440] text-white rounded-xl font-semibold hover:bg-[#0a1d33] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#0C2440] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+=======
+            {/* Error Message */}
+            {error && (
+              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg space-y-2 mt-4">
+                <div className="font-medium whitespace-pre-line text-left">{error}</div>
+                {error.includes('Invalid email or password') && (
+                  <div className="text-xs text-gray-600 mt-2 pt-2 border-t border-red-200">
+                    <p className="font-semibold mb-1">Troubleshooting:</p>
+                    <ul className="list-disc list-inside space-y-1 text-left">
+                      <li>Make sure you're using the correct email and password</li>
+                      <li>Check if you have an account - if not, please sign up first</li>
+                      <li>Verify that email/password authentication is enabled in Firebase Console</li>
+                      <li>Try resetting your password if you've forgotten it</li>
+                    </ul>
+                  </div>
+                )}
+                {error.includes('Apple Sign In is not enabled') && (
+                  <div className="text-xs text-gray-600 mt-2 pt-2 border-t border-red-200">
+                    <p className="font-semibold mb-1">Quick Setup:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-left">
+                      <li>Go to Firebase Console → Authentication → Sign-in method</li>
+                      <li>Click on "Apple" provider</li>
+                      <li>Enable it and configure your Apple credentials</li>
+                      <li>See APPLE_SIGN_IN_SETUP.md for detailed instructions</li>
+                    </ol>
+                  </div>
+                )}
+                {error.includes('Google Sign In is not enabled') && (
+                  <div className="text-xs text-gray-600 mt-2 pt-2 border-t border-red-200">
+                    <p className="font-semibold mb-1">Quick Setup:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-left">
+                      <li>Go to Firebase Console → Authentication → Sign-in method</li>
+                      <li>Click on "Google" provider</li>
+                      <li>Enable it (Firebase will auto-configure OAuth client)</li>
+                      <li>See GOOGLE_SIGN_IN_SETUP.md for detailed instructions</li>
+                    </ol>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Sign In Button - Exact Canva styling */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-[#0C2440] text-white rounded-xl font-semibold hover:bg-[#0a1d33] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#0C2440] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
             >
-              {isLoading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <>
-                  Sign in
-                  <ArrowRight size={16} />
-                </>
-              )}
+              Login
             </button>
-          </form>
 
           {/* Sign Up Link - Below main button, exact Canva spacing */}
           <div className="mt-6 text-center">
@@ -318,6 +350,7 @@ const Login: React.FC = () => {
               </Link>
             </p>
           </div>
+          </form>
         </div>
       </div>
     </div>
