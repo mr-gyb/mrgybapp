@@ -1,10 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can read/write their own data
+    // Users collection - allow reading any user for group chat invites, but only write own data
     match /users/{userId} {
-      // Users can read their own profile
-      allow read: if request.auth != null && request.auth.uid == userId;
+      // Allow reading any user (for search/invite purposes in group chats)
+      allow read: if request.auth != null;
       
       // Users can create their own profile
       allow create: if request.auth != null && request.auth.uid == userId;
@@ -68,6 +68,42 @@ service cloud.firestore {
     match /chat_invitations/{invitationId} {
       allow read, write: if request.auth != null && 
         (request.auth.uid == resource.data.invitedBy || request.auth.uid == resource.data.invitedUser);
+    }
+    
+    // Group Chats - Helper function to check if user is a participant
+    function isGroupChatParticipant(groupId) {
+      let groupDoc = get(/databases/$(database)/documents/group_chats/$(groupId));
+      if (!groupDoc.exists()) return false;
+      // Check if user created the group
+      if (request.auth.uid == groupDoc.data.createdBy) return true;
+      // Check participantIds array (string array)
+      let participantIds = groupDoc.data.participantIds;
+      if (participantIds != null && participantIds.hasAny([request.auth.uid])) {
+        return true;
+      }
+      // Fallback: check participants array (object array)
+      let participants = groupDoc.data.participants;
+      return participants != null && participants.hasAny([{ id: request.auth.uid }]);
+    }
+    
+    match /group_chats/{groupId} {
+      allow read: if request.auth != null && isGroupChatParticipant(groupId);
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.createdBy;
+      allow update: if request.auth != null && isGroupChatParticipant(groupId);
+      allow delete: if request.auth != null && 
+        request.auth.uid == resource.data.createdBy;
+    }
+    
+    match /group_messages/{messageId} {
+      allow read: if request.auth != null && 
+        isGroupChatParticipant(resource.data.groupId);
+      allow create: if request.auth != null && 
+        (request.auth.uid == request.resource.data.senderId || 
+         request.resource.data.senderType == 'ai') && // Allow AI agents to send messages
+        isGroupChatParticipant(request.resource.data.groupId);
+      allow update, delete: if request.auth != null && 
+        request.auth.uid == resource.data.senderId;
     }
     
     // User profiles

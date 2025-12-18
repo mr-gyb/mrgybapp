@@ -1,36 +1,23 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Grid3X3, Users, Plus, Video } from 'lucide-react';
+import CultureIcon from './icons/CultureIcon';
 import { useTheme } from '../contexts/ThemeContext';
-import { useChat } from '../contexts/ChatContext';
 
 const BottomMenu: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
-  const { currentChatId, createNewChat } = useChat();
 
   const handleChatNavigation = async () => {
-    if (!currentChatId) {
-      const newChatId = await createNewChat();
-      if (newChatId) {
-        navigate(`/chat/${newChatId}`);
-      }
-    } else {
-      navigate(`/chat/${currentChatId}`);
-    }
+    // Navigate to group chat for Culture tab
+    navigate('/group-chat');
   };
 
   const menuItems = [
-    {
-      path: '/home',
-      icon: Grid3X3,
-      label: 'Home',
-      isCustomNav: false
-    },
-    {
-      path: '/new-chat',
-      icon: null,
+    { 
+      path: '/new-chat', 
+      icon: CultureIcon, // Use CultureIcon here
       label: 'Culture',
       onClick: handleChatNavigation,
       isCustomNav: true
@@ -71,7 +58,7 @@ const BottomMenu: React.FC = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-transparent">
+  <nav className={`fixed bottom-0 left-0 right-0 z-50 ${isDarkMode ? 'bg-navy-blue' : 'bg-transparent'}`}>
       <div className="max-w-5xl mx-auto px-6 py-2">
         <div className="flex items-center justify-between rounded-3xl bg-[#E3C472] border border-[#11335d] shadow-[0_0_20px_rgba(0,0,0,0.12)] px-6 py-2">
           {menuItems.map((item, idx) => {

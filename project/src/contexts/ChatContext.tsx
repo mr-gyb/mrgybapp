@@ -279,7 +279,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (chatData.length > 0 && !currentChatId) {
             setCurrentChatId(chatData[0].id);
           }
-          
+
           setIsLoading(false);
         }, (error: any) => {
           // Suppress index errors - they're expected until indexes are deployed

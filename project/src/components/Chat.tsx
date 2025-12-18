@@ -407,7 +407,7 @@ const Chat: React.FC = () => {
         }
       }
     }
-    
+
     // AI user not found — fallback to default AI profile image
     console.log('AI User not found for:', agentName, 'fallback to default');
     return "/gyb-logo.png";

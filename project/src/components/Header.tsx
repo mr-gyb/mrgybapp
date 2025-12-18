@@ -6,7 +6,7 @@ import SideMenu from './SideMenu';
 import { getProfile } from '../lib/firebase/profile';
 import { UserProfile } from '../types/user';
 import { useChat } from '../contexts/ChatContext';
-import { Bell, Grid3X3, Menu } from 'lucide-react';
+import { Bell, Menu } from 'lucide-react';
 
 interface HeaderProps {
   getPageTitle: (pathname: string) => string;
