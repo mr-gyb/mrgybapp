@@ -51,18 +51,42 @@ const ChrisAIBusinessCoach: React.FC = () => {
 
   const checkFacebookStatus = async () => {
     try {
-      // Check if Facebook token exists in localStorage (from our OAuth flow)
+      const backendUrl = import.meta.env.VITE_CHAT_API_BASE?.replace('/api', '') || 'http://localhost:8080';
+
+      // First try the backend status endpoint (with credentials)
+      try {
+        const statusResp = await fetch(`${backendUrl}/api/facebook/status`, {
+          credentials: 'include',
+          // Use AbortSignal.timeout if available (modern browsers)
+          signal: (AbortSignal as any)?.timeout ? (AbortSignal as any).timeout(5000) : undefined
+        } as any);
+        if (statusResp.ok) {
+          const data = await statusResp.json();
+          if (data.connected) {
+            setFacebookConnected(true);
+            setFacebookUser(data.user || null);
+            return;
+          }
+        }
+      } catch (backendErr) {
+        // backend may not be running or endpoint not available — fall back to client-side token check
+        console.warn('Backend facebook status check failed, falling back to token check:', backendErr);
+      }
+
+      // Fallback: check for tokens stored in localStorage (legacy flow)
       const facebookToken = localStorage.getItem('facebook_long_lived_token') || localStorage.getItem('facebook_access_token');
-      
       if (facebookToken) {
-        // We have a token, so user is connected
         setFacebookConnected(true);
-        // Try to get user info from Facebook Graph API
         try {
-          const userResponse = await fetch(`https://graph.facebook.com/v18.0/me?access_token=${facebookToken}&fields=id,name,email`);
+          const userResponse = await fetch(`https://graph.facebook.com/v18.0/me?access_token=${facebookToken}&fields=id,name,email,picture`);
           if (userResponse.ok) {
             const userData = await userResponse.json();
-            setFacebookUser(userData);
+            setFacebookUser({
+              id: userData.id,
+              name: userData.name,
+              email: userData.email,
+              photo: userData.picture?.data?.url
+            });
           } else if (userResponse.status === 401) {
             // Token expired or invalid, clear it
             localStorage.removeItem('facebook_long_lived_token');
@@ -71,23 +95,20 @@ const ChrisAIBusinessCoach: React.FC = () => {
             setFacebookUser(null);
           }
         } catch (userError) {
-          // Silently handle - token might be invalid
           console.warn('Could not fetch Facebook user info:', userError);
         }
       } else {
-        // No token found, user is not connected
         setFacebookConnected(false);
         setFacebookUser(null);
       }
     } catch (error: any) {
-      // Silently handle errors - this is expected if tokens don't exist
       console.warn('Error checking Facebook status:', error);
+      setFacebookConnected(false);
+      setFacebookUser(null);
     }
   };
 
   const handleConnectFacebook = async () => {
-    // Redirect to backend Facebook authentication endpoint
-    // Use the backend OAuth URL endpoint
     const backendUrl = import.meta.env.VITE_CHAT_API_BASE?.replace('/api', '') || 'http://localhost:8080';
     try {
       const response = await fetch(`${backendUrl}/api/facebook/auth/url`);
@@ -101,22 +122,22 @@ const ChrisAIBusinessCoach: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Error getting Facebook OAuth URL:', error);
+      console.warn('Error getting Facebook OAuth URL from backend, falling back to direct redirect:', error);
     }
-    // Fallback: show error message
-    alert('Failed to initiate Facebook login. Please check your backend configuration.');
+
+    // Fallback: redirect to a conventional auth endpoint (legacy dev environment)
+    window.location.href = `${backendUrl}/auth/facebook`;
   };
 
   const handleDisconnectFacebook = async () => {
     try {
-      // Clear Facebook tokens from localStorage
+      // Clear Facebook tokens from localStorage (legacy)
       localStorage.removeItem('facebook_access_token');
       localStorage.removeItem('facebook_long_lived_token');
       localStorage.removeItem('facebook_user_id');
       localStorage.removeItem('facebook_page_id');
       localStorage.removeItem('instagram_business_account_id');
-      
-      // Try backend logout if endpoint exists
+
       const backendUrl = import.meta.env.VITE_CHAT_API_BASE?.replace('/api', '') || 'http://localhost:8080';
       try {
         const response = await fetch(`${backendUrl}/api/facebook/logout`, {
@@ -132,7 +153,7 @@ const ChrisAIBusinessCoach: React.FC = () => {
         // Backend endpoint doesn't exist - that's okay, we cleared localStorage
         console.warn('Backend logout endpoint not available:', logoutError);
       }
-      
+
       // Always clear local state regardless of backend response
       setFacebookConnected(false);
       setFacebookUser(null);

@@ -39,7 +39,7 @@ Please rewrite the script incorporating the suggested edits while preserving the
             content: prompt
           }
         ],
-        model: import.meta.env.VITE_MODEL_NAME || 'o3-mini',
+  model: import.meta.env.VITE_MODEL_NAME || 'gpt-4o-mini',
         temperature: 0.7,
         stream: false
       }),

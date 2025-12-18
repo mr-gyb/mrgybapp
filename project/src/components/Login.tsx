@@ -15,7 +15,6 @@ const Login: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-<<<<<<< HEAD
     setIsLoading(true);
     setError('');
 
@@ -34,7 +33,7 @@ const Login: React.FC = () => {
 
     try {
       const result = await signIn(email, password);
-      if (result.error) {
+      if (result?.error) {
         // Use the error message from AuthContext (which provides user-friendly messages)
         const errorMessage = result.error.message || 'Invalid email or password. Please try again.';
         setError(errorMessage);
@@ -54,9 +53,8 @@ const Login: React.FC = () => {
     
     try {
       const result = await signInWithApple();
-      if (result.error) {
-        const errorMessage = result.error.message || 'Apple sign in failed. Please try again.';
-        // Replace newlines with line breaks for better display
+      if ((result as any)?.error) {
+        const errorMessage = (result as any).error.message || 'Apple sign in failed. Please try again.';
         setError(errorMessage.replace(/\n/g, '\n'));
       } else {
         navigate('/home');
@@ -75,8 +73,8 @@ const Login: React.FC = () => {
     
     try {
       const result = await signInWithGoogle();
-      if (result.error) {
-        const errorMessage = result.error.message || 'Google sign in failed. Please try again.';
+      if ((result as any)?.error) {
+        const errorMessage = (result as any).error.message || 'Google sign in failed. Please try again.';
         setError(errorMessage);
       } else {
         navigate('/home');
@@ -288,7 +286,30 @@ const Login: React.FC = () => {
               type="submit"
               disabled={isLoading}
               className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-[#0C2440] text-white rounded-xl font-semibold hover:bg-[#0a1d33] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#0C2440] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
-=======
+            >
+              Login
+            </button>
+
+          {/* Sign Up Link - Below main button, exact Canva spacing */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
+              <Link
+                to="/signup"
+                className="text-[#D4B77A] hover:text-[#C4A76A] font-semibold transition-colors"
+              >
+                Sign Up
+              </Link>
+            </p>
+          </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Login;
             {/* Error Message */}
             {error && (
               <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg space-y-2 mt-4">

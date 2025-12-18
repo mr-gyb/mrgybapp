@@ -215,7 +215,7 @@ Provide a brief confirmation that this segment should be extracted.`;
               content: prompt
             }
           ],
-          model: import.meta.env.VITE_MODEL_NAME || 'o3-mini',
+          model: import.meta.env.VITE_MODEL_NAME || 'gpt-4o-mini',
           stream: false,
         }),
       });
