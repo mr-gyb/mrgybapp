@@ -91,8 +91,51 @@ const Login: React.FC = () => {
             <button type="submit" disabled={isLoading} className="w-full mt-4 py-2 rounded-full bg-[#11335d] text-white font-semibold">Login</button>
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
             <div className="mt-6 text-center"><p className="text-sm text-gray-600">Don't have an account? <Link to="/signup" className="text-[#D4B77A] font-semibold">Sign Up</Link></p></div>
 =======
+=======
+            {/* Error Message */}
+            {error && (
+              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg space-y-2 mt-4">
+                <div className="font-medium whitespace-pre-line text-left">{error}</div>
+                {error.includes('Invalid email or password') && (
+                  <div className="text-xs text-gray-600 mt-2 pt-2 border-t border-red-200">
+                    <p className="font-semibold mb-1">Troubleshooting:</p>
+                    <ul className="list-disc list-inside space-y-1 text-left">
+                      <li>Make sure you're using the correct email and password</li>
+                      <li>Check if you have an account - if not, please sign up first</li>
+                      <li>Verify that email/password authentication is enabled in Firebase Console</li>
+                      <li>Try resetting your password if you've forgotten it</li>
+                    </ul>
+                  </div>
+                )}
+                {error.includes('Apple Sign In is not enabled') && (
+                  <div className="text-xs text-gray-600 mt-2 pt-2 border-t border-red-200">
+                    <p className="font-semibold mb-1">Quick Setup:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-left">
+                      <li>Go to Firebase Console → Authentication → Sign-in method</li>
+                      <li>Click on "Apple" provider</li>
+                      <li>Enable it and configure your Apple credentials</li>
+                      <li>See APPLE_SIGN_IN_SETUP.md for detailed instructions</li>
+                    </ol>
+                  </div>
+                )}
+                {error.includes('Google Sign In is not enabled') && (
+                  <div className="text-xs text-gray-600 mt-2 pt-2 border-t border-red-200">
+                    <p className="font-semibold mb-1">Quick Setup:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-left">
+                      <li>Go to Firebase Console → Authentication → Sign-in method</li>
+                      <li>Click on "Google" provider</li>
+                      <li>Enable it (Firebase will auto-configure OAuth client)</li>
+                      <li>See GOOGLE_SIGN_IN_SETUP.md for detailed instructions</li>
+                    </ol>
+                  </div>
+                )}
+              </div>
+            )}
+
+>>>>>>> Stashed changes
             {/* Sign In Button - Exact Canva styling */}
             <button
               type="submit"
