@@ -204,10 +204,10 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
       formData.append('file', file);
     } else {
       // form-data package (takes buffer with options)
-      formData.append('file', req.file.buffer, {
+    formData.append('file', req.file.buffer, {
         filename: filename,
-        contentType: req.file.mimetype
-      });
+      contentType: req.file.mimetype
+    });
     }
     
     formData.append('model', 'whisper-1');
@@ -255,8 +255,8 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
       response = await fetch('https://api.openai.com/v1/audio/transcriptions', fetchOptions);
       
       clearTimeout(timeoutId);
-      
-      console.log('📡 OpenAI API response status:', response.status);
+
+    console.log('📡 OpenAI API response status:', response.status);
     } catch (fetchError) {
       clearTimeout(timeoutId);
       console.error('❌ Fetch error calling OpenAI:', fetchError);
@@ -577,13 +577,13 @@ const sendChatError = (res, status, code, message, requestId, meta = {}) => {
   if (isQuota) {
     // Quota exceeded = billing issue, user needs to check their OpenAI account
     // Use the exact OpenAI error message
-    return res.status(status).json({
+  return res.status(status).json({
       ok: false,
       errorType: 'quota',
       status,
       code: 'insufficient_quota',
       message: originalMessage, // Use exact OpenAI error message
-      requestId,
+    requestId,
       retryAfter: null, // Quota errors don't have retry-after
       meta: {
         ...meta,
@@ -713,25 +713,25 @@ const handleChatRequest = async (req, res) => {
   });
 
     const makeRequest = async (currentModel) => {
-      const payload = {
+    const payload = {
         model: currentModel,
-        messages: [
-          { role: 'system', content: buildSystemPrompt(agent) },
-        ...trimmedMessages,
-        ],
-        temperature: typeof temperature === 'number' ? temperature : 0.7,
-        max_tokens: Math.min(
-          typeof maxTokens === 'number' ? maxTokens : 700,
-          parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS || '900', 10)
-        ),
-      stream: stream !== false,
-      };
+      messages: [
+        { role: 'system', content: buildSystemPrompt(agent) },
+      ...trimmedMessages,
+      ],
+      temperature: typeof temperature === 'number' ? temperature : 0.7,
+      max_tokens: Math.min(
+        typeof maxTokens === 'number' ? maxTokens : 700,
+        parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS || '900', 10)
+      ),
+    stream: stream !== false,
+    };
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), CHAT_TIMEOUT_MS);
 
       try {
-        const response = await fetch(outboundUrl, {
+    const response = await fetch(outboundUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -743,7 +743,7 @@ const handleChatRequest = async (req, res) => {
         });
         clearTimeout(timeout);
 
-        const latency = Date.now() - startTime;
+    const latency = Date.now() - startTime;
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -775,13 +775,13 @@ const handleChatRequest = async (req, res) => {
               retryAfter: extractRetryAfter(response, parsed),
             });
           } else {
-            logChat('error', requestId, 'request.error', {
-              status: response.status,
-              latencyMs: latency,
-              message: errorText,
-              userId: userId || 'unknown',
-              chatId: chatId || 'unknown',
-            });
+      logChat('error', requestId, 'request.error', {
+        status: response.status,
+        latencyMs: latency,
+        message: errorText,
+        userId: userId || 'unknown',
+        chatId: chatId || 'unknown',
+      });
           }
           
           return {
@@ -828,9 +828,9 @@ const handleChatRequest = async (req, res) => {
       // Handle error response
       if (!result.ok) {
         const parsed = result.parsed || {};
-        const message =
-          parsed?.error?.message ||
-          parsed?.message ||
+      const message =
+        parsed?.error?.message ||
+        parsed?.message ||
           result.errorText?.slice(0, 500) ||
           `Provider error (${result.response.status})`;
         
@@ -853,45 +853,45 @@ const handleChatRequest = async (req, res) => {
 
       // Success - stream the response
       const response = result.response;
-      logChat('info', requestId, 'request.response', {
-        status: response.status,
+    logChat('info', requestId, 'request.response', {
+      status: response.status,
         latencyMs: result.latency,
         model: modelName,
         fallbackUsed: isFallbackAttempt,
-        userId: userId || 'unknown',
-        chatId: chatId || 'unknown',
-      });
+      userId: userId || 'unknown',
+      chatId: chatId || 'unknown',
+    });
 
-      res.status(200);
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.setHeader('X-Request-Id', requestId);
+    res.status(200);
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Request-Id', requestId);
       if (isFallbackAttempt) {
         res.setHeader('X-Model-Fallback', 'true');
         res.setHeader('X-Original-Model', originalModel);
       }
-      res.flushHeaders?.();
+    res.flushHeaders?.();
 
-      const decoder = new TextDecoder();
-      try {
-        for await (const chunk of response.body) {
-          res.write(decoder.decode(chunk, { stream: true }));
-        }
-        res.write(decoder.decode());
-        res.write('data: [DONE]\n\n');
-        res.end();
-      } catch (streamError) {
-        logChat('error', requestId, 'request.stream_error', {
-          latencyMs: Date.now() - startTime,
-          message: streamError.message,
-          stack: streamError.stack,
-        });
-        if (!res.headersSent) {
-          return sendChatError(res, 502, 'stream_error', 'Failed to stream provider response', requestId);
-        }
-        res.end();
+    const decoder = new TextDecoder();
+    try {
+      for await (const chunk of response.body) {
+        res.write(decoder.decode(chunk, { stream: true }));
       }
+      res.write(decoder.decode());
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } catch (streamError) {
+      logChat('error', requestId, 'request.stream_error', {
+        latencyMs: Date.now() - startTime,
+        message: streamError.message,
+        stack: streamError.stack,
+      });
+      if (!res.headersSent) {
+        return sendChatError(res, 502, 'stream_error', 'Failed to stream provider response', requestId);
+      }
+      res.end();
+    }
   } catch (error) {
     clearTimeout(timeout);
     const latency = Date.now() - startTime;
@@ -918,6 +918,108 @@ const handleChatRequest = async (req, res) => {
 };
 
 app.post('/api/chat', handleChatRequest);
+
+// Non-streaming chat endpoint for group chat AI responses
+app.post('/api/chat/non-streaming', async (req, res) => {
+  const requestId = req.headers['x-request-id'] || randomUUID();
+  const startTime = Date.now();
+  const {
+    messages,
+    model,
+    temperature,
+    maxTokens,
+    agent,
+    userId,
+  } = req.body || {};
+
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return sendChatError(res, 400, 'invalid_request', 'messages array is required', requestId);
+  }
+
+  const trimmedMessages = messages
+    .map(msg => ({
+      role: ['system', 'assistant', 'user'].includes(msg.role) ? msg.role : 'user',
+      content: typeof msg.content === 'string' ? msg.content.trim() : '',
+    }))
+    .filter(msg => msg.content.length > 0)
+    .slice(-12);
+
+  if (trimmedMessages.length === 0) {
+    return sendChatError(res, 400, 'empty_messages', 'All messages were empty after trimming.', requestId);
+  }
+
+  const modelName = model || DEFAULT_CHAT_MODEL;
+  const outboundUrl = `${OPENAI_BASE_URL}/chat/completions`;
+
+  const payload = {
+    model: modelName,
+    messages: [
+      { role: 'system', content: buildSystemPrompt(agent) },
+      ...trimmedMessages,
+    ],
+    temperature: typeof temperature === 'number' ? temperature : 0.7,
+    max_tokens: Math.min(
+      typeof maxTokens === 'number' ? maxTokens : 700,
+      parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS || '900', 10)
+    ),
+    stream: false, // Explicitly non-streaming
+  };
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), CHAT_TIMEOUT_MS);
+
+    const response = await fetch(outboundUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        ...(process.env.OPENAI_ORG ? { 'OpenAI-Organization': process.env.OPENAI_ORG } : {}),
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+    const latency = Date.now() - startTime;
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      const parsed = safeJsonParse(errorText);
+      return sendChatError(
+        res,
+        response.status,
+        parsed?.error?.code || 'provider_error',
+        parsed?.error?.message || errorText.slice(0, 500),
+        requestId,
+        { errorData: parsed }
+      );
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+
+    return res.json({
+      success: true,
+      response: content,
+      requestId,
+      metadata: {
+        model: modelName,
+        latencyMs: latency,
+      },
+    });
+  } catch (error) {
+    const latency = Date.now() - startTime;
+    return sendChatError(
+      res,
+      500,
+      'server_error',
+      error.message || 'Failed to get AI response',
+      requestId,
+      { latencyMs: latency }
+    );
+  }
+});
 
 // Content Inspiration Agent Endpoint
 app.post('/api/agent/content-inspiration', async (req, res) => {
@@ -3776,6 +3878,7 @@ app.listen(PORT, () => {
   console.log(`📡 Server running on http://localhost:${PORT}`);
   console.log(`🎤 Transcription endpoint: http://localhost:${PORT}/api/transcribe`);
   console.log(`💬 Chat endpoint: http://localhost:${PORT}/api/chat`);
+  console.log(`💬 Non-streaming chat endpoint: http://localhost:${PORT}/api/chat/non-streaming`);
   console.log(`🎬 Video Analysis endpoint: http://localhost:${PORT}/api/video/analyze`);
   console.log(`🎥 Video Shorts Generator endpoint: http://localhost:${PORT}/api/video/shorts`);
   console.log(`📊 Content Analysis endpoint: http://localhost:${PORT}/api/content/analyze`);
@@ -3802,6 +3905,7 @@ app.listen(PORT, () => {
   console.log(`📈 YouTube Analytics endpoints: http://localhost:${PORT}/api/youtube/metrics/:videoId, /api/youtube/overview, /api/youtube/demographics, /api/youtube/geography, /api/youtube/traffic-source, /api/youtube/age-groups`);
   console.log(`❤️  Transcription health: http://localhost:${PORT}/api/transcribe/health`);
   console.log(`🩺 Chat health: http://localhost:${PORT}/api/chat/health`);
+  console.log(`💬 Non-streaming chat endpoint: http://localhost:${PORT}/api/chat/non-streaming`);
   console.log('');
   console.log('📝 Make sure to set OPENAI_API_KEY in your .env file');
   console.log('📝 VideoAnalysisAgent uses GPT-4o for deep content analysis');

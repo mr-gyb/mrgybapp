@@ -12,19 +12,13 @@ const BottomMenu: React.FC = () => {
   const { currentChatId, createNewChat, setSelectedAgent } = useChat();
 
   const handleChatNavigation = async () => {
-    if (!currentChatId) {
-      const newChatId = await createNewChat();
-      if (newChatId) {
-        navigate(`/chat/${newChatId}`);
-      }
-    } else {
-      navigate(`/chat/${currentChatId}`);
-    }
+    // Navigate to group chat for Culture tab
+    navigate('/group-chat');
   };
 
   const menuItems = [
     { 
-      path: '/new-chat', 
+      path: '/group-chat', 
       icon: CultureIcon, // Use CultureIcon here
       label: 'Culture',
       onClick: handleChatNavigation,

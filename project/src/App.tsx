@@ -35,6 +35,7 @@ import BottomMenu from './components/BottomMenu';
 // Lazy load components for code splitting
 const CommunityTab = lazy(() => import('./components/content/CommunityTab'));
 const NewChat = lazy(() => import('./components/NewChat'));
+const GroupChatView = lazy(() => import('./components/groupChat/GroupChatView'));
 const Chat = lazy(() => import('./components/Chat'));
 const ChatHistory = lazy(() => import('./components/ChatHistory'));
 const Commerce = lazy(() => import('./components/Commerce'));
@@ -121,6 +122,7 @@ const getPageTitle = (pathname: string): string => {
     '/roadmap': 'RoadMap',
     '/settings': 'Settings',
     '/new-chat': 'Culture',
+    '/group-chat': 'Culture',
     '/chat-history': 'Culture',
     '/new-post': 'Content',
     '/upload': 'Content',
@@ -271,6 +273,13 @@ const AppContent: React.FC = () => {
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
                   <NewChat />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/group-chat" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <GroupChatView />
                 </Suspense>
               </ProtectedRoute>
             } />
