@@ -18,6 +18,7 @@ export interface ContentItem {
     content: string;
   }>;
   platforms?: string[];
+  blogPlatform?: string; // Added blogPlatform
 
   isAISuggestion?: boolean; // Flag for AI-generated suggestions
   suggestionData?: any; // Additional data for AI suggestions

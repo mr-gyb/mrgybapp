@@ -1,6 +1,18 @@
 import { useMemo } from 'react';
 import { ContentItem } from '../types/content';
 
+// Helper function to group platforms - EXPORTED
+export const groupPlatform = (platform: string): 'Audio' | 'Video' | 'Social Media' | 'YouTube' | 'Other' | 'Blogs' => {
+  const platformLower = platform.toLowerCase();
+  
+  if (['spotify', 'audio', 'podcast'].includes(platformLower)) return 'Audio';
+  if (['youtube', 'video'].includes(platformLower)) return 'YouTube';
+  if (['instagram', 'pinterest', 'facebook', 'social'].includes(platformLower)) return 'Social Media';
+  if (['blog', 'written', 'medium', 'wordpress', 'substack'].includes(platformLower)) return 'Blogs';
+  if (['other'].includes(platformLower)) return 'Other';
+  return 'Other';
+};
+
 interface AnalyticsData {
   barData: Array<{
     name: string;
@@ -26,17 +38,6 @@ interface AnalyticsData {
 
 export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: number = 0): AnalyticsData => {
   return useMemo(() => {
-    // Helper function to group platforms
-    const groupPlatform = (platform: string): 'Audio' | 'Video' | 'Social Media' | 'YouTube' | 'Other' => {
-      const platformLower = platform.toLowerCase();
-      
-      if (['spotify', 'audio', 'podcast'].includes(platformLower)) return 'Audio';
-      if (['youtube', 'video'].includes(platformLower)) return 'YouTube';
-      if (['instagram', 'pinterest', 'facebook', 'social', 'tiktok'].includes(platformLower)) return 'Social Media';
-      if (['other'].includes(platformLower)) return 'Other';
-      return 'Other';
-    };
-
     // Helper function to group content types
     const groupContentType = (item: ContentItem): 'Blogs' | 'Audio' | 'Video' | 'Social Media' | 'Other' => {
       if (item.type === 'written') return 'Blogs';
@@ -111,6 +112,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
       'Video': '#FF0000',
       'Social Media': '#C13584',
       'YouTube': '#FF0000',
+      'Blogs': '#3366CC', // Added Blogs color
       'Other': '#9E9E9E'
     };
 
@@ -122,11 +124,12 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
       'Pinterest': '#E60023', 
       'Other': '#9E9E9E',
       'Facebook': '#1877F3',
+      'Blogs': '#3366CC', // Added Blogs color
     };
 
     // Only show these keys in the legend
     const LEGEND_KEYS = [
-      'YouTube', 'Instagram', 'Spotify', 'Pinterest', 'Other', 'Facebook'
+      'YouTube', 'Instagram', 'Spotify', 'Pinterest', 'Other', 'Facebook', 'Blogs' // Added Blogs to legend
     ];
 
     // Prepare individual platform data
@@ -141,7 +144,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
     // Spotify
     const spotifyCount = userContent.filter(item => 
       item.platforms && 
-      item.platforms.some(p => p.toLowerCase().includes('spotify'))
+      item.platforms.some(p => groupPlatform(p) === 'Audio')
     ).length;
     
     if (spotifyCount > 0) {
@@ -152,7 +155,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
         views: userContent
           .filter(item => 
             item.platforms && 
-            item.platforms.some(p => p.toLowerCase().includes('spotify'))
+            item.platforms.some(p => groupPlatform(p) === 'Audio')
           )
           .reduce((sum, item) => sum + (item.views || item.engagement || 1), 0),
       });
@@ -161,7 +164,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
     // YouTube
     const youtubeCount = userContent.filter(item => 
       item.platforms && 
-      item.platforms.some(p => p.toLowerCase().includes('youtube'))
+      item.platforms.some(p => groupPlatform(p) === 'YouTube')
     ).length;
     
     if (youtubeCount > 0) {
@@ -172,7 +175,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
         views: userContent
           .filter(item => 
             item.platforms && 
-            item.platforms.some(p => p.toLowerCase().includes('youtube'))
+            item.platforms.some(p => groupPlatform(p) === 'YouTube')
           )
           .reduce((sum, item) => sum + (item.views || item.engagement || 1), 0),
       });
@@ -181,7 +184,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
     // Instagram
     const instagramCount = userContent.filter(item => 
       item.platforms && 
-      item.platforms.some(p => p.toLowerCase().includes('instagram'))
+      item.platforms.some(p => groupPlatform(p) === 'Social Media')
     ).length;
     
     if (instagramCount > 0) {
@@ -192,7 +195,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
         views: userContent
           .filter(item => 
             item.platforms && 
-            item.platforms.some(p => p.toLowerCase().includes('instagram'))
+            item.platforms.some(p => groupPlatform(p) === 'Social Media')
           )
           .reduce((sum, item) => sum + (item.views ?? 1), 0),
       });
@@ -201,7 +204,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
     // Pinterest
     const pinterestCount = userContent.filter(item => 
       item.platforms && 
-      item.platforms.some(p => p.toLowerCase().includes('pinterest'))
+      item.platforms.some(p => groupPlatform(p) === 'Social Media')
     ).length;
     
     if (pinterestCount > 0) {
@@ -212,7 +215,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
         views: userContent
           .filter(item => 
             item.platforms && 
-            item.platforms.some(p => p.toLowerCase().includes('pinterest'))
+            item.platforms.some(p => groupPlatform(p) === 'Social Media')
           )
           .reduce((sum, item) => sum + (item.views ?? 1), 0),
       });
@@ -221,7 +224,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
     // Facebook
     const facebookCount = userContent.filter(item => 
       item.platforms && 
-      item.platforms.some(p => p.toLowerCase().includes('facebook'))
+      item.platforms.some(p => groupPlatform(p) === 'Social Media')
     ).length;
     
     if (facebookCount > 0) {
@@ -232,7 +235,27 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
         views: userContent
           .filter(item => 
             item.platforms && 
-            item.platforms.some(p => p.toLowerCase().includes('facebook'))
+            item.platforms.some(p => groupPlatform(p) === 'Social Media')
+          )
+          .reduce((sum, item) => sum + (item.views ?? 1), 0),
+      });
+    }
+    
+    // Blogs (new)
+    const blogCount = userContent.filter(item => 
+      item.platforms && 
+      item.platforms.some(p => groupPlatform(p) === 'Blogs')
+    ).length;
+
+    if (blogCount > 0) {
+      individualPlatformData.push({
+        name: 'Blogs',
+        count: blogCount,
+        color: PLATFORM_GROUP_COLORS.Blogs,
+        views: userContent
+          .filter(item => 
+            item.platforms && 
+            item.platforms.some(p => groupPlatform(p) === 'Blogs')
           )
           .reduce((sum, item) => sum + (item.views ?? 1), 0),
       });
@@ -241,7 +264,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
     // Other
     const otherCount = userContent.filter(item => 
       item.platforms && 
-      item.platforms.some(p => p.toLowerCase().includes('other'))
+      item.platforms.some(p => groupPlatform(p) === 'Other')
     ).length;
     
     if (otherCount > 0) {
@@ -252,7 +275,7 @@ export const useAnalytics = (userContent: ContentItem[], youtubeVideoViews: numb
         views: userContent
           .filter(item => 
             item.platforms && 
-            item.platforms.some(p => p.toLowerCase().includes('other'))
+            item.platforms.some(p => groupPlatform(p) === 'Other')
           )
           .reduce((sum, item) => sum + (item.views || item.engagement || 1), 0),
       });

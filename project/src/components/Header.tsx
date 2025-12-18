@@ -6,7 +6,7 @@ import SideMenu from './SideMenu';
 import { getProfile } from '../lib/firebase/profile';
 import { UserProfile } from '../types/user';
 import { useChat } from '../contexts/ChatContext';
-import NotificationBell from './common/NotificationBell';
+import { Bell, Grid3X3, Menu } from 'lucide-react';
 
 interface HeaderProps {
   getPageTitle: (pathname: string) => string;
@@ -21,6 +21,7 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { currentChatId } = useChat();
+  const isHome = location.pathname === '/home';
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -72,41 +73,61 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
     }
   };
 
+  const initials = profileData?.name
+    ? profileData.name
+        .split(' ')
+        .filter(Boolean)
+        .map((part) => part[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'JD';
+
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-10 bg-white dark:bg-navy-blue shadow-md transition-colors duration-200`}>
-        <div className="container mx-auto flex items-center justify-between gap-2 p-2 sm:p-4">
-          <button onClick={handleLogoClick} className="flex-shrink-0 h-8 sm:h-10">
-            <img src="/gyb-logo.svg" alt="GYB Logo" className="h-full" />
-          </button>
-
-          <div className="flex-1 flex justify-center">
-            <h1 
-              onClick={handleTitleClick}
-              className="text-lg sm:text-xl font-bold text-navy-blue dark:text-white cursor-pointer hover:opacity-80 transition-opacity"
+      <header className="fixed top-0 left-0 right-0 z-10 bg-[#11335d] shadow-sm">
+        <div className="w-full flex items-center justify-between px-4 py-2.5">
+          {/* Left cluster: app grid, menu, brand */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsSideMenuOpen(true)}
+              className="w-9 h-9 rounded-full bg-[#E3C472] border border-[#E3C472] flex items-center justify-center text-[#11335d] hover:opacity-90 transition-opacity"
             >
-              {getPageTitle(location.pathname)}
-            </h1>
+              <Menu size={18} />
+            </button>
+
+            <button
+              onClick={handleLogoClick}
+              className="flex items-center gap-2 group"
+            >
+              <img
+                src="/GYBlogo.webp"
+                alt="Grow Your Business"
+                className="h-7 w-auto object-contain"
+              />
+              <span className="text-sm font-medium tracking-wide text-gray-100">
+                <span>Grow Your </span>
+                <span className="text-[#E3C472]">Business</span>
+              </span>
+            </button>
           </div>
 
-          <button
-            onClick={() => setIsSideMenuOpen(true)}
-            className={`flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 ${
-              profileData ? getExperienceColor(profileData.experienceLevel) : 'border-navy-blue dark:border-gold'
-            } focus:outline-none focus:ring-2 focus:ring-navy-blue dark:focus:ring-gold transition-colors`}
-          >
-              {profileData?.profile_image_url?.startsWith('http') ? (
-              <img
-                src={profileData?.profile_image_url}
-                alt={profileData?.name}
-                className="w-full h-full object-cover"
-              />
-              ) : (
-              <div className = "w-full h-full flex items-center justify-center text-2xl font-bold object-cover pb-1">
-                  {profileData?.profile_image_url}
-                </div>
-              )}
-          </button>
+          {/* Right cluster: bell (except on home) + user pill */}
+          <div className="flex items-center gap-4">
+            {!isHome && (
+              <button className="relative text-gray-300 hover:text-white transition-colors">
+                <Bell size={18} />
+                <span className="absolute -top-1 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#facc15]" />
+              </button>
+            )}
+
+            <button
+              onClick={() => setIsSideMenuOpen(true)}
+              className="w-9 h-9 rounded-full bg-[#E3C472] flex items-center justify-center border border-[#E3C472] text-xs font-semibold text-[#11335d]"
+            >
+              {initials}
+            </button>
+          </div>
         </div>
       </header>
 

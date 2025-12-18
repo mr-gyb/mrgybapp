@@ -26,6 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // const [authInitialized, setAuthInitialized] = useState(false); // Removed authInitialized state
 
   // check token for auto log out.
   const checkTokenExpiration = async (currentUser: User) => {
@@ -116,6 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       setIsLoading(false);
+      // setAuthInitialized(true); // Removed setAuthInitialized
     });
 
     return () => unsubscribe();
@@ -135,6 +137,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => clearInterval(interval);
   }, [user]);
+
+  // Helper function moved inside AuthProvider to avoid external import dependency
+  function getInitials(name?: string | null): string {
+    if (!name) return "U"; // fallback for unknown
+    const words = name.trim().split(" ");
+    if (words.length === 1) return words[0][0].toUpperCase();
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -295,7 +305,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           rating: 4.5,
           following: 0,
           followers: 0,
-          profile_image_url: result.user.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&h=200&q=80',
+          profile_image_url: result.user.photoURL || getInitials(result.user.displayName),
           cover_image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -525,6 +535,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await signOut(auth);
+      setUser(null);
       setUserData(null);
       // Clear all user-specific data from localStorage to prevent data leakage
       storage.clear();
@@ -561,13 +572,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuthStatus,
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-navy-blue"></div>
-      </div>
-    );
-  }
+  // if (!authInitialized) { // Removed conditional rendering
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center bg-white">
+  //       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-navy-blue"></div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <AuthContext.Provider value={value}>

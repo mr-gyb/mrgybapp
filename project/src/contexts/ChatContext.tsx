@@ -50,6 +50,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
+<<<<<<< HEAD
   const [chatDiagnostics, setChatDiagnostics] = useState<ChatDiagnostics | null>(null);
   const [streamingResponses, setStreamingResponses] = useState<Record<string, { content: string; agent: string | null }>>({});
   const [retryableChats, setRetryableChats] = useState<Record<string, { prompt: string; agent: string | null; status?: number; message?: string; requestId?: string; retryAfter?: number }>>({});
@@ -154,6 +155,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const [chatDiagnostics, setChatDiagnostics] = useState<ChatDiagnostics | null>(null);
+  const [streamingResponses, setStreamingResponses] = useState<Record<string, { content: string; agent: string | null }>>({});
+  const [retryableChats, setRetryableChats] = useState<Record<string, { prompt: string; agent: string | null; status?: number; message?: string; requestId?: string; retryAfter?: number }>>({});
+  const [quotaError, setQuotaError] = useState<{ retryAfter?: number; message: string } | null>(null);
+  const [chatInitialized, setChatInitialized] = useState(false);
+  const { user, userData, isLoading: authLoading } = useAuth();
+  const authInitialized = !authLoading;
+
   useEffect(() => {
     let unsubscribeChats = () => {};
     let unsubscribeMessages: { [key: string]: () => void } = {};
@@ -162,10 +171,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const setupSubscriptions = async () => {
       setIsLoading(true);
       
+      if (!authInitialized) { // Wait for auth to be initialized
+        // Keep loading state true until auth is ready
+        return;
+      }
+
       if (!user || !user.uid)  {
         setChats([]);
         setCurrentChatId(null);
+        // Ensure loading and initialized states are set to false even if no user
         setIsLoading(false);
+        setChatInitialized(true); 
         return;
       }
 
@@ -271,6 +287,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setCurrentChatId(chatData[0].id);
           }
           
+<<<<<<< HEAD
           setIsLoading(false);
         }, (error: any) => {
           // Suppress index errors - they're expected until indexes are deployed
@@ -285,18 +302,27 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (err) {
         console.error('Error setting up chat subscriptions:', err);
         setError('Failed to load chats');
+      } finally { // Ensure loading and initialized states are always set
         setIsLoading(false);
+        setChatInitialized(true);
       }
     };
 
-    setupSubscriptions();
+    // Only run setupSubscriptions if auth is initialized
+    if (authInitialized) {
+      setupSubscriptions();
+    } else {
+      // If auth is not initialized, ensure chat context is also marked as initialized (but not loaded)
+      setIsLoading(false);
+      setChatInitialized(true);
+    }
     
     return () => {
       isSubscribed = false; // Set cleanup flag
       unsubscribeChats();
       Object.values(unsubscribeMessages).forEach(unsubscribe => unsubscribe());
     };
-  }, [user, currentChatId]);
+  }, [user, currentChatId, authInitialized]); // Add authInitialized to dependencies
 
   const newchatButton = async () => {
     console.log("user", user);
@@ -874,6 +900,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     retryLastPrompt,
     quotaError
   };
+
+  if (!chatInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-navy-blue"></div>
+      </div>
+    );
+  }
 
   return (
     <ChatContext.Provider value={value}>
