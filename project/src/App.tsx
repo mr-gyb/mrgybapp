@@ -38,7 +38,7 @@ import { useAuth } from './contexts/AuthContext';
  */
 
 // Lazy load components for code splitting
-const CommunityTab = lazy(() => import('./components/content/CommunityTab'));
+const CommunityPage = lazy(() => import('./pages/Community'));
 const NewChat = lazy(() => import('./components/NewChat'));
 const GroupChatView = lazy(() => import('./components/groupChat/GroupChatView'));
 const Chat = lazy(() => import('./components/Chat'));
@@ -302,7 +302,7 @@ const AppContent: React.FC = () => {
             <Route path="/community" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
-                  <CommunityTab />
+                  <CommunityPage />
                 </Suspense>
               </ProtectedRoute>
             } />

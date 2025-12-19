@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import { getAllProfiles } from '../../services/profile.service';
 import { watchFollowState, toggleFollow } from '../../services/follow.service';
-import { UserProfile, AI_USERS } from '../../types/user';
+import { UserProfile, AI_USERS, PLACEHOLDER_USERS } from '../../types/user';
 import { Loader2, Users, Star, UserPlus, Check, Bot, Briefcase, CheckCircle } from 'lucide-react';
 import { getInitials } from '../../utils/avatar';
 import { Link } from 'react-router-dom';
@@ -28,8 +28,8 @@ const TEAM_IMAGE_MAP: Record<string, string> = {
   'mrgyb': '/images/team/mrgyb-ai.png',
 };
 
-// Team member ordering and roles
-const TEAM_ORDER = ['chris', 'charlotte', 'alex', 'devin', 'jake', 'mr-gyb-ai'];
+// Community grid ordering – Mr.GYB AI first, then core team members
+const COMMUNITY_GRID_IDS = ['mr-gyb-ai', 'chris', 'charlotte', 'devin', 'alex', 'jake'];
 const TEAM_ROLES: Record<string, { role: string; department: string }> = {
   'chris': { role: 'CEO', department: 'Executive Leadership' },
   'charlotte': { role: 'CHRO', department: 'Human Resources' },
@@ -274,24 +274,28 @@ const GridView: React.FC<GridViewProps> = ({ searchTerm = '' }) => {
     const loadProfiles = async () => {
       setLoading(true);
       try {
-        // Get team members first (AI users)
+        // Build community grid members in a fixed order
         const teamMembers: UserProfile[] = [];
-        
-        // Add team members in correct order
-        for (const teamId of TEAM_ORDER) {
-          // Try both lowercase and original case
-          const aiUser = AI_USERS[teamId] || AI_USERS[teamId.toLowerCase()];
-          if (aiUser) {
-            // Update image URLs to use local team images
-            const teamImage = TEAM_IMAGE_MAP[teamId] || TEAM_IMAGE_MAP[teamId.toLowerCase()];
-            if (teamImage) {
-              teamMembers.push({
-                ...aiUser,
-                profile_image_url: teamImage,
-              });
-            } else {
-              teamMembers.push(aiUser);
-            }
+
+        for (const id of COMMUNITY_GRID_IDS) {
+          let profile: UserProfile | undefined;
+
+          if (AI_USERS[id]) {
+            profile = AI_USERS[id];
+          } else if (PLACEHOLDER_USERS[id]) {
+            profile = PLACEHOLDER_USERS[id];
+          }
+
+          if (profile) {
+            const teamImage = TEAM_IMAGE_MAP[id] || TEAM_IMAGE_MAP[id.toLowerCase()];
+            teamMembers.push(
+              teamImage
+                ? {
+                    ...profile,
+                    profile_image_url: teamImage,
+                  }
+                : profile
+            );
           }
         }
 
@@ -338,7 +342,7 @@ const GridView: React.FC<GridViewProps> = ({ searchTerm = '' }) => {
   return (
     <div className="grid-view-container">
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <SkeletonCard key={i} />
           ))}
@@ -360,8 +364,8 @@ const GridView: React.FC<GridViewProps> = ({ searchTerm = '' }) => {
             </div>
           ) : (
             <>
-              {/* Responsive Grid: 3 columns desktop, 2 tablet, 1 mobile */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Responsive Grid: 3 columns on tablet/desktop, 1 on mobile */}
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
                 {displayedProfiles.map((profile) => (
                   <ProfileCard
                     key={profile.id}

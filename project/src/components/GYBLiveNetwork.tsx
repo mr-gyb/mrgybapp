@@ -16,10 +16,36 @@ const GYBLiveNetwork: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Combine AI and placeholder users
-    const allUsers = [...Object.values(AI_USERS), ...Object.values(PLACEHOLDER_USERS)];
-    setUsers(allUsers);
-    setFilteredUsers(allUsers);
+    // Combine AI and placeholder users, excluding specific profiles for this view
+    // Hide the legacy duplicate ID "mrgyb" so MR.GYB AI only appears once (via "mr-gyb-ai")
+    const hiddenIds = new Set<string>(['rachel', 'sherry', 'user1', 'mrgyb']);
+
+    const baseUsers = [...Object.values(AI_USERS), ...Object.values(PLACEHOLDER_USERS)].filter(
+      (u) => !hiddenIds.has(u.id)
+    );
+
+    // Enforce explicit ordering so MR.GYB AI appears as 6th card in the 3×2 grid
+    const ORDER: string[] = ['chris', 'charlotte', 'alex', 'devin', 'jake', 'mr-gyb-ai'];
+    const used = new Set<string>();
+    const ordered: UserProfile[] = [];
+
+    for (const id of ORDER) {
+      const found = baseUsers.find((u) => u.id === id);
+      if (found) {
+        ordered.push(found);
+        used.add(found.id);
+      }
+    }
+
+    // Append any remaining users after the first 6 in a stable order
+    for (const u of baseUsers) {
+      if (!used.has(u.id)) {
+        ordered.push(u);
+      }
+    }
+
+    setUsers(ordered);
+    setFilteredUsers(ordered);
     setIsLoading(false);
   }, []);
 
@@ -83,7 +109,7 @@ const GYBLiveNetwork: React.FC = () => {
   };
 
   const renderGridView = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
       {filteredUsers.map((user) => (
         <div
           key={user.id}

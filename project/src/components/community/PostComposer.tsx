@@ -4,11 +4,12 @@ import { useToast } from '../../hooks/useToast';
 import { createPost } from '../../services/posts';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
-import { ImageIcon, Loader2 } from 'lucide-react';
+import { ImageIcon, Loader2, Smile } from 'lucide-react';
 import CommunityAvatar from './CommunityAvatar';
+import { Post } from '../../types/community';
 
 interface PostComposerProps {
-  onPostCreated?: () => void;
+  onPostCreated?: (post: Post) => void;
 }
 
 const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
@@ -19,7 +20,6 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isPosting, setIsPosting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [audience, setAudience] = useState<'anyone' | 'friends'>('anyone');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -87,7 +87,7 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
   };
 
   const handlePost = async () => {
-    if (!user || !userData) {
+    if (!user) {
       showError('You must be logged in to post.');
       return;
     }
@@ -113,9 +113,11 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
       }
 
       const authorName = user.displayName?.trim() || user.email?.trim() || 'Unknown';
-      const authorPhotoURL = user.photoURL || userData.profile_image_url || '';
+      const authorPhotoURL = user.photoURL || userData?.profile_image_url || '';
 
-      await createPost(
+      const audience: 'anyone' = 'anyone';
+
+      const newPostId = await createPost(
         {
           text: trimmedText,
           imageURL: mediaUrl,
@@ -129,15 +131,34 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
         }
       );
 
+      const optimisticPost: Post = {
+        id: newPostId,
+        authorId: user.uid,
+        authorName,
+        authorEmail: user.email || undefined,
+        authorPhotoURL,
+        text: trimmedText,
+        imageURL: mediaUrl,
+        audience,
+        visibility: audience,
+        likeCount: 0,
+        likedBy: [],
+        commentsCount: 0,
+        repostCount: 0,
+        shareCount: 0,
+        isAI: false,
+        createdAt: new Date(),
+      };
+
+      onPostCreated?.(optimisticPost);
+
       showSuccess('Post created successfully!');
       setText('');
       setImageFile(null);
       setImagePreview(null);
-      setAudience('anyone');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      onPostCreated?.();
     } catch (error: unknown) {
       console.error('Error creating post:', error);
       showError(error instanceof Error ? error.message : 'Failed to create post.');
@@ -219,23 +240,19 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
               >
                 <ImageIcon size={20} />
               </button>
+
+              {/* Emoji (non-functional placeholder for now) */}
+              <button
+                type="button"
+                disabled={isPosting || isUploading}
+                className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Add emoji"
+              >
+                <Smile size={20} />
+              </button>
             </div>
 
             <div className="flex items-center gap-3">
-              <label htmlFor="post-audience" className="sr-only">
-                Post audience
-              </label>
-              <select
-                id="post-audience"
-                value={audience}
-                onChange={event => setAudience(event.target.value as 'anyone' | 'friends')}
-                disabled={isPosting || isUploading}
-                className="text-sm border border-gray-200 dark:border-gray-600 rounded-full px-3 py-1.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="anyone">Post to Anyone</option>
-                <option value="friends">Post to Friends</option>
-              </select>
-
               {/* Post Button - Right aligned */}
               <button
                 onClick={handlePost}

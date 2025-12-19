@@ -29,6 +29,15 @@ const FeedView: React.FC<FeedViewProps> = ({ searchTerm = '' }) => {
   const PAGE_SIZE = 10;
   const INITIAL_DISPLAY_COUNT = 4; // Show 4 posts in 2×2 grid initially
 
+  // Authors to hide from Community feed
+  const HIDDEN_AUTHOR_IDS = new Set<string>([
+    'mr-gyb-ai',
+    'mrgyb',
+    'rachel',
+    'sherry',
+    'user1', // Alice Johnson placeholder
+  ]);
+
   // Initial load and real-time subscription
   useEffect(() => {
     if (!isAuthenticated || !user?.uid) {
@@ -46,7 +55,8 @@ const FeedView: React.FC<FeedViewProps> = ({ searchTerm = '' }) => {
           pageSize: PAGE_SIZE,
           currentUserId: user.uid
         });
-        setPosts(result.posts);
+        // Filter out posts from hidden authors
+        setPosts(result.posts.filter((p) => !HIDDEN_AUTHOR_IDS.has(p.authorId)));
         lastDocRef.current = result.lastDoc;
         setHasMore(result.hasMore);
         setLoading(false);
@@ -58,7 +68,9 @@ const FeedView: React.FC<FeedViewProps> = ({ searchTerm = '' }) => {
             // Merge new posts with existing, avoiding duplicates
             setPosts((prevPosts) => {
               const existingIds = new Set(prevPosts.map((p) => p.id));
-              const uniqueNewPosts = newPosts.filter((p) => !existingIds.has(p.id));
+              const uniqueNewPosts = newPosts
+                .filter((p) => !existingIds.has(p.id))
+                .filter((p) => !HIDDEN_AUTHOR_IDS.has(p.authorId));
               
               // Combine and sort by createdAt desc
               const combined = [...uniqueNewPosts, ...prevPosts].sort((a, b) => {
@@ -103,7 +115,9 @@ const FeedView: React.FC<FeedViewProps> = ({ searchTerm = '' }) => {
       setPosts((prevPosts) => {
         // Merge new posts, avoiding duplicates
         const existingIds = new Set(prevPosts.map((p) => p.id));
-        const newPosts = result.posts.filter((p) => !existingIds.has(p.id));
+        const newPosts = result.posts
+          .filter((p) => !existingIds.has(p.id))
+          .filter((p) => !HIDDEN_AUTHOR_IDS.has(p.authorId));
         
         return [...prevPosts, ...newPosts];
       });
@@ -144,9 +158,17 @@ const FeedView: React.FC<FeedViewProps> = ({ searchTerm = '' }) => {
     <div className="feed-view-container">
       {/* Post Composer */}
       {isAuthenticated && (
-        <PostComposer onPostCreated={() => {
-          // Post will appear via real-time subscription
-        }} />
+        <PostComposer
+          onPostCreated={(newPost) => {
+            setPosts((prevPosts) => {
+              const existingIds = new Set(prevPosts.map((p) => p.id));
+              if (existingIds.has(newPost.id)) {
+                return prevPosts;
+              }
+              return [newPost, ...prevPosts];
+            });
+          }}
+        />
       )}
 
       {/* Secondary Tabs */}
@@ -175,8 +197,8 @@ const FeedView: React.FC<FeedViewProps> = ({ searchTerm = '' }) => {
             </div>
           ) : (
             <>
-              {/* 2×2 Grid Layout */}
-              <div className="grid grid-cols-2 gap-4" style={{ gap: '16px' }}>
+              {/* Single-column Feed Layout */}
+              <div className="space-y-4">
                 {(showAll ? filteredPosts : filteredPosts.slice(0, INITIAL_DISPLAY_COUNT)).map((post) => (
                   <PostCard key={post.id} post={post} currentUserId={user?.uid || ''} />
                 ))}
