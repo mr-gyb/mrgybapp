@@ -27,6 +27,15 @@ export interface UserProfile {
   phoneNumber?: string; // Added phone number
   country?: string; // Added country
   notificationsEnabled?: boolean; // Added notificationsEnabled
+  forecastTokens?: number; // Forecast token balance
+  roles?: string[]; // User roles
+  permissions?: string[]; // User permissions
+  appPreferences?: {
+    theme?: 'light' | 'dark' | 'auto';
+    notifications?: boolean;
+    language?: string;
+    [key: string]: unknown;
+  };
   content?: {
     posts?: { id: number; title: string; date: string; likes: number; comments: number; }[];
     subs?: { id: number; name: string; tier: string; since: string; amount: number; }[];

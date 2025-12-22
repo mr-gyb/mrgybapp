@@ -48,7 +48,7 @@ const LandingPage: React.FC = () => {
                     <button
                       className="px-6 py-3 rounded-full bg-[#E3C472] text-[#3B4371] font-semibold hover:bg-[#d4b566]"
                       style={{ marginRight: '1cm' }}
-                      onClick={() => navigate('/trial-signup')}
+                      onClick={() => navigate('/signup')}
                     >
                       Sign up Today
                     </button>

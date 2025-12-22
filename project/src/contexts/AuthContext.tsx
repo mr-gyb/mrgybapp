@@ -73,9 +73,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            setUserData(userDoc.data() as UserProfile);
+            // Fetch existing user data and ensure all required fields are present
+            const existingData = userDoc.data() as UserProfile;
+            
+            // Ensure forecast tokens exist (default to 10 if missing)
+            if (existingData.forecastTokens === undefined || existingData.forecastTokens === null) {
+              await setDoc(userDocRef, {
+                forecastTokens: 10,
+                updated_at: new Date().toISOString()
+              }, { merge: true });
+              existingData.forecastTokens = 10;
+            }
+            
+            // Ensure roles exist (default to ['user'] if missing)
+            if (!existingData.roles || existingData.roles.length === 0) {
+              await setDoc(userDocRef, {
+                roles: ['user'],
+                updated_at: new Date().toISOString()
+              }, { merge: true });
+              existingData.roles = ['user'];
+            }
+            
+            // Ensure permissions exist (default to ['read', 'write'] if missing)
+            if (!existingData.permissions || existingData.permissions.length === 0) {
+              await setDoc(userDocRef, {
+                permissions: ['read', 'write'],
+                updated_at: new Date().toISOString()
+              }, { merge: true });
+              existingData.permissions = ['read', 'write'];
+            }
+            
+            // Ensure app preferences exist
+            if (!existingData.appPreferences) {
+              await setDoc(userDocRef, {
+                appPreferences: {
+                  theme: 'auto',
+                  notifications: true,
+                  language: 'en'
+                },
+                updated_at: new Date().toISOString()
+              }, { merge: true });
+              existingData.appPreferences = {
+                theme: 'auto',
+                notifications: true,
+                language: 'en'
+              };
+            }
+            
+            setUserData(existingData);
           } else {
-            // Create a default profile if none exists
+            // Create a default profile if none exists with all required fields
             const defaultProfile: UserProfile = {
               id: currentUser.uid,
               name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous',
@@ -89,10 +136,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               rating: 4.5,
               following: 0,
               followers: 0,
-              profile_image_url: currentUser.displayName ? currentUser.displayName.split(' ').map(n => n[0]).join('').toUpperCase() : 'U',
+              profile_image_url: currentUser.photoURL || (currentUser.displayName ? currentUser.displayName.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'),
               cover_image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              forecastTokens: 10, // Initialize with 10 forecast tokens
+              roles: ['user'], // Default role
+              permissions: ['read', 'write'], // Default permissions
+              appPreferences: {
+                theme: 'auto',
+                notifications: true,
+                language: 'en'
+              }
             };
             
             await setDoc(userDocRef, defaultProfile);
@@ -291,7 +346,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userDoc = await getDoc(userDocRef);
       
       if (!userDoc.exists()) {
-        // Create a new profile for Facebook user
+        // Create a new profile for Facebook user with all required fields
         const defaultProfile: UserProfile = {
           id: result.user.uid,
           name: result.user.displayName || result.user.email?.split('@')[0] || 'Facebook User',
@@ -309,11 +364,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           cover_image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          authProvider: 'facebook'
+          authProvider: 'facebook',
+          forecastTokens: 10,
+          roles: ['user'],
+          permissions: ['read', 'write'],
+          appPreferences: {
+            theme: 'auto',
+            notifications: true,
+            language: 'en'
+          }
         };
         
         await setDoc(userDocRef, defaultProfile);
         setUserData(defaultProfile);
+      } else {
+        // Fetch existing profile and ensure all fields are initialized
+        const existingData = userDoc.data() as UserProfile;
+        const updates: Partial<UserProfile> = {};
+        
+        if (existingData.forecastTokens === undefined || existingData.forecastTokens === null) {
+          updates.forecastTokens = 10;
+        }
+        if (!existingData.roles || existingData.roles.length === 0) {
+          updates.roles = ['user'];
+        }
+        if (!existingData.permissions || existingData.permissions.length === 0) {
+          updates.permissions = ['read', 'write'];
+        }
+        if (!existingData.appPreferences) {
+          updates.appPreferences = {
+            theme: 'auto',
+            notifications: true,
+            language: 'en'
+          };
+        }
+        
+        if (Object.keys(updates).length > 0) {
+          updates.updated_at = new Date().toISOString();
+          await setDoc(userDocRef, updates, { merge: true });
+          setUserData({ ...existingData, ...updates } as UserProfile);
+        } else {
+          setUserData(existingData);
+        }
       }
       
       return { user: result.user };
@@ -348,7 +440,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userDoc = await getDoc(userDocRef);
       
       if (!userDoc.exists()) {
-        // Create a new profile for Google user
+        // Create a new profile for Google user with all required fields
         const defaultProfile: UserProfile = {
           id: result.user.uid,
           name: result.user.displayName || result.user.email?.split('@')[0] || 'Google User',
@@ -366,11 +458,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           cover_image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          authProvider: 'google'
+          authProvider: 'google',
+          forecastTokens: 10,
+          roles: ['user'],
+          permissions: ['read', 'write'],
+          appPreferences: {
+            theme: 'auto',
+            notifications: true,
+            language: 'en'
+          }
         };
         
         await setDoc(userDocRef, defaultProfile);
         setUserData(defaultProfile);
+      } else {
+        // Fetch existing profile and ensure all fields are initialized
+        const existingData = userDoc.data() as UserProfile;
+        const updates: Partial<UserProfile> = {};
+        
+        if (existingData.forecastTokens === undefined || existingData.forecastTokens === null) {
+          updates.forecastTokens = 10;
+        }
+        if (!existingData.roles || existingData.roles.length === 0) {
+          updates.roles = ['user'];
+        }
+        if (!existingData.permissions || existingData.permissions.length === 0) {
+          updates.permissions = ['read', 'write'];
+        }
+        if (!existingData.appPreferences) {
+          updates.appPreferences = {
+            theme: 'auto',
+            notifications: true,
+            language: 'en'
+          };
+        }
+        
+        if (Object.keys(updates).length > 0) {
+          updates.updated_at = new Date().toISOString();
+          await setDoc(userDocRef, updates, { merge: true });
+          setUserData({ ...existingData, ...updates } as UserProfile);
+        } else {
+          setUserData(existingData);
+        }
       }
       
       return { user: result.user };
@@ -449,7 +578,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Extract name from email or use default
         const displayName = result.user.displayName || result.user.email?.split('@')[0] || 'Apple User';
         
-        // Create a new profile for Apple user
+        // Create a new profile for Apple user with all required fields
         const defaultProfile: UserProfile = {
           id: result.user.uid,
           name: displayName,
@@ -467,11 +596,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           cover_image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          authProvider: 'apple'
+          authProvider: 'apple',
+          forecastTokens: 10,
+          roles: ['user'],
+          permissions: ['read', 'write'],
+          appPreferences: {
+            theme: 'auto',
+            notifications: true,
+            language: 'en'
+          }
         };
         
         await setDoc(userDocRef, defaultProfile);
         setUserData(defaultProfile);
+      } else {
+        // Fetch existing profile and ensure all fields are initialized
+        const existingData = userDoc.data() as UserProfile;
+        const updates: Partial<UserProfile> = {};
+        
+        if (existingData.forecastTokens === undefined || existingData.forecastTokens === null) {
+          updates.forecastTokens = 10;
+        }
+        if (!existingData.roles || existingData.roles.length === 0) {
+          updates.roles = ['user'];
+        }
+        if (!existingData.permissions || existingData.permissions.length === 0) {
+          updates.permissions = ['read', 'write'];
+        }
+        if (!existingData.appPreferences) {
+          updates.appPreferences = {
+            theme: 'auto',
+            notifications: true,
+            language: 'en'
+          };
+        }
+        
+        if (Object.keys(updates).length > 0) {
+          updates.updated_at = new Date().toISOString();
+          await setDoc(userDocRef, updates, { merge: true });
+          setUserData({ ...existingData, ...updates } as UserProfile);
+        } else {
+          setUserData(existingData);
+        }
       }
       
       return { user: result.user };

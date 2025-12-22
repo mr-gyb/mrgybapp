@@ -7,7 +7,7 @@ const SignupButton: React.FC = () => {
   return (
     <button
       className="px-4 py-2 rounded-full bg-[#1A2C42] text-white font-medium hover:bg-[#0A1929]"
-      onClick={() => navigate('/trial-signup')}
+      onClick={() => navigate('/signup')}
     >
       Sign Up
     </button>

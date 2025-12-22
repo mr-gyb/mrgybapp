@@ -10,7 +10,7 @@ import { UserProfile } from '../types/user'; // Import UserProfile
 
 
 const UserOnboarding: React.FC = () => {
-  const { signUp } = useAuth();
+  const { user } = useAuth(); // Get user from AuthContext instead of navigation state
   const navigate = useNavigate();
   const location = useLocation();
   const [step, setStep] = useState(0);
@@ -21,9 +21,8 @@ const UserOnboarding: React.FC = () => {
   const [businessName, setBusinessName] = useState('');
   const [industry, setIndustry] = useState('');
   const [birthday, setBirthday] = useState('');
-  const [password, setPassword] = useState(location.state?.password || '');
+  const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [userCredential, setUserCredential] = useState(location.state?.userCredential || null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [country, setCountry] = useState('US');
   const [error, setError] = useState('');
@@ -114,9 +113,26 @@ const UserOnboarding: React.FC = () => {
     setError('');
 
     try {
-      // Create user account first
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const currentUser = userCredential.user;
+      // User should already be created via Signup component and available in AuthContext
+      // If not, we need to create it here (for direct navigation to onboarding)
+      let currentUser = user;
+      
+      if (!currentUser) {
+        // Fallback: create user if not already created (shouldn't happen in normal flow)
+        if (!email || !password) {
+          setError('Email and password are required');
+          setIsLoading(false);
+          return;
+        }
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        currentUser = userCredential.user;
+      }
+      
+      if (!currentUser) {
+        setError('Failed to get user. Please try signing up again.');
+        setIsLoading(false);
+        return;
+      }
       
       console.log('Account created successfully for:', email);
 

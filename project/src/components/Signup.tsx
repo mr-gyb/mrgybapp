@@ -84,13 +84,12 @@ const Signup: React.FC = () => {
         const errorMessage = result.error.message || 'Failed to create account. Please try again.';
         setError(errorMessage);
       } else {
-        // Navigate to onboarding or home
+        // User is created and will be available in AuthContext via onAuthStateChanged
+        // Only pass plain serializable data in navigation state
         navigate('/onboarding', { 
           state: { 
             email, 
-            password,
-            fullName,
-            userCredential: result.user 
+            fullName
           } 
         });
       }
