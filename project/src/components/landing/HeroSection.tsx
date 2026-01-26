@@ -18,7 +18,7 @@ const HeroSection: React.FC = () => {
         <div className="flex items-center gap-3 sm:gap-4">
           <Link
             to="/login"
-            className="px-4 sm:px-6 py-2 sm:py-2.5 border-2 border-[#0A2342] text-[#0A2342] rounded-full font-medium text-sm sm:text-base hover:bg-[#0A2342] hover:text-white transition-all duration-200"
+            className="px-4 sm:px-6 py-2 sm:py-2.5 bg-[#D9B45F] text-[#0A2342] rounded-full font-medium text-sm sm:text-base hover:bg-[#C4A64D] transition-all duration-200"
           >
             Login
           </Link>

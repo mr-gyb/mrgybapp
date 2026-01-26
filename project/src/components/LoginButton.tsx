@@ -6,7 +6,7 @@ const LoginButton: React.FC = () => {
 
   return (
     <button
-      className="px-4 py-2 rounded-full border border-[#1A2C42] text-[#1A2C42] font-medium hover:bg-gray-100"
+      className="px-4 py-2 rounded-full bg-[#D9B45F] text-[#0A2342] font-medium hover:bg-[#C4A64D] transition-colors"
       onClick={() => navigate('/login')}
     >
       Login
