@@ -16,6 +16,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, getPageTitle }) => {
   const location = useLocation();
   const showHeaderAndMenu = location.pathname !== '/' && location.pathname !== '/login';
   const isHome = location.pathname === '/home';
+  const showHeader = showHeaderAndMenu && !isHome;
   const showBottomMenu = showHeaderAndMenu;
 
   // Removed conditional loading spinner
@@ -35,8 +36,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, getPageTitle }) => {
 
   return (
     <div className={`flex flex-col min-h-screen ${baseClasses}`}>
-      {showHeaderAndMenu && <Header getPageTitle={getPageTitle} />}
-      <main className={`flex-grow ${showHeaderAndMenu ? 'mt-16 mb-16' : ''}`}>
+      {showHeader && <Header getPageTitle={getPageTitle} />}
+      <main
+        className={`flex-grow ${showHeader ? 'mt-16' : ''} ${showBottomMenu ? 'mb-16' : ''}`}
+      >
         {children}
       </main>
       {showBottomMenu && <BottomMenu />}

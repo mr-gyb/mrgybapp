@@ -162,7 +162,20 @@ const AppContent: React.FC = () => {
   const location = useLocation();
   const { isLoading: isAuthLoading } = useAuth();
 
-  const showHeaderAndBottomMenu = !['/login', '/onboarding', '/trial-signup', '/trial-signup-step2', '/trial-signup-confirmation', '/business-roadmap-welcome', '/lets-begin', '/assessment'].includes(location.pathname);
+  const hideHeaderAndBottomMenuRoutes = [
+    '/',
+    '/landing',
+    '/login',
+    '/signup',
+    '/onboarding',
+    '/trial-signup',
+    '/trial-signup-step2',
+    '/trial-signup-confirmation',
+    '/lets-begin',
+    '/assessment'
+  ];
+  const showBottomMenu = !hideHeaderAndBottomMenuRoutes.includes(location.pathname);
+  const showHeader = showBottomMenu;
 
   if (isAuthLoading) {
     return <LoadingSpinner />;
@@ -170,8 +183,8 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex flex-col ${isDarkMode ? 'dark' : ''}`}>
-      {showHeaderAndBottomMenu && <Header getPageTitle={getPageTitle} />}
-      <main className="flex-grow">
+      {showHeader && <Header getPageTitle={getPageTitle} />}
+      <main className={`flex-grow ${showHeader ? 'pt-16' : ''} ${showBottomMenu ? 'pb-24' : ''}`}>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={
@@ -608,7 +621,7 @@ const AppContent: React.FC = () => {
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </main>
-        {showHeaderAndBottomMenu && <BottomMenu />}
+        {showBottomMenu && <BottomMenu />}
       </div>
     );
 };

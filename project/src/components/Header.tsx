@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import SideMenu from './SideMenu';
 import { getProfile } from '../lib/firebase/profile';
 import { UserProfile } from '../types/user';
@@ -14,21 +14,18 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { user, isAuthenticated } = useAuth();
-  const { isDarkMode } = useTheme();
+  const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isHome = location.pathname === '/home';
 
   useEffect(() => {
     const loadProfile = async () => {
       if (user) {
-        setIsLoading(true);
         const profile = await getProfile(user.uid);
         if (profile) {
           setProfileData(profile);
         }
-        setIsLoading(false);
       }
     };
 
@@ -46,19 +43,6 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
 
   }, [user]);
 
-  // Header actions removed — visual elements on the blue strip were removed per request.
-
-  const getExperienceColor = (level: number) => {
-    switch (level) {
-      case 1: return 'border-red-500';
-      case 2: return 'border-orange-500';
-      case 3: return 'border-blue-500';
-      case 4: return 'border-green-500';
-      case 5: return 'border-yellow-400';
-      default: return 'border-gray-300';
-    }
-  };
-
   const initials = profileData?.name
     ? profileData.name
         .split(' ')
@@ -72,12 +56,37 @@ const Header: React.FC<HeaderProps> = ({ getPageTitle }) => {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-10 bg-[#11335d] shadow-sm min-h-[64px]">
-        <div className="w-full flex items-center justify-between px-6 py-3">
-          {/* Left cluster removed */}
-          <div />
+        <div className="w-full flex items-center justify-between px-4 md:px-6 py-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsSideMenuOpen(true)}
+              className="w-9 h-9 rounded-full bg-[#E3C472] text-[#11335d] flex items-center justify-center"
+              aria-label="Open menu"
+            >
+              <Menu size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/home')}
+              className="flex items-center gap-2 text-white"
+              aria-label="Go to home"
+            >
+              <img src="/logo.png" alt="GYB" className="w-9 h-9 object-contain" />
+              <span className="text-sm md:text-base font-semibold">
+                {isHome ? 'Grow Your Business' : getPageTitle(location.pathname)}
+              </span>
+            </button>
+          </div>
 
-          {/* Right cluster removed */}
-          <div />
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            className="w-9 h-9 rounded-full bg-[#E3C472] text-[#11335d] text-xs font-semibold flex items-center justify-center"
+            aria-label="Open profile"
+          >
+            {initials}
+          </button>
         </div>
       </header>
 
