@@ -354,14 +354,21 @@ app.get('/api/chat/health', async (req, res) => {
     );
   }
 
+  // O3 models use max_completion_tokens instead of max_tokens and don't support temperature
+  const isO3Model = DEFAULT_CHAT_MODEL.toLowerCase().startsWith('o3');
+
   const payload = {
     model: DEFAULT_CHAT_MODEL,
     messages: [
       { role: 'system', content: 'You are a health-check assistant that only replies with "pong".' },
       { role: 'user', content: 'ping' },
     ],
-    max_tokens: 1,
-    temperature: 0,
+    ...(isO3Model
+      ? { max_completion_tokens: 1 }
+      : { max_tokens: 1 }
+    ),
+    // O3 models don't support temperature parameter
+    ...(isO3Model ? {} : { temperature: 0 }),
   };
 
   const start = Date.now();
@@ -713,16 +720,27 @@ const handleChatRequest = async (req, res) => {
   });
 
     const makeRequest = async (currentModel) => {
+    // O3 models use max_completion_tokens instead of max_tokens and don't support temperature
+    const isO3Model = currentModel.toLowerCase().startsWith('o3');
+    const maxTokenValue = Math.min(
+      typeof maxTokens === 'number' ? maxTokens : 700,
+      parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS || '900', 10)
+    );
+
     const payload = {
         model: currentModel,
       messages: [
         { role: 'system', content: buildSystemPrompt(agent) },
       ...trimmedMessages,
       ],
-      temperature: typeof temperature === 'number' ? temperature : 0.7,
-      max_tokens: Math.min(
-        typeof maxTokens === 'number' ? maxTokens : 700,
-        parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS || '900', 10)
+      // O3 models don't support temperature parameter
+      ...(isO3Model
+        ? {}
+        : { temperature: typeof temperature === 'number' ? temperature : 0.7 }
+      ),
+      ...(isO3Model
+        ? { max_completion_tokens: maxTokenValue }
+        : { max_tokens: maxTokenValue }
       ),
     stream: stream !== false,
     };
@@ -951,16 +969,27 @@ app.post('/api/chat/non-streaming', async (req, res) => {
   const modelName = model || DEFAULT_CHAT_MODEL;
   const outboundUrl = `${OPENAI_BASE_URL}/chat/completions`;
 
+  // O3 models use max_completion_tokens instead of max_tokens and don't support temperature
+  const isO3Model = modelName.toLowerCase().startsWith('o3');
+  const maxTokenValue = Math.min(
+    typeof maxTokens === 'number' ? maxTokens : 700,
+    parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS || '900', 10)
+  );
+
   const payload = {
     model: modelName,
     messages: [
       { role: 'system', content: buildSystemPrompt(agent) },
       ...trimmedMessages,
     ],
-    temperature: typeof temperature === 'number' ? temperature : 0.7,
-    max_tokens: Math.min(
-      typeof maxTokens === 'number' ? maxTokens : 700,
-      parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS || '900', 10)
+    // O3 models don't support temperature parameter
+    ...(isO3Model
+      ? {}
+      : { temperature: typeof temperature === 'number' ? temperature : 0.7 }
+    ),
+    ...(isO3Model
+      ? { max_completion_tokens: maxTokenValue }
+      : { max_tokens: maxTokenValue }
     ),
     stream: false, // Explicitly non-streaming
   };
@@ -1066,14 +1095,21 @@ Return ONLY the JSON array, no other text, no markdown, no code blocks. Example 
   
   userPrompt += 'Generate 3 unique, actionable content ideas that would work well for this user.';
 
+  // O3 models use max_completion_tokens instead of max_tokens and don't support temperature
+  const isO3Model = DEFAULT_CHAT_MODEL.toLowerCase().startsWith('o3');
+
   const payload = {
     model: DEFAULT_CHAT_MODEL,
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ],
-    temperature: 0.7,
-    max_tokens: 1000,
+    // O3 models don't support temperature parameter
+    ...(isO3Model ? {} : { temperature: 0.7 }),
+    ...(isO3Model
+      ? { max_completion_tokens: 1000 }
+      : { max_tokens: 1000 }
+    ),
     stream: false, // We need structured JSON, not streaming
   };
 
@@ -1280,8 +1316,8 @@ Important:
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ],
-    temperature: 0.8, // Slightly higher for creative analysis
-    max_tokens: 3000,
+    // O3 models don't support temperature parameter - removed
+    max_completion_tokens: 3000, // O3 models use max_completion_tokens instead of max_tokens
     stream: false, // We need structured JSON, not streaming
   };
 
@@ -1488,8 +1524,8 @@ Important:
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ],
-    temperature: 0.7,
-    max_tokens: 4000,
+    // O3 models don't support temperature parameter - removed
+    max_completion_tokens: 4000, // O3 models use max_completion_tokens instead of max_tokens
     stream: false, // We need structured JSON, not streaming
   };
 

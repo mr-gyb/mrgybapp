@@ -467,15 +467,16 @@ export const generateAIResponse = async (
 ): Promise<ChatLLMResult> => {
   try {
     const lastMessage = messages[messages.length - 1];
-    
-    // Use local Dream Team agent instead of external API to avoid quota issues
+
+    // TEMPORARILY COMMENTED OUT: Use local Dream Team agent instead of external API to avoid quota issues
     // This is a temporary solution until real training data/model is connected
+    /*
     if (typeof lastMessage.content === 'string') {
       const userMessage = lastMessage.content.trim();
-      
+
       // Get response from local agent
       const agentResponse = await dreamTeamAgent(userMessage, aiAgent, messages);
-      
+
       // Simulate streaming if onToken callback is provided
       if (options?.onToken && agentResponse.content) {
         // Split content into tokens and call onToken for each word
@@ -487,7 +488,7 @@ export const generateAIResponse = async (
           await new Promise(resolve => setTimeout(resolve, 20));
         }
       }
-      
+
       return {
         content: agentResponse.content,
         isFallback: false,
@@ -504,6 +505,7 @@ export const generateAIResponse = async (
         },
       };
     }
+    */
 
     // For non-string content (images, files), fall back to original behavior
     // TODO: Add local agent support for image/file handling
